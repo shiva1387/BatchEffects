@@ -32,16 +32,14 @@ library(gplots)
 # Variables #
 #############
 
-directory<-"F:/Vinay's Algae Data/Aug2013/Data"
+directory<- "F:/Vinay's Algae Data/Aug2013/RawData/MZXML/15th MZxml"
 #Contains path for .tsv file
-
-#directory<-"D:/Shiv_data/Shiv_NUS/PhD_Project/Integrating_Omics/Analysis_R/MetabolomicsSoftwareComparison/Data/TT8_RawData_Metabolomics/Agilent/MZXML_MS1/All/";
-#Contains path for raw mzxml files
-
 # The "PATH", Remember to use "/" and not "/" in the path
+
 num_cores<-8; # The number of CPUs available, be aware of memory issue
 
 setwd(directory)
+getwd()
 
 #################
 # Get filenames #
@@ -112,28 +110,73 @@ SampleGroup<-SampleGroups[1:311]
 #StrainName<-as.factor(names(ms_data))
 #StrainName0<-names(ms_data)
 
+#######################################
+###### Exploratory data analysis ######
+#######################################
 
-### Measure of variation ########
-
-png('boxplot.png',width=8000)
-boxplot(log(ms_data),range=0,xlab="Samples",ylab="Log2 feature counts",las=1,cex.axis=0.7)
-dev.off()
-
-#boxplot(as.matrix(log(ms_data)),range=0,xlab="Samples",ylab="Log2 feature counts",las=1,col=rainbow(9))
-
-plot(t(log1p(ms_data))~SampleGroup,range=0,xlab="Samples",ylab="Log2 feature counts",las=1,col=SampleGroup)
-# plotting coefficient of variations among samples(cols)
-
-#Coefficient of variation
-
-plot(1:ncol(ms_data),apply(ms_data,2,cv)) # For each column 
-
-# for each feature in each sample group
+##########################
+# Histogram of mz and rt #
+##########################
 
 mz_rt <- strsplit(rownames(ms_data_total), "\\@")
 mz<-sapply(mz_rt , function (x) if(length(x) == 2) x[1] else as.character(NA))
 rt<-sapply(mz_rt , function (x) if(length(x) == 2) x[2] else as.character(NA))
- 
+
+png("algae_417reps_retcor_MPP_sorted.png")
+plot(rt,mz,pch=1,main="algae_417reps_retcor_MPP_sorted",ylab="m/z",xlab="rt")
+dev.off()
+
+### Measure of variation ########
+
+png('boxplot.png',width=8000)
+boxplot(log(ms_data[227:232]),range=0,xlab="Samples",ylab="Log2 feature counts",las=1,cex.axis=0.7)
+dev.off()
+
+## Generating boxplot and cv for each sample group
+
+groups<-unique(SampleGroup)
+
+for(i in 1:length(groups))
+{
+png(paste(groups[i],".png"),width=500,height=500)
+ms_data_grp1<-ms_data[, grep(groups[i], names(ms_data))]
+par(mar=c(10,2,2,2))
+boxplot(log(ms_data_grp1),range=0,ylab="Log2 feature counts",las=2,cex.axis=1)
+if(ncol(ms_data_grp1)==6)
+{
+text(3.5, 10,font=3, paste("cv:", round(cv(ms_data_grp1[,1]), 2), "   cv:", round(cv(ms_data_grp1[,2]), 2),"   cv:", round(cv(ms_data_grp1[,3]), 2),
+                  "   cv:", round(cv(ms_data_grp1[,4]), 2),"   cv:", round(cv(ms_data_grp1[,5]), 2),"   cv:", round(cv(ms_data_grp1[,6]), 2)
+                  ),cex=1)
+}
+else if(ncol(ms_data_grp1)==4)
+{
+  text(3.5, 10,font=3, paste("cv:", round(cv(ms_data_grp1[,1]), 2), "   cv:", round(cv(ms_data_grp1[,2]), 2),"   cv:", round(cv(ms_data_grp1[,3]), 2),
+                             "   cv:", round(cv(ms_data_grp1[,4]), 2)
+  ),cex=1)
+}
+else if(ncol(ms_data_grp1)==7)
+{
+  text(3.5, 10,font=3, paste("cv:", round(cv(ms_data_grp1[,1]), 2), "   cv:", round(cv(ms_data_grp1[,2]), 2),"   cv:", round(cv(ms_data_grp1[,3]), 2),
+                             "   cv:", round(cv(ms_data_grp1[,4]), 2),"   cv:", round(cv(ms_data_grp1[,5]), 2),"   cv:", round(cv(ms_data_grp1[,6]), 2),
+                             "   cv:", round(cv(ms_data_grp1[,7]), 2)
+  ),cex=1)
+}
+dev.off()
+graphics.off()
+font=1
+}
+
+#plot(t(log1p(ms_data))~SampleGroup,range=0,xlab="Samples",ylab="Log2 feature counts",las=1,col=SampleGroup)
+
+# plotting coefficient of variations among samples(cols)
+
+#Coefficient of variation
+png("cv_samples.png",width=4000)
+plot(1:ncol(ms_data),apply(ms_data,2,cv)) # For each column 
+dev.off()
+
+# for each feature in each sample group
+
 ms_data_tst<-data.table(t(log(ms_data)))
 ms_data_tst1<-cbind(ms_data_tst,as.factor(SampleGroup))
 lapply(ms_data_tst1,class) #checking col classes
@@ -150,49 +193,52 @@ write.table(cv_mz_feature,"mz_features_cv.txt",quote=FALSE,sep="\t")
 mz_grp_cv<-read.table("mz_features_cv.txt",sep='\t',header=TRUE,row.name=1)
 mz_grp_cv[is.na(mz_grp_cv)]<-0
 
+
+####
+
 internalStandard<-mz_grp_cv[4473,]
 
-mz_grp_cv<-as.data.frame(mz_grp_cv)
+#mz_grp_cv<-as.data.frame(mz_grp_cv)
 #colnames(mz_grp_cv)<-d
 
-
-
-#heatmap.2(as.matrix(mz_grp_cv),dendrogram="column",trace="none",mar=c(10,10),Rowv=FALSE,labRow= NULL, ylab=NULL)
-
-
-
 mz_grp_cv<-data.frame(cbind(mz,rt,mz_grp_cv))
-
 for (i in seq(3,ncol(mz_grp_cv),4))
 {
-mz<-as.vector(mz_grp_cv$mz)
-rt<-as.vector(mz_grp_cv$rt)
-rt<-as.numeric(rt)
-print (i)
-#y<-mz_grp_cv[,i]
-#rt_cv<-cbind(as.character(rt),as.numeric(y))
-rt_cv<-data.frame(rt,mz_grp_cv[,i],mz_grp_cv[,i+1],mz_grp_cv[,i+2],mz_grp_cv[,i+3])
-rt_cv<-rt_cv[order(rt_cv[,1]),]
-
-## now plot histogram
-png(paste("CoefficientofVariation/", i, "_mz.png", sep = ""),height=800,width=1200)
-par(mfrow=c(2,2))
-plot(mz,mz_grp_cv[,i],main=names(mz_grp_cv)[i],xlab="mz",ylab="cv of log(counts)")
-plot(mz,mz_grp_cv[,i+1],main=names(mz_grp_cv)[i+1],xlab="mz",ylab="cv of log(counts)")
-plot(mz,mz_grp_cv[,i+2],main=names(mz_grp_cv)[i+2],xlab="mz",ylab="cv of log(counts)")
-plot(mz,mz_grp_cv[,i+3],main=names(mz_grp_cv)[i+3],xlab="mz",ylab="cv of log(counts)")
-dev.off()
-
-png(paste("CoefficientofVariation/", i, "_rt.png", sep = ""),height=800,width=1200)
-par(mfrow=c(2,2))
-plot(rt_cv[,1],rt_cv[,2],main=names(mz_grp_cv)[i],xlab="rt",ylab="cv of log(counts)")
-plot(rt_cv[,1],rt_cv[,3],main=names(mz_grp_cv)[i+1],xlab="rt",ylab="cv of log(counts)")
-plot(rt_cv[,1],rt_cv[,4],main=names(mz_grp_cv)[i+2],xlab="rt",ylab="cv of log(counts)")
-plot(rt_cv[,1],rt_cv[,5],main=names(mz_grp_cv)[i+3],xlab="rt",ylab="cv of log(counts)")
-dev.off()
+  mz<-as.vector(mz_grp_cv$mz)
+  rt<-as.vector(mz_grp_cv$rt)
+  rt<-as.numeric(rt)
+  print (i)
+  y<-mz_grp_cv[,i]
+  rt_cv<-cbind(as.character(rt),as.numeric(y))
+  rt_cv<-data.frame(rt,mz_grp_cv[,i],mz_grp_cv[,i+1],mz_grp_cv[,i+2],mz_grp_cv[,i+3])
+  rt_cv<-rt_cv[order(rt_cv[,1]),]
+  
+  ## now plot scatter plot
+  png(paste("hist-coefofvar/", i, "_mz.png", sep = ""),height=800,width=1200)
+  par(mfrow=c(2,2))
+  plot(mz,mz_grp_cv[,i],main=names(mz_grp_cv)[i],xlab="mz",ylab="cv of log(counts)")
+  plot(mz,mz_grp_cv[,i+1],main=names(mz_grp_cv)[i+1],xlab="mz",ylab="cv of log(counts)")
+  plot(mz,mz_grp_cv[,i+2],main=names(mz_grp_cv)[i+2],xlab="mz",ylab="cv of log(counts)")
+  plot(mz,mz_grp_cv[,i+3],main=names(mz_grp_cv)[i+3],xlab="mz",ylab="cv of log(counts)")
+  
+  ## now plot histogram
+  # hist(mz_grp_cv[,i],main=names(mz_grp_cv)[i],ylab="number of features",xlab="cv of log(counts)")
+  # hist(mz_grp_cv[,i+1],main=names(mz_grp_cv)[i+1],ylab="number of features",xlab="cv of log(counts)")
+  # hist(mz_grp_cv[,i+2],main=names(mz_grp_cv)[i+2],ylab="number of features",xlab="cv of log(counts)")
+  # hist(mz_grp_cv[,i+3],main=names(mz_grp_cv)[i+3],ylab="number of features",xlab="cv of log(counts)")
+  
+  dev.off()
+  
+  png(paste("CoefficientofVariation/", i, "_rt.png", sep = ""),height=800,width=1200)
+  par(mfrow=c(2,2))
+  plot(rt_cv[,1],rt_cv[,2],main=names(mz_grp_cv)[i],xlab="rt",ylab="cv of log(counts)")
+  plot(rt_cv[,1],rt_cv[,3],main=names(mz_grp_cv)[i+1],xlab="rt",ylab="cv of log(counts)")
+  plot(rt_cv[,1],rt_cv[,4],main=names(mz_grp_cv)[i+2],xlab="rt",ylab="cv of log(counts)")
+  plot(rt_cv[,1],rt_cv[,5],main=names(mz_grp_cv)[i+3],xlab="rt",ylab="cv of log(counts)")
+  dev.off()
 }
 graphics.off()
-rm(rt_cv)
+# rm(rt_cv)
 
 #plot(mz,as.numeric(mz_grp_cv[,4]),main=names(mz_grp_cv)[4],xlab="mz",ylab="cv of log trans counts")
 #plot(mz,as.numeric(mz_grp_cv[,5]),main=names(mz_grp_cv)[5],col="green")
@@ -205,28 +251,91 @@ rm(rt_cv)
 #axis(side=1,at=seq(2,24,3),as.character(1:8))
 dev.off()
 
-heatmap.2(as.matrix(log(day4_strains+1)),dendrogram="column",trace="none",mar=c(10,10),Rowv=FALSE,Colv=FALSE,xlab = NULL)
 
-################PERMANOVA
+### Counting number of zeroes for each m/z feature in each group
 
-#ms_data_total$DayStrain<-paste0(ms_data_total$Day,ms_data_total$Strain)
-a<-adonis(t(log(ms_data+1)) ~ GrowthStage*StrainId+RunDay, strata=StrainId  , data=ms_data,method = "bray", perm=999)
-b1<-metaMDS(log(ms_data+1),k=2)
+zero_count<-function(x) sum(x == 0) 
+zero_mz_feature2<-t(ms_data_tst1[,lapply(.SD,zero_count),by=V2])
+zero_mz_feature<-as.data.frame(zero_mz_feature2[2:nrow(zero_mz_feature2),])
+colnames(zero_mz_feature)<-unique(SampleGroup)
 
-plot(b)
-ordiplot(b,type="n")
-orditorp(b,display="species",col="red",air=0.01)
-orditorp(b,display="sites",cex=0.01,air=0.01)
+write.table(zero_mz_feature,"mz_features_zeroes.txt",quote=FALSE,sep="\t")
+mz_grp_zero<-read.table("mz_features_zeroes.txt",sep='\t',header=TRUE,row.name=1)
 
-distance<-vegdist(log(t(ms_data+1)), method="bray")
-model1<-betadisper(distance, SampleGroup)
-permute_data<-permutest(model1, pairwise = TRUE,permutations=999)
-posthoc_test<-TukeyHSD(model1)
+mz_grp_zero<-data.frame(cbind(mz,rt,mz_grp_zero))
 
-write.table(permute_data$pairwise,"permute_data_day12",quote=F)
-write.table(posthoc_test$group,"posthoc_test_day12",quote=F)
+for (i in seq(3,ncol(mz_grp_cv),2))
+{
+  mz<-as.vector(mz_grp_cv$mz)
+  rt<-as.vector(mz_grp_cv$rt)
+ ## now plot scatter plot
+  png(paste("noofZeros/", i, "_mz.png", sep = ""),height=800,width=1200)
+  par(mfrow=c(2,2))
+  plot(mz,mz_grp_zero[,i],main=names(mz_grp_zero)[i],xlab="mz",ylab="No of zeros")
+  hist(mz_grp_zero[,i],main=names(mz_grp_zero)[i],xlab="no of zeroes",ylab="Features", breaks=6)
+  plot(mz,mz_grp_zero[,i+1],main=names(mz_grp_zero)[i+1],xlab="mz",ylab="No of zeros")
+  hist(mz_grp_zero[,i+1],main=names(mz_grp_zero)[i+1],xlab="no of zeroes",ylab="Features", breaks=6)
+  dev.off()
+}
+graphics.off()
 
-#ttest
+#CoefofVar-Vs-Zeros
+
+for (i in seq(3,ncol(mz_grp_cv),2))
+{
+  mz<-as.vector(mz_grp_cv$mz)
+  rt<-as.vector(mz_grp_cv$rt)
+  ## now plot scatter plot
+  png(paste("CoefofVar-Vs-Zeros/", i, ".png", sep = ""),height=800,width=1200)
+  par(mfrow=c(2,2))
+  
+  cor1<-cor(mz_grp_zero[,i],mz_grp_cv[,i], use="all.obs", method="pearson")
+  plot(mz_grp_zero[,i],mz_grp_cv[,i],main=names(mz_grp_zero)[i],xlab="No of zeroes",ylab="Coefficient of variation")
+  text(1, 180, paste("R2 =", round(cor1, 3)),cex=1)
+  hist(mz_grp_cv[,i],main=names(mz_grp_zero)[i],xlab="Coefficient of variation",ylab="No of Features")
+  
+  cor2<-cor(mz_grp_cv[,i+1],mz_grp_zero[,i+1], use="all.obs", method="pearson")  
+  plot(mz_grp_zero[,i+1],mz_grp_cv[,i+1],main=names(mz_grp_zero)[i+1],xlab="No of zeroes",ylab="Coefficient of variation")
+  text(1, 180, paste("R2 =", round(cor2, 3)),cex=1)
+  hist(mz_grp_cv[,i+1],main=names(mz_grp_zero)[i+1],xlab="Coefficient of variation",ylab="No of Features")
+  
+  dev.off()
+}
+graphics.off()
+
+######### Converting values based on 50% zero count per sample group
+
+new_ms_data<-ms_data_tst1[, lapply(.SD, function(v) { 
+  len <- length(v)
+  if((sum(v==0)/len)>0.5) rep(0,len) else v
+}), by=V2]
+
+rownames(new_ms_data)<-colnames(ms_data)
+new_ms_data<-as.data.frame(t(new_ms_data))
+
+###### removing replicates(samples with large variance) from the dataset
+
+rem <- c('D4_094_b1_r002','D4_104_b3_r002','D4_245b1_r001','D4_254b1_r001','D4_325_b1_r002')
+
+new_ms_data1<-new_ms_data[, !names(new_ms_data) %in% rem]
+
+names(new_ms_data1)
+
+
+
+#df[, lapply(.SD, function(v) { 
+#  len <- length(v)
+#  if((sum(v==0)/len)>0.5) rep(0L,len) else v
+#}), by="Group", .SDcols=c("r1","r2","r3")]
+
+
+########################################
+###### Multivariate data analysis ######
+########################################
+
+#heatmap.2(as.matrix(mz_grp_cv),dendrogram="column",trace="none",mar=c(10,10),Rowv=FALSE,labRow= NULL, ylab=NULL)
+
+########ttest
 
 ## ttest between columns 
 
@@ -250,7 +359,6 @@ adply(combos, 2, function(x) {
 #pairwise_ttest_strains<-pairwise.t.test(t(ms_data_test),StrainName_test,p.adj="BH", paired=F, var.equal=T)
 #pairwise.wilcox.test(t(ms_data_test),p.adj="BH", paired=F, var.equal=T)
 
-
 ## ttest on rows
 t.list <- apply(ms_data,1,function(x){t.test(x[1:6],x[61:66],paired=TRUE,var.equal=F,p.adjust=BH)$p.value}) 
 a.list <- apply(ms_data,1,function(x){wilcox.test(x[1:42],x[43:84],paired=TRUE,var.equal=F,p.adj=BH,exact=F)$p.value})
@@ -264,7 +372,6 @@ fc_val<-apply(ttest.table,1,function(x){foldchange(mean(x[1:42]),mean(x[43:84]))
 fc_sig<- which(fc_val>10);
 
 fc.metab.sig<-names(fc_sig)
-
 significant.metab <- cbind(ms_data[fc.metab.sig,],fc_val[fc_sig])
 
 write.table(significant.metab,"comparison_highVslow_DAY12.txt",sep='\t',col.names=NA,quote=FALSE)
@@ -274,57 +381,23 @@ write.table(significant.metab,"comparison_highVslow_DAY12.txt",sep='\t',col.name
 write.table(pairwise_ttest_strains$p.value,"paiwise_day4.txt",sep='\t',col.names=NA,quote=FALSE)
 day4_strains<-read.table("paiwise_day4.txt",sep='\t',header=TRUE,row.names=1)
 
-apply(d, 2, function(d) {t.test(x = d[,1], y = d[,2])$p.value})
-
-##########################
-# Histogram of mz and rt #
-##########################
-
-mz_list<-ms_data_total$mz
-rt_list<-ms_data_total$rt
-
-png("algae_417reps_retcor_MPP_sorted.png")
-plot(ms_data_total$"Retention Time",ms_data_total$Mass,pch=1,main="algae_417reps_retcor_MPP_sorted",ylab="m/z",xlab="rt")
-dev.off()
-############## various plotting functions
-
-##Plotting TIC's
-
-#combined
-
-getTICs(files=mzxmlfiles,pdfname=paste("xcms_agilent_TIC_algae_15th.pdf", sep = ""),rt="raw")
-
-#ws
-
-ws_mzxmlfiles<-mzxmlfiles[grep('WS',mzxmlfiles)] 
-getTICs(files=ws_mzxmlfiles,pdfname=paste("xcms_agilent_TIC_WS_140513.pdf", sep = ""),rt="raw")
-
-#tt8
-tt8_mzxmlfiles<-mzxmlfiles[-grep('WS',mzxmlfiles)] 
-getTICs(files=tt8_mzxmlfiles,pdfname=paste("xcms_agilent_TIC_TT8_140513.pdf", sep = ""),rt="raw")
-
-######### ggplot ########
-
-ggplot(ms_data_nd_new, aes_string(x=rt,y=n)) + geom_line(aes(colour = series)) + facet_grid(series ~ .)+theme(axis.ticks = element_blank(), axis.text.y = element_blank())
-lapply(list("00111","12922"), function(i) ggplot(i,aes(x=rt,value))+geom_point())
-log_blanks<-log1p(blanks)
-log_blanks$rt<-ms_data_total[,5]
-log_blanks<- melt(log_blanks,  id = 'rt', variable_name = 'series')
-ggplot(log_blanks, aes(x=rt,value)) + geom_line(aes(colour = series)) +geom_rug(sides="b")
+#apply(d, 2, function(d) {t.test(x = d[,1], y = d[,2])$p.value})
 
 ########## Clustering ######
 
-d <- dist(t(mz_grp_cv[3:54]), method = "euclidean") # distance matrix
+d <- dist(t(new_ms_data1), method = "euclidean") # distance matrix
 fit <- hclust(d, method="average") 
 #pdf('hclust.pdf',width=800)
+png('hclust_reps_zeroCor.png',width=8000)
 plot (fit)
-#dev.off()
+dev.off()
 
 clusDendro<-as.dendrogram(fit,hang=2)
-labelColors<-c("red","blue")
-clusMember<-rep(1,length(names(ms_data)))
-clusMember[grep("D12",names(ms_data))]<-2
-names(clusMember)<-names(ms_data)
+labelColors<-c("black","red","blue")
+clusMember<-rep(1,length(names(new_ms_data1)))
+clusMember[grep("D12",names(new_ms_data1))]<-2
+clusMember[grep("D4",names(new_ms_data1))]<-3
+names(clusMember)<-names(new_ms_data1)
 
 colLab <- function(n)
 {
@@ -339,19 +412,23 @@ colLab <- function(n)
 }
 
 clusDendro<-dendrapply(clusDendro, colLab)
-plot(clusDendro,hang=0)
 
+png('hclust_reps_blanks_matrix_rem5rep.png',width=8000,height=1200)
+plot(clusDendro)
+dev.off()
+  
 #### PCOA
 
-bray_grps.D <- vegdist(t(log1p(ms_data)), "bray")#calculating distance matrix using bray curtis
+bray_grps.D <- vegdist(t(new_ms_data1[,25:281]), "bray")#calculating distance matrix using bray curtis
 res_grps <- pcoa(bray_grps.D)
 res_grps$values
 pdf(file="PCOA_samples.pdf")
 biplot(res_grps)
 dev.off()
 
-pdf(file="PCOA_ordplot.pdf",width=12, heigh=12, paper="a4r")
-pc<-cmdscale(bray_grps.D, k=10, eig=TRUE, add=TRUE, x.ret =TRUE)   
+pdf(file="PCOA_ordplot_zeroCor_rem5rep.pdf",width=12, height=12, paper="a4r")
+pc<-cmdscale(bray_grps.D, k=10, eig=TRUE, add=TRUE, x.ret =TRUE) 
+#PCoA.res<-capscale(bray_grps.D~1,distance="bray") 
 #Create ordination plot     
 fig<-ordiplot(scores(pc)[,c(1,2)], type="t", main="PCoA Samples",cex=0.5)
 dev.off()
@@ -364,14 +441,14 @@ legend("bottomleft", legend = c("Day4","Day12"), pch = 1:2,col = c("blue","red")
 
 #### PCA
 
-fit <- princomp(log1p(ms_data), cor=TRUE)
+fit <- princomp(new_ms_data, scale=TRUE)
 summary(fit) # print variance accounted for 
 loadings(fit) # pc loadings 
-plot(fit,type="lines") # scree plot 
+screeplot(fit,type="lines") # scree plot 
 fit$scores # the principal components
 biplot(fit)
 
-fit <- prcomp(t(log1p(ms_data)))
+fit <- prcomp(new_ms_data,scale=TRUE)
 mycolors <- c("red", "green", "blue", "magenta", "black")
 plot(fit$x, type="n"); text(fit$x, rownames(fit$x), cex=0.5)
 
@@ -391,6 +468,50 @@ ms.1nn_str<-define.1nn.graph(ms.d_str)
 pdf(file="NN_graph_strains.pdf",paper="a4r")
 plot(define.1nn.graph(ms.d_str),layout=layout.fruchterman.reingold,vertex.label=V(ms.1nn_str)$name,vertex.label.cex=0.8,main="Strains")
 dev.off()
+
+
+################PERMANOVA
+
+#ms_data_total$DayStrain<-paste0(ms_data_total$Day,ms_data_total$Strain)
+a<-adonis(t(log(ms_data+1)) ~ GrowthStage*StrainId+RunDay, strata=StrainId  , data=ms_data,method = "bray", perm=999)
+b1<-metaMDS(log(ms_data+1),k=2)
+
+plot(b)
+ordiplot(b,type="n")
+orditorp(b,display="species",col="red",air=0.01)
+orditorp(b,display="sites",cex=0.01,air=0.01)
+
+distance<-vegdist(log(t(ms_data+1)), method="bray")
+model1<-betadisper(distance, SampleGroup)
+permute_data<-permutest(model1, pairwise = TRUE,permutations=999)
+posthoc_test<-TukeyHSD(model1)
+
+write.table(permute_data$pairwise,"permute_data_day12",quote=F)
+write.table(posthoc_test$group,"posthoc_test_day12",quote=F)
+
+###############Plotting TIC's
+
+#combined
+
+getTICs(files=mzxmlfiles,pdfname=paste("xcms_agilent_TIC_algae_15th.pdf", sep = ""),rt="raw")
+
+#ws
+
+mzxmlfiles1<-mzxmlfiles[1:6] 
+getTICs(files=mzxmlfiles1,pdfname=paste("15th_ACN_Blank.pdf", sep = ""),rt="raw")
+
+#tt8
+tt8_mzxmlfiles<-mzxmlfiles[-grep('WS',mzxmlfiles)] 
+getTICs(files=tt8_mzxmlfiles,pdfname=paste("xcms_agilent_TIC_TT8_140513.pdf", sep = ""),rt="raw")
+
+######### ggplot ########
+
+ggplot(ms_data_nd_new, aes_string(x=rt,y=n)) + geom_line(aes(colour = series)) + facet_grid(series ~ .)+theme(axis.ticks = element_blank(), axis.text.y = element_blank())
+lapply(list("00111","12922"), function(i) ggplot(i,aes(x=rt,value))+geom_point())
+log_blanks<-log1p(blanks)
+log_blanks$rt<-ms_data_total[,5]
+log_blanks<- melt(log_blanks,  id = 'rt', variable_name = 'series')
+ggplot(log_blanks, aes(x=rt,value)) + geom_line(aes(colour = series)) +geom_rug(sides="b")
 
 ######### TIC overlays #############################################
 
