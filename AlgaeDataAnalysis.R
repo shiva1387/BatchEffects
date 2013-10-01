@@ -145,7 +145,7 @@ boxplot(log(ms_data_grp1),range=0,ylab="Log2 feature counts",las=2,cex.axis=1)
 if(ncol(ms_data_grp1)==6)
 {
 text(3.5, 10,font=3, paste("cv:", round(cv(ms_data_grp1[,1]), 2), "   cv:", round(cv(ms_data_grp1[,2]), 2),"   cv:", round(cv(ms_data_grp1[,3]), 2),
-                  "   cv:", round(cv(ms_data_grp1[,4]), 2),"   cv:", round(cv(ms_data_grp1[,5]), 2),"   cv:", round(cv(ms_data_grp1[,6]), 2)
+                  "   cv:", round(cv(ms_data_grp1[,4]), 2),"R","1234","   cv:", round(cv(ms_data_grp1[,5]), 2),"   cv:", round(cv(ms_data_grp1[,6]), 2)
                   ),cex=1)
 }
 else if(ncol(ms_data_grp1)==4)
@@ -175,7 +175,7 @@ png("cv_samples.png",width=4000)
 plot(1:ncol(ms_data),apply(ms_data,2,cv)) # For each column 
 dev.off()
 
-# for each feature in each sample group
+# cv for each feature in each sample group
 
 ms_data_tst<-data.table(t(log(ms_data)))
 ms_data_tst1<-cbind(ms_data_tst,as.factor(SampleGroup))
@@ -419,7 +419,7 @@ dev.off()
   
 #### PCOA
 
-bray_grps.D <- vegdist(t(new_ms_data1[,25:281]), "bray")#calculating distance matrix using bray curtis
+bray_grps.D <- vegdist(t(log(ms_data)), "bray") #calculating distance matrix using bray curtis
 res_grps <- pcoa(bray_grps.D)
 res_grps$values
 pdf(file="PCOA_samples.pdf")
@@ -438,7 +438,18 @@ ordiplot (scores(pc)[,c(1,2)], display = 'sp', type = 'n',main="PCoA Samples", c
 points(scores(pc)[,c(1,2)], col = clusMember , pch = clusMember )
 legend("bottomleft", legend = c("Day4","Day12"), pch = 1:2,col = c("blue","red"))
 
+# Correlation between PCOA-axis1 and number of zeroes in each column 
+# Testing the influence of number of zeroes on seapration of samples
 
+pcoa_scores<-scores(pc)[,c(1)]
+
+zero_count_column<-function(x){ d=as.vector(x); sum(d == 1) }
+zeroes_in_column<-lapply(ms_data,zero_count_column) 
+zeroes_in_column1<-as.integer(zeroes_in_column)
+
+cor_zero_pcoa<-cor(pcoa_scores,zeroes_in_column1, use="all.obs", method="pearson")  
+#-0.990737
+                       
 #### PCA
 
 fit <- princomp(new_ms_data, scale=TRUE)
