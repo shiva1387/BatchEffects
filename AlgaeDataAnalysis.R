@@ -2,12 +2,45 @@
 # Data Analysis in R-Malaysian algae data #
 ###########################################
 # Author(s): Shiv
-# Version: 28092013 
+# Version: 06102013 
 # Input: ".tsv" file from XCMS 
 # Software: XCMS
-# File Location :
-# Output: 
 # Modified By :Shivshankar Umashankar 
+
+##############################################
+# Data,software used for obaining input data #
+##############################################
+# The files, algae_417reps_sorted.txt,Algae_22strains_indreps_blanks_matrix.tsv,algae_4setblanks_060913.tsv are the same.
+# 
+# algae_417reps_sorted.txt and algae_4setblanks_060913 are the same,the difference is in algae_417reps_sorted.txt, 
+# the columns are sorted based on column names
+# 
+# The difference between Algae_22strains_indreps_blanks_matrix and the other 2 files is, 
+# Algae_22strains_indreps_blanks_matrix contains only the 22 strains + blanks and matrix. 
+# It does not contain any duplicate columns.
+# 
+# After numberous xcms parameter optimization, the below parameters provided the best resolution and features. 
+# This was determined by looking at the mz/rt list for the blanks and sample strain and comparing the counts/TIC with the raw
+# MS file using Mass Hunter(Agilent software to display raw data from the instrument). 
+# Features were checked to see if they were real or noise picked up by XCMS.
+# The known features were checked for accuracy in peak characteristics such as peak width, retention time.
+# This files were processed using the R code below.
+# 
+# MZXML File location: smbl.nus.edu.sg/data/metagenome_data/Desktop/Shiv_algae/Algae/MZXML/algae_all
+# 
+# #The version used was R version 3.0.1 (2013-05-16) -- "Good Sport" and xcms_1.36.0
+# 
+#### R code for XCMS ##########
+# library(xcms)
+# 
+# set1<-xcmsSet(nSlaves=44,method='centWave',ppm=30,peakwidth=c(5,60), prefilter=c(0,0),snthresh=6) 
+# set2 <- group(set1,bw=5,mzwid=0.015,minsamp=1,minfrac=0) 
+# set3 <- retcor(set2,method="obiwarp",plottype="none")
+# set4 <- group(set3,bw=5,mzwid=0.015,minsamp=1,minfrac=0)
+# set5 <- fillPeaks(set4) 
+# peaklist<-peakTable(set5,filebase="algae_4setblanks_060913")
+##############################
+
 
 #############
 # Clear all #
@@ -32,7 +65,8 @@ library(gplots)
 # Variables #
 #############
 
-directory<- "F:/Vinay's Algae Data/Aug2013/RawData/MZXML/15th MZxml"
+
+directory<- "F:/Vinay's Algae Data/Aug2013/Data"
 #Contains path for .tsv file
 # The "PATH", Remember to use "/" and not "/" in the path
 
@@ -68,19 +102,15 @@ rm(a,b,c)
 #ms_data_total_strains<-ms_data_total[, -grep('ACN', names(ms_data_total))] #removing blanks
 #ms_data_total_strains<-ms_data_total_strains[, -grep('matri_', names(ms_data_total_strains))] #removing matrix
 
-metadata<-read.table("Algae_22strains_indreps_blanks_matrix_metadata.txt",check.names=FALSE,sep="\t")
-
-#ms_data<-ms_data_total_strains[,1:262]
-#a<-names(ms_data_total_strains)
+metadata<-read.table("Algae_indreps_22strains_blanks_matrix_metadata.txt",header=TRUE,row.name=1,sep="\t")
+metadata<-as.data.frame(metadata)
+metadata<-t(metadata)
+RunDay<-metadata[3,]
+GrowthStage<-metadata[1,]
 
 # Assigning sample groups
 
-a<-names(ms_data_total)
-#strsplit(a[3],"_")
-#gsub("^([^_]*_[^_]*)_.*$", "\\1", a[3])
-#b<-paste(strsplit(a,"_")[[1]][1:2],collapse = "_")
-
-SampleGroups<-sapply(a, function(x) paste(strsplit(x,"_")[[1]][1:2],collapse = "_"))
+SampleGroups<-sapply(names(ms_data_total), function(x) paste(strsplit(x,"_")[[1]][1:2],collapse = "_"))
 SampleGroups<-as.vector(SampleGroups)
 
 SampleGroups<-gsub('b1','',SampleGroups)
@@ -97,12 +127,13 @@ SampleGroups<-gsub('b3','',SampleGroups)
 ms_data<-ms_data_total[,1:311]
 names(ms_data)
 dim(ms_data)
+SampleGroup<-SampleGroups[1:311]
+
 #ms_data<-log(ms_data)
 
 #ms_data_day4<-ms_data[, grep('D4', names(ms_data))] 
 #ms_data_day12<-ms_data[, grep('D12', names(ms_data))] 
 
-SampleGroup<-SampleGroups[1:311]
 
 #name_list <- strsplit(SampleGroup, "_")
 #GrowthStage<-sapply(name_list , function (x) if(length(x) == 2) x[1] else as.character(NA))
@@ -129,43 +160,132 @@ dev.off()
 ### Measure of variation ########
 
 png('boxplot.png',width=8000)
-boxplot(log(ms_data[227:232]),range=0,xlab="Samples",ylab="Log2 feature counts",las=1,cex.axis=0.7)
+boxplot(log(ms_data),range=0,xlab="Samples",ylab="Log2 feature counts",las=1,cex.axis=0.7)
 dev.off()
+
+## Counting zeros in each column
+
+zero_count_column<-function(x){ d=as.vector(x); sum(d == 1) }# here zero is given as 1
+zeroes_in_column<-lapply(ms_data,zero_count_column) 
+zeroes_in_column<-as.numeric(zeroes_in_column)
 
 ## Generating boxplot and cv for each sample group
 
 groups<-unique(SampleGroup)
+no<-1
+
+no_of_features<-as.integer(nrow(ms_data_total))
 
 for(i in 1:length(groups))
 {
-png(paste(groups[i],".png"),width=500,height=500)
+png(paste(groups[i],".png"),width=2000,height=800)
 ms_data_grp1<-ms_data[, grep(groups[i], names(ms_data))]
-par(mar=c(10,2,2,2))
-boxplot(log(ms_data_grp1),range=0,ylab="Log2 feature counts",las=2,cex.axis=1)
+par(mar=c(10,2,4,2),mfrow=c(1,2))
+ms_data_grp1<-log(ms_data_grp1)
+boxplot(ms_data_grp1,range=0,ylab="Log2 feature counts", main=paste0(groups[i],"\n","For each col:cv,no of zeroes"),xaxt="n",las=1)
 if(ncol(ms_data_grp1)==6)
 {
-text(3.5, 10,font=3, paste("cv:", round(cv(ms_data_grp1[,1]), 2), "   cv:", round(cv(ms_data_grp1[,2]), 2),"   cv:", round(cv(ms_data_grp1[,3]), 2),
-                  "   cv:", round(cv(ms_data_grp1[,4]), 2),"R","1234","   cv:", round(cv(ms_data_grp1[,5]), 2),"   cv:", round(cv(ms_data_grp1[,6]), 2)
-                  ),cex=1)
+  axis(side=1,cex.axis=1,at=seq(1,6,1),as.character(c(paste0(names(ms_data_grp1[1]),"\n",round(cv(ms_data_grp1[,1]), 2),",",zeroes_in_column[no]),paste0(names(ms_data_grp1[2]),"\n",round(cv(ms_data_grp1[,2]), 2),",",zeroes_in_column[no+1]),
+                                           paste0(names(ms_data_grp1[3]),"\n",round(cv(ms_data_grp1[,3]), 2),",",zeroes_in_column[no+2]),paste0(names(ms_data_grp1[4]),"\n",round(cv(ms_data_grp1[,4]), 2),",",zeroes_in_column[no+3]),
+                                           paste0(names(ms_data_grp1[5]),"\n",round(cv(ms_data_grp1[,5]), 2),",",zeroes_in_column[no+4]),paste0(names(ms_data_grp1[6]),"\n",round(cv(ms_data_grp1[,6]), 2),",",zeroes_in_column[no+5])   
+  )))
+
+ ### Plotting colored bar charts explaining % of values in each col
+  
+  c = c(((no_of_features-zeroes_in_column[no])/no_of_features)*100,(zeroes_in_column[no]/no_of_features)*100,((no_of_features-zeroes_in_column[no+1])/no_of_features)*100,(zeroes_in_column[no+1]/no_of_features)*100,
+        ((no_of_features-zeroes_in_column[no+2])/no_of_features)*100,(zeroes_in_column[no+2]/no_of_features)*100,((no_of_features-zeroes_in_column[no+3])/no_of_features)*100,(zeroes_in_column[no+3]/no_of_features)*100,
+        ((no_of_features-zeroes_in_column[no+4])/no_of_features)*100,(zeroes_in_column[no+4]/no_of_features)*100,((no_of_features-zeroes_in_column[no+5])/no_of_features)*100,(zeroes_in_column[no+5]/no_of_features)*100)
+  a = c("Present","Zero","Present","Zero","Present","Zero","Present","Zero","Present","Zero","Present","Zero")
+  b = c(names(ms_data_grp1[1]),names(ms_data_grp1[1]),names(ms_data_grp1[2]),names(ms_data_grp1[2]),names(ms_data_grp1[3]),names(ms_data_grp1[3]),
+        names(ms_data_grp1[4]),names(ms_data_grp1[4]),names(ms_data_grp1[5]),names(ms_data_grp1[5]),names(ms_data_grp1[6]),names(ms_data_grp1[6]))
+  
+  dat = data.frame(Group=a, Member=b, Percentage=c)
+  
+  ## the last one is the current plot
+  plot.new()              ## suggested by @Josh
+  vps <- baseViewports()
+  pushViewport(vps$figure) ##   I am in the space of the autocorrelation plot
+  vp1 <-plotViewport(c(1,1,0,1)) ## create new vp with margins, you play with this values 
+  require(ggplot2)
+  
+  p <-  ggplot(dat, aes(x = factor(Member),  y = Percentage, fill=Group))+ xlab("Replicates") + geom_bar(stat = "identity")+ labs(title= "Features Pres Vs Abs\n")+
+    ## some setting in the title to get something near to the other plots
+    theme(plot.title = element_text(size = rel(2),face ='bold'),axis.text.x = element_text(size=15))+scale_fill_manual(values = c('red','green'))
+  print(p,vp = vp1)        ## suggested by @bpatiste
+  
+  no<-no+6
+  
 }
 else if(ncol(ms_data_grp1)==4)
 {
-  text(3.5, 10,font=3, paste("cv:", round(cv(ms_data_grp1[,1]), 2), "   cv:", round(cv(ms_data_grp1[,2]), 2),"   cv:", round(cv(ms_data_grp1[,3]), 2),
-                             "   cv:", round(cv(ms_data_grp1[,4]), 2)
-  ),cex=1)
+  axis(side=1,at=seq(1,4,1),as.character(c(paste0(names(ms_data_grp1[1]),"\n",round(cv(ms_data_grp1[,1]), 2),",",zeroes_in_column[no]),paste0(names(ms_data_grp1[2]),"\n",round(cv(ms_data_grp1[,2]), 2),",",zeroes_in_column[no+1]),
+                                           paste0(names(ms_data_grp1[3]),"\n",round(cv(ms_data_grp1[,3]), 2),",",zeroes_in_column[no+2]),paste0(names(ms_data_grp1[4]),"\n",round(cv(ms_data_grp1[,4]), 2),",",zeroes_in_column[no+3])   
+  )))
+ 
+  ### Plotting colored bar charts explaining % of values in each col
+  
+  c = c(((no_of_features-zeroes_in_column[no])/no_of_features)*100,(zeroes_in_column[no]/no_of_features)*100,((no_of_features-zeroes_in_column[no+1])/no_of_features)*100,(zeroes_in_column[no+1]/no_of_features)*100,
+        ((no_of_features-zeroes_in_column[no+2])/no_of_features)*100,(zeroes_in_column[no+2]/no_of_features)*100,((no_of_features-zeroes_in_column[no+3])/no_of_features)*100,(zeroes_in_column[no+3]/no_of_features)*100)
+  a = c("Present","Zero","Present","Zero","Present","Zero","Present","Zero")
+  b = c(names(ms_data_grp1[1]),names(ms_data_grp1[1]),names(ms_data_grp1[2]),names(ms_data_grp1[2]),
+        names(ms_data_grp1[3]),names(ms_data_grp1[3]),names(ms_data_grp1[4]),names(ms_data_grp1[4]))
+  
+  dat = data.frame(Group=a, Member=b, Percentage=c)
+  
+  ## the last one is the current plot
+  plot.new()              ## suggested by @Josh
+  vps <- baseViewports()
+  pushViewport(vps$figure) ##   I am in the space of the autocorrelation plot
+  vp1 <-plotViewport(c(1,1,0,1)) ## create new vp with margins, you play with this values 
+  require(ggplot2)
+  
+  p <-  ggplot(dat, aes(x = factor(Member),  y = Percentage, fill=Group))+ xlab("Replicates") + geom_bar(stat = "identity")+ labs(title= "Features Pres Vs Abs\n")+
+    ## some setting in the title to get something near to the other plots
+    theme(plot.title = element_text(size = rel(1.4),face ='bold'),axis.text.x = element_text(size=15))+scale_fill_manual(values = c('red','green'))
+  print(p,vp = vp1)        ## suggested by @bpatiste
+  
+  no<-no+4
+  
 }
 else if(ncol(ms_data_grp1)==7)
 {
-  text(3.5, 10,font=3, paste("cv:", round(cv(ms_data_grp1[,1]), 2), "   cv:", round(cv(ms_data_grp1[,2]), 2),"   cv:", round(cv(ms_data_grp1[,3]), 2),
-                             "   cv:", round(cv(ms_data_grp1[,4]), 2),"   cv:", round(cv(ms_data_grp1[,5]), 2),"   cv:", round(cv(ms_data_grp1[,6]), 2),
-                             "   cv:", round(cv(ms_data_grp1[,7]), 2)
-  ),cex=1)
+  axis(side=1,at=seq(1,7,1),as.character(c(paste0(names(ms_data_grp1[1]),"\n",round(cv(ms_data_grp1[,1]), 2),",",zeroes_in_column[no]),paste0(names(ms_data_grp1[2]),"\n",round(cv(ms_data_grp1[,2]), 2),",",zeroes_in_column[no+1]),
+                                           paste0(names(ms_data_grp1[3]),"\n",round(cv(ms_data_grp1[,3]), 2),",",zeroes_in_column[no+2]),paste0(names(ms_data_grp1[4]),"\n",round(cv(ms_data_grp1[,4]), 2),",",zeroes_in_column[no+3]),
+                                           paste0(names(ms_data_grp1[5]),"\n",round(cv(ms_data_grp1[,5]), 2),",",zeroes_in_column[no+4]),paste0(names(ms_data_grp1[6]),"\n",round(cv(ms_data_grp1[,6]), 2),",",zeroes_in_column[no+5]),
+                                           paste0(names(ms_data_grp1[7]),"\n",round(cv(ms_data_grp1[,7]), 2),",",zeroes_in_column[no+6])
+  )))
+  
+  ### Plotting colored bar charts explaining % of values in each col
+  
+  c = c(((no_of_features-zeroes_in_column[no])/no_of_features)*100,(zeroes_in_column[no]/no_of_features)*100,((no_of_features-zeroes_in_column[no+1])/no_of_features)*100,(zeroes_in_column[no+1]/no_of_features)*100,
+        ((no_of_features-zeroes_in_column[no+2])/no_of_features)*100,(zeroes_in_column[no+2]/no_of_features)*100,((no_of_features-zeroes_in_column[no+3])/no_of_features)*100,(zeroes_in_column[no+3]/no_of_features)*100,
+        ((no_of_features-zeroes_in_column[no+4])/no_of_features)*100,(zeroes_in_column[no+4]/no_of_features)*100,((no_of_features-zeroes_in_column[no+5])/no_of_features)*100,(zeroes_in_column[no+5]/no_of_features)*100,
+        ((no_of_features-zeroes_in_column[no+5])/no_of_features)*100,(zeroes_in_column[no+5]/no_of_features)*100)
+  a = c("Present","Zero","Present","Zero","Present","Zero","Present","Zero","Present","Zero","Present","Zero","Present","Zero")
+  b = c(names(ms_data_grp1[1]),names(ms_data_grp1[1]),names(ms_data_grp1[2]),names(ms_data_grp1[2]),names(ms_data_grp1[3]),names(ms_data_grp1[3]),
+        names(ms_data_grp1[4]),names(ms_data_grp1[4]),names(ms_data_grp1[5]),names(ms_data_grp1[5]),names(ms_data_grp1[6]),names(ms_data_grp1[6]),
+        names(ms_data_grp1[7]),names(ms_data_grp1[7]))
+  
+  dat = data.frame(Group=a, Member=b, Percentage=c)
+  
+  ## the last one is the current plot
+  plot.new()              ## suggested by @Josh
+  vps <- baseViewports()
+  pushViewport(vps$figure) ##   I am in the space of the autocorrelation plot
+  vp1 <-plotViewport(c(1,1,0,1)) ## create new vp with margins, you play with this values 
+  require(ggplot2)
+  
+  p <-  ggplot(dat, aes(x = factor(Member),  y = Percentage, fill=Group))+ xlab("Replicates") + geom_bar(stat = "identity")+ labs(title= "Features Pres Vs Abs\n")+
+    ## some setting in the title to get something near to the other plots
+    theme(plot.title = element_text(size = rel(1.4),face ='bold'),axis.text.x = element_text(size=15))+scale_fill_manual(values = c('red','green'))
+  print(p,vp = vp1)        ## suggested by @bpatiste
+  
+  no<-no+7
 }
 dev.off()
 graphics.off()
-font=1
 }
-
+rm(no)
 #plot(t(log1p(ms_data))~SampleGroup,range=0,xlab="Samples",ylab="Log2 feature counts",las=1,col=SampleGroup)
 
 # plotting coefficient of variations among samples(cols)
@@ -178,11 +298,11 @@ dev.off()
 # cv for each feature in each sample group
 
 ms_data_tst<-data.table(t(log(ms_data)))
-ms_data_tst1<-cbind(ms_data_tst,as.factor(SampleGroup))
-lapply(ms_data_tst1,class) #checking col classes
+ms_data_tst<-cbind(ms_data_tst,as.factor(SampleGroup))
+lapply(ms_data_tst,class) #checking col classes
 cv1 <- function(x) (sd(x)/mean(x)) * 100
 
-cv_mz_feature2<-t(ms_data_tst1[,lapply(.SD,cv1),by=V2])
+cv_mz_feature2<-t(ms_data_tst[,lapply(.SD,cv1),by=V2])
 #lapply(cv_mz_feature,class)
 cv_mz_feature<-as.data.frame(cv_mz_feature2[2:nrow(cv_mz_feature2),])
 #cv_mz_feature<-as.data.frame(lapply(cv_mz_feature,as.numeric))
@@ -255,7 +375,7 @@ dev.off()
 ### Counting number of zeroes for each m/z feature in each group
 
 zero_count<-function(x) sum(x == 0) 
-zero_mz_feature2<-t(ms_data_tst1[,lapply(.SD,zero_count),by=V2])
+zero_mz_feature2<-t(ms_data_tst[,lapply(.SD,zero_count),by=V2])
 zero_mz_feature<-as.data.frame(zero_mz_feature2[2:nrow(zero_mz_feature2),])
 colnames(zero_mz_feature)<-unique(SampleGroup)
 
@@ -313,14 +433,25 @@ new_ms_data<-ms_data_tst1[, lapply(.SD, function(v) {
 rownames(new_ms_data)<-colnames(ms_data)
 new_ms_data<-as.data.frame(t(new_ms_data))
 
-###### removing replicates(samples with large variance) from the dataset
+###### Data: inclusion and exclusion, removing replicates(samples with large variance) from the dataset 
 
 rem <- c('D4_094_b1_r002','D4_104_b3_r002','D4_245b1_r001','D4_254b1_r001','D4_325_b1_r002')
 
-new_ms_data1<-new_ms_data[, !names(new_ms_data) %in% rem]
+ms_data_rem<-ms_data[, !names(ms_data) %in% rem]
+names(ms_data_rem[25:281])
 
-names(new_ms_data1)
+metadata_rem<-metadata[, !colnames(metadata) %in% rem]
+RunDay_rem<-metadata_rem[3,]
+GrowthStage_rem<-metadata_rem[1,]
+RunDay_rem<-as.vector(RunDay_rem)
+GrowthStage_rem<-as.vector(GrowthStage_rem)
 
+GrowthStage_rem<-gsub('D4', 1, GrowthStage_rem)
+GrowthStage_rem<-gsub('D12', 2, GrowthStage_rem)
+
+z1<-t(zeroes_in_column)
+colnames(z1)<-colnames(ms_data)
+zeroes_in_column_rem<-z1[, !colnames(z1) %in% rem]
 
 
 #df[, lapply(.SD, function(v) { 
@@ -438,18 +569,89 @@ ordiplot (scores(pc)[,c(1,2)], display = 'sp', type = 'n',main="PCoA Samples", c
 points(scores(pc)[,c(1,2)], col = clusMember , pch = clusMember )
 legend("bottomleft", legend = c("Day4","Day12"), pch = 1:2,col = c("blue","red"))
 
-# Correlation between PCOA-axis1 and number of zeroes in each column 
-# Testing the influence of number of zeroes on seapration of samples
 
-pcoa_scores<-scores(pc)[,c(1)]
+# Correlation between PCOA-axis1 and number of zeroes in each column(sample)
+# Testing the influence of number of zeroes on separation of samples
 
-zero_count_column<-function(x){ d=as.vector(x); sum(d == 1) }
-zeroes_in_column<-lapply(ms_data,zero_count_column) 
-zeroes_in_column1<-as.integer(zeroes_in_column)
+pcoa_scores_axis1<-scores(pc)[,c(1)]
+cor_zero_pcoa1<-cor.test(pcoa_scores_axis1,zeroes_in_column, use="all.obs", method="kendall")  
+#(for complete dataset, including blanks)
+# Pearson's product-moment correlation
+# data:  pcoa_scores_axis1 and zeroes_in_column
+# t = -123.828, df = 309, p-value < 2.2e-16
+# alternative hypothesis: true correlation is not equal to 0
+# 95 percent confidence interval:
+# -0.9920528 -0.9876049
+# sample estimates:
+# cor 
+# -0.9900737 
+# Kendall's rank correlation tau 
+# -0.8620787
 
-cor_zero_pcoa<-cor(pcoa_scores,zeroes_in_column1, use="all.obs", method="pearson")  
-#-0.990737
-                       
+cor_zero_pcoa1<-cor.test(pcoa_scores_axis1,zeroes_in_column[25:286], use="all.obs", method="kendall")  
+#(without blanks,matrix)
+# Pearson's product-moment correlation
+# data:  pcoa_scores_axis1 and zeroes_in_column[25:286]
+# t = 40.629, df = 260, p-value < 2.2e-16
+# alternative hypothesis: true correlation is not equal to 0
+# 95 percent confidence interval:
+#   0.9108919 0.9442969
+# sample estimates:
+#   cor 
+# 0.9294758 
+# Kendall's rank correlation tau 
+# 0.7178032
+
+cor_zero_pcoa1<-cor.test(pcoa_scores_axis1,zeroes_in_column_rem[25:281], use="all.obs", method="pearson") 
+#(without blanks,matrix and 5 bioreps)
+# Pearson's product-moment correlation
+# data:  pcoa_scores_axis1 and as.numeric(as.character(zeroes_in_column_v1[25:281]))
+# t = 27.7962, df = 255, p-value < 2.2e-16
+# alternative hypothesis: true correlation is not equal to 0
+# 95 percent confidence interval:
+# 0.8331291 0.8945476
+# sample estimates:
+# cor 
+# 0.8670966 
+# Kendall's rank correlation tau 
+# 0.592765
+
+# Correlation PCOA-axis2 and RunDay of each column(sample)
+# Testing the influence of runday on separation of samples
+
+pcoa_scores_axis2<-scores(pc)[,c(2)]
+cor_runday_pcoa2<-cor.test(pcoa_scores_axis2,as.numeric(RunDay_rem[25:281]), use="all.obs", method="kendall")                
+#(without blanks,matrix and 5 bioreps)
+# Pearson's product-moment correlation
+#data:  pcoa_scores_axis2 and as.numeric(RunDay_rem[25:281])
+# t = 23.5807, df = 255, p-value < 2.2e-16
+# alternative hypothesis: true correlation is not equal to 0
+# 95 percent confidence interval:
+#   0.7851964 0.8629379
+# sample estimates:
+#   cor 
+# 0.8280054
+# Kendall's rank correlation tau 
+# 0.6448284
+
+# Correlation PCOA-axis2 and GrowthStage of each column(sample)
+# Testing the influence of GrowthStage on separation of samples
+
+pcoa_scores_axis2<-scores(pc)[,c(2)]
+cor_runday_pcoa3<-cor.test(pcoa_scores_axis2,as.numeric(GrowthStage_rem[25:281]), use="all.obs", method="kendall") 
+#(without blanks,matrix and 5 bioreps)
+# Pearson's product-moment correlation
+# # data:  pcoa_scores_axis2 and as.numeric(GrowthStage_rem[25:281])
+# t = -15.5856, df = 255, p-value < 2.2e-16
+# alternative hypothesis: true correlation is not equal to 0
+# 95 percent confidence interval:
+# -0.7562032 -0.6299474
+# sample estimates:
+# cor 
+# -0.6984706 
+# Kendall's rank correlation tau 
+# -0.570355 
+
 #### PCA
 
 fit <- princomp(new_ms_data, scale=TRUE)
