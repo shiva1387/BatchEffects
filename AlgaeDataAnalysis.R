@@ -449,10 +449,26 @@ GrowthStage_rem<-as.vector(GrowthStage_rem)
 GrowthStage_rem<-gsub('D4', 1, GrowthStage_rem)
 GrowthStage_rem<-gsub('D12', 2, GrowthStage_rem)
 
+GrowthStage_strains<-GrowthStage[25:286]
+GrowthStage_strains<-gsub('D4', 1, GrowthStage_strains)
+GrowthStage_strains<-gsub('D12', 2, GrowthStage_strains)
+
+
+RunDay_strains<-as.numeric(RunDay[25:286])
+
 z1<-t(zeroes_in_column)
 colnames(z1)<-colnames(ms_data)
 zeroes_in_column_rem<-z1[, !colnames(z1) %in% rem]
 
+
+GrowthStage_day4<-GrowthStage[grep('D4', names(GrowthStage))]
+GrowthStage_day12<-GrowthStage[grep('D12', names(GrowthStage))] 
+
+RunDay_day4<-as.numeric(RunDay[grep('D4', names(RunDay))])
+RunDay_day12<-as.numeric(RunDay[grep('D12', names(RunDay))])
+
+zeroes_in_column_day4<-z1[grep('D4', colnames(z1))] 
+zeroes_in_column_day12<-z1[grep('D12', colnames(z1))] 
 
 #df[, lapply(.SD, function(v) { 
 #  len <- length(v)
@@ -550,31 +566,34 @@ dev.off()
   
 #### PCOA
 
-bray_grps.D <- vegdist(t(log(ms_data)), "bray") #calculating distance matrix using bray curtis
-res_grps <- pcoa(bray_grps.D)
-res_grps$values
-pdf(file="PCOA_samples.pdf")
-biplot(res_grps)
-dev.off()
-
-pdf(file="PCOA_ordplot_zeroCor_rem5rep.pdf",width=12, height=12, paper="a4r")
+bray_grps.D <- vegdist(t(log(ms_data_day12)), "bray") #calculating distance matrix using bray curtis
+# res_grps <- pcoa(bray_grps.D)
+# res_grps$values
 pc<-cmdscale(bray_grps.D, k=10, eig=TRUE, add=TRUE, x.ret =TRUE) 
 #PCoA.res<-capscale(bray_grps.D~1,distance="bray") 
-#Create ordination plot     
-fig<-ordiplot(scores(pc)[,c(1,2)], type="t", main="PCoA Samples",cex=0.5)
-dev.off()
+
+
+# pdf(file="PCOA_samples.pdf")
+# biplot(res_grps)
+# dev.off()
+
+# Create ordination plot
+# pdf(file="PCOA_ordplot_zeroCor_rem5rep.pdf",width=12, height=12, paper="a4r")
+# fig<-ordiplot(scores(pc)[,c(1,2)], type="t", main="PCoA Samples",cex=0.5)
+# dev.off()
 
 x11()
 ordiplot (scores(pc)[,c(1,2)], display = 'sp', type = 'n',main="PCoA Samples", cex=0.5)
 points(scores(pc)[,c(1,2)], col = clusMember , pch = clusMember )
 legend("bottomleft", legend = c("Day4","Day12"), pch = 1:2,col = c("blue","red"))
 
+#### Testing various correlations ########
 
 # Correlation between PCOA-axis1 and number of zeroes in each column(sample)
 # Testing the influence of number of zeroes on separation of samples
 
 pcoa_scores_axis1<-scores(pc)[,c(1)]
-cor_zero_pcoa1<-cor.test(pcoa_scores_axis1,zeroes_in_column, use="all.obs", method="kendall")  
+cor_zero_pcoa1<-cor.test(pcoa_scores_axis1,zeroes_in_column_day4, use="all.obs", method="kendall")  
 #(for complete dataset, including blanks)
 # Pearson's product-moment correlation
 # data:  pcoa_scores_axis1 and zeroes_in_column
@@ -616,6 +635,30 @@ cor_zero_pcoa1<-cor.test(pcoa_scores_axis1,zeroes_in_column_rem[25:281], use="al
 # Kendall's rank correlation tau 
 # 0.592765
 
+
+cor_zero_pcoa1<-cor.test(pcoa_scores_axis1,zeroes_in_column_day4, use="all.obs", method="kendall") 
+#for day 4 strains
+# Kendall's rank correlation tau
+# 
+# data:  pcoa_scores_axis1 and zeroes_in_column_day4
+# z = -12.7119, p-value < 2.2e-16
+# alternative hypothesis: true tau is not equal to 0
+# sample estimates:
+# tau 
+# -0.7477437 
+
+cor_zero_pcoa1<-cor.test(pcoa_scores_axis1,zeroes_in_column_day12, use="all.obs", method="kendall") 
+#for day 12 strains
+# Kendall's rank correlation tau
+# 
+# data:  pcoa_scores_axis1 and zeroes_in_column_day12
+# z = -12.0514, p-value < 2.2e-16
+# alternative hypothesis: true tau is not equal to 0
+# sample estimates:
+# tau 
+# -0.7145159 
+
+
 # Correlation PCOA-axis2 and RunDay of each column(sample)
 # Testing the influence of runday on separation of samples
 
@@ -634,6 +677,29 @@ cor_runday_pcoa2<-cor.test(pcoa_scores_axis2,as.numeric(RunDay_rem[25:281]), use
 # Kendall's rank correlation tau 
 # 0.6448284
 
+cor_runday_pcoa2<-cor.test(pcoa_scores_axis2,as.numeric(RunDay_day4), use="all.obs", method="kendall")
+#for day4 strains
+# Kendall's rank correlation tau
+# 
+# data:  pcoa_scores_axis2 and as.numeric(RunDay_day4)
+# z = 10.3382, p-value < 2.2e-16
+# alternative hypothesis: true tau is not equal to 0
+# sample estimates:
+# tau 
+# 0.7000252 
+
+cor_runday_pcoa2<-cor.test(pcoa_scores_axis2,as.numeric(RunDay_day12), use="all.obs", method="kendall")                
+#for day12 strains
+# Kendall's rank correlation tau
+# 
+# data:  pcoa_scores_axis2 and as.numeric(RunDay_day12)
+# z = -7.9067, p-value = 2.643e-15
+# alternative hypothesis: true tau is not equal to 0
+# sample estimates:
+# tau 
+# -0.5436908 
+
+
 # Correlation PCOA-axis2 and GrowthStage of each column(sample)
 # Testing the influence of GrowthStage on separation of samples
 
@@ -651,6 +717,65 @@ cor_runday_pcoa3<-cor.test(pcoa_scores_axis2,as.numeric(GrowthStage_rem[25:281])
 # -0.6984706 
 # Kendall's rank correlation tau 
 # -0.570355 
+
+#Correlation between zeroes in column and runday for strains
+cor.test(zeroes_in_column[25:286],RunDay_strains,method="kendall",use="all.obs")
+
+# Kendall's rank correlation tau
+# 
+# data:  zeroes_in_column[25:286] and RunDay_strains
+# z = 0.3597, p-value = 0.7191
+# alternative hypothesis: true tau is not equal to 0
+# sample estimates:
+#        tau 
+# 0.01676437 
+
+#Correlation between zeroes in column and runday for strains
+cor.test(zeroes_in_column[25:286],as.numeric(GrowthStage_strains),method="kendall",use="all.obs")
+# Kendall's rank correlation tau
+# 
+# data:  zeroes_in_column[25:286] and as.numeric(GrowthStage_strains)
+# z = -2.2307, p-value = 0.0257
+# alternative hypothesis: true tau is not equal to 0
+# sample estimates:
+# tau 
+# -0.1130019 
+
+#Correlation between Growth stage and RunDay for strains
+cor.test(as.numeric(GrowthStage_strains),RunDay_strains,method="kendall",use="all.obs")
+# Kendall's rank correlation tau
+# 
+# data:  as.numeric(GrowthStage_strains) and RunDay_strains
+# z = -9.8696, p-value < 2.2e-16
+# alternative hypothesis: true tau is not equal to 0
+# sample estimates:
+# tau 
+# -0.5618739 
+
+#Correlation between zeroes in column and RunDay for strain at groth stage-day4
+cor.test(zeroes_in_column_day4,RunDay_day4,method="kendall",use="all.obs")
+
+# Kendall's rank correlation tau
+# 
+# data:  zeroes_in_column_day4 and RunDay_day4
+# z = 1.9832, p-value = 0.04735
+# alternative hypothesis: true tau is not equal to 0
+# sample estimates:
+# tau 
+# 0.1343476 
+# 
+
+#Correlation between zeroes in column and RunDay for strain at groth stage-day12
+cor.test(zeroes_in_column_day12,RunDay_day12,method="kendall",use="all.obs")
+# 
+# Kendall's rank correlation tau
+# 
+# data:  zeroes_in_column_day12 and RunDay_day12
+# z = -4.6396, p-value = 3.491e-06
+# alternative hypothesis: true tau is not equal to 0
+# sample estimates:
+#   tau 
+# -0.3192004 
 
 #### PCA
 
