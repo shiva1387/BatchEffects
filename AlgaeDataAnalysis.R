@@ -425,7 +425,7 @@ graphics.off()
 
 ######### Converting values based on 50% zero count per sample group
 
-new_ms_data<-ms_data_tst1[, lapply(.SD, function(v) { 
+new_ms_data<-ms_data_tst[, lapply(.SD, function(v) { 
   len <- length(v)
   if((sum(v==0)/len)>0.5) rep(0,len) else v
 }), by=V2]
