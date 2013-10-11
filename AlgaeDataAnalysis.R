@@ -57,7 +57,8 @@ library(stringr)
 library(vegan)
 library(ape)
 library(gplots)
-
+library(raster)
+library(gridBase)
 
 #############
 # User      #
@@ -69,9 +70,6 @@ library(gplots)
 directory<- "F:/Vinay's Algae Data/Aug2013/Data"
 #Contains path for .tsv file
 # The "PATH", Remember to use "/" and not "/" in the path
-
-num_cores<-8; # The number of CPUs available, be aware of memory issue
-
 setwd(directory)
 getwd()
 
@@ -165,11 +163,20 @@ dev.off()
 
 ## Counting zeros in each column
 
-zero_count_column<-function(x){ d=as.vector(x); sum(d == 1) }# here zero is given as 1
+zero_count_column<-function(x){ d=as.vector(x); sum(d < 1+1e-3) }# here zero is given as 1
 zeroes_in_column<-lapply(ms_data,zero_count_column) 
 zeroes_in_column<-as.numeric(zeroes_in_column)
 
-## Generating boxplot and cv for each sample group
+## Generating boxplot and cv/mean for each sample group
+
+# #scatterplot matrix for mean,cv,no of zeroes
+# d<-data.frame(c(1,2,3,4,5,6),
+#               c(round(mean(ms_data_grp1[,1]), 2),round(mean(ms_data_grp1[,2]), 2),round(mean(ms_data_grp1[,3]), 2),round(mean(ms_data_grp1[,4]), 2),round(mean(ms_data_grp1[,5]), 2),round(mean(ms_data_grp1[,6]), 2)),
+#               c(round(cv(ms_data_grp1[,1]), 2),round(cv(ms_data_grp1[,2]), 2),round(cv(ms_data_grp1[,3]), 2),round(cv(ms_data_grp1[,4]), 2),round(cv(ms_data_grp1[,5]), 2),round(cv(ms_data_grp1[,6]), 2)),
+#               c(zeroes_in_column[no+1],zeroes_in_column[no+2],zeroes_in_column[no+3],zeroes_in_column[no+4],zeroes_in_column[no+5],zeroes_in_column[no+6]))
+# colnames(d)<-c('replicates','mean','cv','zeroes')
+# 
+# plot(d,pch=16,col=rainbow(9),cex=2,main=paste0(groups[i]))
 
 groups<-unique(SampleGroup)
 no<-1
@@ -182,14 +189,19 @@ png(paste(groups[i],".png"),width=2000,height=800)
 ms_data_grp1<-ms_data[, grep(groups[i], names(ms_data))]
 par(mar=c(10,2,4,2),mfrow=c(1,2))
 ms_data_grp1<-log(ms_data_grp1)
-boxplot(ms_data_grp1,range=0,ylab="Log2 feature counts", main=paste0(groups[i],"\n","For each col:cv,no of zeroes"),xaxt="n",las=1)
+boxplot(ms_data_grp1,range=0,ylab="Log2 feature counts", main=paste0(groups[i],"\n","For each col:mean,cv,no of zeroes"),xaxt="n",las=1)
 if(ncol(ms_data_grp1)==6)
 {
-  axis(side=1,cex.axis=1,at=seq(1,6,1),as.character(c(paste0(names(ms_data_grp1[1]),"\n",round(cv(ms_data_grp1[,1]), 2),",",zeroes_in_column[no]),paste0(names(ms_data_grp1[2]),"\n",round(cv(ms_data_grp1[,2]), 2),",",zeroes_in_column[no+1]),
-                                           paste0(names(ms_data_grp1[3]),"\n",round(cv(ms_data_grp1[,3]), 2),",",zeroes_in_column[no+2]),paste0(names(ms_data_grp1[4]),"\n",round(cv(ms_data_grp1[,4]), 2),",",zeroes_in_column[no+3]),
-                                           paste0(names(ms_data_grp1[5]),"\n",round(cv(ms_data_grp1[,5]), 2),",",zeroes_in_column[no+4]),paste0(names(ms_data_grp1[6]),"\n",round(cv(ms_data_grp1[,6]), 2),",",zeroes_in_column[no+5])   
+  axis(side=1,cex.axis=1,at=seq(1,6,1),as.character(c(paste0(names(ms_data_grp1[1]),"\n",round(mean(ms_data_grp1[,1]), 2),",",round(cv(ms_data_grp1[,1]), 2),"\n",zeroes_in_column[no]),
+                                                      paste0(names(ms_data_grp1[2]),"\n",round(mean(ms_data_grp1[,2]), 2),",",round(cv(ms_data_grp1[,2]), 2),"\n",zeroes_in_column[no+1]),
+                                                      paste0(names(ms_data_grp1[3]),"\n",round(mean(ms_data_grp1[,3]), 2),",",round(cv(ms_data_grp1[,3]), 2),"\n",zeroes_in_column[no+2]),
+                                                      paste0(names(ms_data_grp1[4]),"\n",round(mean(ms_data_grp1[,4]), 2),",",round(cv(ms_data_grp1[,4]), 2),"\n",zeroes_in_column[no+3]),
+                                                      paste0(names(ms_data_grp1[5]),"\n",round(mean(ms_data_grp1[,5]), 2),",",round(cv(ms_data_grp1[,5]), 2),"\n",zeroes_in_column[no+4]),
+                                                      paste0(names(ms_data_grp1[6]),"\n",round(mean(ms_data_grp1[,6]), 2),",",round(cv(ms_data_grp1[,6]), 2),"\n",zeroes_in_column[no+5])   
   )))
 
+
+  
  ### Plotting colored bar charts explaining % of values in each col
   
   c = c(((no_of_features-zeroes_in_column[no])/no_of_features)*100,(zeroes_in_column[no]/no_of_features)*100,((no_of_features-zeroes_in_column[no+1])/no_of_features)*100,(zeroes_in_column[no+1]/no_of_features)*100,
@@ -218,8 +230,10 @@ if(ncol(ms_data_grp1)==6)
 }
 else if(ncol(ms_data_grp1)==4)
 {
-  axis(side=1,at=seq(1,4,1),as.character(c(paste0(names(ms_data_grp1[1]),"\n",round(cv(ms_data_grp1[,1]), 2),",",zeroes_in_column[no]),paste0(names(ms_data_grp1[2]),"\n",round(cv(ms_data_grp1[,2]), 2),",",zeroes_in_column[no+1]),
-                                           paste0(names(ms_data_grp1[3]),"\n",round(cv(ms_data_grp1[,3]), 2),",",zeroes_in_column[no+2]),paste0(names(ms_data_grp1[4]),"\n",round(cv(ms_data_grp1[,4]), 2),",",zeroes_in_column[no+3])   
+  axis(side=1,at=seq(1,4,1),as.character(c(paste0(names(ms_data_grp1[1]),"\n",round(mean(ms_data_grp1[,1]), 2),",",round(cv(ms_data_grp1[,1]), 2),"\n",zeroes_in_column[no]),
+                                           paste0(names(ms_data_grp1[2]),"\n",round(mean(ms_data_grp1[,2]), 2),",",round(cv(ms_data_grp1[,2]), 2),"\n",zeroes_in_column[no+1]),
+                                           paste0(names(ms_data_grp1[3]),"\n",round(mean(ms_data_grp1[,3]), 2),",",round(cv(ms_data_grp1[,3]), 2),"\n",zeroes_in_column[no+2]),
+                                           paste0(names(ms_data_grp1[4]),"\n",round(mean(ms_data_grp1[,4]), 2),",",round(cv(ms_data_grp1[,4]), 2),"\n",zeroes_in_column[no+3])   
   )))
  
   ### Plotting colored bar charts explaining % of values in each col
@@ -249,10 +263,13 @@ else if(ncol(ms_data_grp1)==4)
 }
 else if(ncol(ms_data_grp1)==7)
 {
-  axis(side=1,at=seq(1,7,1),as.character(c(paste0(names(ms_data_grp1[1]),"\n",round(cv(ms_data_grp1[,1]), 2),",",zeroes_in_column[no]),paste0(names(ms_data_grp1[2]),"\n",round(cv(ms_data_grp1[,2]), 2),",",zeroes_in_column[no+1]),
-                                           paste0(names(ms_data_grp1[3]),"\n",round(cv(ms_data_grp1[,3]), 2),",",zeroes_in_column[no+2]),paste0(names(ms_data_grp1[4]),"\n",round(cv(ms_data_grp1[,4]), 2),",",zeroes_in_column[no+3]),
-                                           paste0(names(ms_data_grp1[5]),"\n",round(cv(ms_data_grp1[,5]), 2),",",zeroes_in_column[no+4]),paste0(names(ms_data_grp1[6]),"\n",round(cv(ms_data_grp1[,6]), 2),",",zeroes_in_column[no+5]),
-                                           paste0(names(ms_data_grp1[7]),"\n",round(cv(ms_data_grp1[,7]), 2),",",zeroes_in_column[no+6])
+  axis(side=1,at=seq(1,7,1),as.character(c(paste0(names(ms_data_grp1[1]),"\n",round(mean(ms_data_grp1[,1]), 2),",",round(cv(ms_data_grp1[,1]), 2),"\n",zeroes_in_column[no]),
+                                           paste0(names(ms_data_grp1[2]),"\n",round(mean(ms_data_grp1[,2]), 2),",",round(cv(ms_data_grp1[,2]), 2),"\n",zeroes_in_column[no+1]),
+                                           paste0(names(ms_data_grp1[3]),"\n",round(mean(ms_data_grp1[,3]), 2),",",round(cv(ms_data_grp1[,3]), 2),"\n",zeroes_in_column[no+2]),
+                                           paste0(names(ms_data_grp1[4]),"\n",round(mean(ms_data_grp1[,4]), 2),",",round(cv(ms_data_grp1[,4]), 2),"\n",zeroes_in_column[no+3]),
+                                           paste0(names(ms_data_grp1[5]),"\n",round(mean(ms_data_grp1[,5]), 2),",",round(cv(ms_data_grp1[,5]), 2),"\n",zeroes_in_column[no+4]),
+                                           paste0(names(ms_data_grp1[6]),"\n",round(mean(ms_data_grp1[,6]), 2),",",round(cv(ms_data_grp1[,6]), 2),"\n",zeroes_in_column[no+5]),
+                                           paste0(names(ms_data_grp1[7]),"\n",round(mean(ms_data_grp1[,7]), 2),",",round(cv(ms_data_grp1[,7]), 2),"\n",zeroes_in_column[no+6])
   )))
   
   ### Plotting colored bar charts explaining % of values in each col
@@ -301,80 +318,72 @@ ms_data_tst<-data.table(t(log(ms_data)))
 ms_data_tst<-cbind(ms_data_tst,as.factor(SampleGroup))
 lapply(ms_data_tst,class) #checking col classes
 cv1 <- function(x) (sd(x)/mean(x)) * 100
-
 cv_mz_feature2<-t(ms_data_tst[,lapply(.SD,cv1),by=V2])
 #lapply(cv_mz_feature,class)
 cv_mz_feature<-as.data.frame(cv_mz_feature2[2:nrow(cv_mz_feature2),])
-#cv_mz_feature<-as.data.frame(lapply(cv_mz_feature,as.numeric))
-
 colnames(cv_mz_feature)<-unique(SampleGroup)
-
 write.table(cv_mz_feature,"mz_features_cv.txt",quote=FALSE,sep="\t")
 mz_grp_cv<-read.table("mz_features_cv.txt",sep='\t',header=TRUE,row.name=1)
 mz_grp_cv[is.na(mz_grp_cv)]<-0
 
+# mean for each feature in each sample group
+
+mean_mz_feature2<-t(ms_data_tst[,lapply(.SD,mean),by=V2])
+mean_mz_feature<-as.data.frame(mean_mz_feature2[2:nrow(mean_mz_feature2),])
+colnames(mean_mz_feature)<-unique(SampleGroup)
+write.table(mean_mz_feature,"mz_features_mean.txt",quote=FALSE,sep="\t")
+mz_grp_mean<-read.table("mz_features_mean.txt",sep='\t',header=TRUE,row.name=1)
+mz_grp_mean[is.na(mz_grp_mean)]<-0
+
 
 ####
 
-internalStandard<-mz_grp_cv[4473,]
+internalStandard_cv<-mz_grp_cv[4473,]
+internalStandard_mean<-mz_grp_cv[4473,]
 
-#mz_grp_cv<-as.data.frame(mz_grp_cv)
-#colnames(mz_grp_cv)<-d
-
-mz_grp_cv<-data.frame(cbind(mz,rt,mz_grp_cv))
-for (i in seq(3,ncol(mz_grp_cv),4))
+mz_grp_mean<-data.frame(cbind(mz,rt,mz_grp_mean))
+for (i in seq(3,ncol(mz_grp_mean),4))
 {
-  mz<-as.vector(mz_grp_cv$mz)
-  rt<-as.vector(mz_grp_cv$rt)
+  mz<-as.vector(mz_grp_mean$mz)
+  rt<-as.vector(mz_grp_mean$rt)
   rt<-as.numeric(rt)
   print (i)
-  y<-mz_grp_cv[,i]
-  rt_cv<-cbind(as.character(rt),as.numeric(y))
-  rt_cv<-data.frame(rt,mz_grp_cv[,i],mz_grp_cv[,i+1],mz_grp_cv[,i+2],mz_grp_cv[,i+3])
-  rt_cv<-rt_cv[order(rt_cv[,1]),]
+  y<-mz_grp_mean[,i]
+  rt_mean<-cbind(as.character(rt),as.numeric(y))
+  rt_mean<-data.frame(rt,mz_grp_mean[,i],mz_grp_mean[,i+1],mz_grp_mean[,i+2],mz_grp_mean[,i+3])
+  rt_mean<-rt_mean[order(rt_mean[,1]),]
   
   ## now plot scatter plot
-  png(paste("hist-coefofvar/", i, "_mz.png", sep = ""),height=800,width=1200)
+  png(paste("mz/", i, "_mz.png", sep = ""),height=800,width=1200)
   par(mfrow=c(2,2))
-  plot(mz,mz_grp_cv[,i],main=names(mz_grp_cv)[i],xlab="mz",ylab="cv of log(counts)")
-  plot(mz,mz_grp_cv[,i+1],main=names(mz_grp_cv)[i+1],xlab="mz",ylab="cv of log(counts)")
-  plot(mz,mz_grp_cv[,i+2],main=names(mz_grp_cv)[i+2],xlab="mz",ylab="cv of log(counts)")
-  plot(mz,mz_grp_cv[,i+3],main=names(mz_grp_cv)[i+3],xlab="mz",ylab="cv of log(counts)")
-  
-  ## now plot histogram
-  # hist(mz_grp_cv[,i],main=names(mz_grp_cv)[i],ylab="number of features",xlab="cv of log(counts)")
-  # hist(mz_grp_cv[,i+1],main=names(mz_grp_cv)[i+1],ylab="number of features",xlab="cv of log(counts)")
-  # hist(mz_grp_cv[,i+2],main=names(mz_grp_cv)[i+2],ylab="number of features",xlab="cv of log(counts)")
-  # hist(mz_grp_cv[,i+3],main=names(mz_grp_cv)[i+3],ylab="number of features",xlab="cv of log(counts)")
-  
+  plot(mz,mz_grp_mean[,i],main=names(mz_grp_mean)[i],xlab="mz",ylab="mean of log(counts)")
+  plot(mz,mz_grp_mean[,i+1],main=names(mz_grp_mean)[i+1],xlab="mz",ylab="mean of log(counts)")
+  plot(mz,mz_grp_mean[,i+2],main=names(mz_grp_mean)[i+2],xlab="mz",ylab="mean of log(counts)")
+  plot(mz,mz_grp_mean[,i+3],main=names(mz_grp_mean)[i+3],xlab="mz",ylab="mean of log(counts)")
   dev.off()
   
-  png(paste("CoefficientofVariation/", i, "_rt.png", sep = ""),height=800,width=1200)
+  ## now plot histogram
+  # hist(mz_grp_mean[,i],main=names(mz_grp_mean)[i],ylab="number of features",xlab="mean of log(counts)")
+  # hist(mz_grp_mean[,i+1],main=names(mz_grp_mean)[i+1],ylab="number of features",xlab="mean of log(counts)")
+  # hist(mz_grp_mean[,i+2],main=names(mz_grp_mean)[i+2],ylab="number of features",xlab="mean of log(counts)")
+  # hist(mz_grp_mean[,i+3],main=names(mz_grp_mean)[i+3],ylab="number of features",xlab="mean of log(counts)")
+    
+  png(paste("rt/", i, "_rt.png", sep = ""),height=800,width=1200)
   par(mfrow=c(2,2))
-  plot(rt_cv[,1],rt_cv[,2],main=names(mz_grp_cv)[i],xlab="rt",ylab="cv of log(counts)")
-  plot(rt_cv[,1],rt_cv[,3],main=names(mz_grp_cv)[i+1],xlab="rt",ylab="cv of log(counts)")
-  plot(rt_cv[,1],rt_cv[,4],main=names(mz_grp_cv)[i+2],xlab="rt",ylab="cv of log(counts)")
-  plot(rt_cv[,1],rt_cv[,5],main=names(mz_grp_cv)[i+3],xlab="rt",ylab="cv of log(counts)")
+  plot(rt_mean[,1],rt_mean[,2],main=names(mz_grp_mean)[i],xlab="rt",ylab="mean of log(counts)")
+  plot(rt_mean[,1],rt_mean[,3],main=names(mz_grp_mean)[i+1],xlab="rt",ylab="mean of log(counts)")
+  plot(rt_mean[,1],rt_mean[,4],main=names(mz_grp_mean)[i+2],xlab="rt",ylab="mean of log(counts)")
+  plot(rt_mean[,1],rt_mean[,5],main=names(mz_grp_mean)[i+3],xlab="rt",ylab="mean of log(counts)")
   dev.off()
 }
 graphics.off()
 # rm(rt_cv)
-
-#plot(mz,as.numeric(mz_grp_cv[,4]),main=names(mz_grp_cv)[4],xlab="mz",ylab="cv of log trans counts")
-#plot(mz,as.numeric(mz_grp_cv[,5]),main=names(mz_grp_cv)[5],col="green")
-#plot(mz,as.numeric(mz_grp_cv[,6]),main=names(mz_grp_cv)[6],col="red")
-#plot(mz,as.numeric(mz_grp_cv[,7]),main=names(mz_grp_cv)[7],col="blue")
-
-#rownames(cv_mz_feature)<-rownames(ms_data_total)
-
-#abline(v=seq(1,24,3)-0.5)
-#axis(side=1,at=seq(2,24,3),as.character(1:8))
 dev.off()
 
 
 ### Counting number of zeroes for each m/z feature in each group
 
-zero_count<-function(x) sum(x == 0) 
+zero_count<-function(x) sum(x < 1e-3) 
 zero_mz_feature2<-t(ms_data_tst[,lapply(.SD,zero_count),by=V2])
 zero_mz_feature<-as.data.frame(zero_mz_feature2[2:nrow(zero_mz_feature2),])
 colnames(zero_mz_feature)<-unique(SampleGroup)
@@ -401,23 +410,23 @@ graphics.off()
 
 #CoefofVar-Vs-Zeros
 
-for (i in seq(3,ncol(mz_grp_cv),2))
+for (i in seq(3,ncol(mz_grp_mean),2))
 {
-  mz<-as.vector(mz_grp_cv$mz)
-  rt<-as.vector(mz_grp_cv$rt)
+  mz<-as.vector(mz_grp_mean$mz)
+  rt<-as.vector(mz_grp_mean$rt)
   ## now plot scatter plot
-  png(paste("CoefofVar-Vs-Zeros/", i, ".png", sep = ""),height=800,width=1200)
+  png(paste("Mean-Vs-Zeros/", i, ".png", sep = ""),height=800,width=1200)
   par(mfrow=c(2,2))
   
-  cor1<-cor(mz_grp_zero[,i],mz_grp_cv[,i], use="all.obs", method="pearson")
-  plot(mz_grp_zero[,i],mz_grp_cv[,i],main=names(mz_grp_zero)[i],xlab="No of zeroes",ylab="Coefficient of variation")
+  cor1<-cor(mz_grp_zero[,i],mz_grp_mean[,i], use="all.obs", method="pearson")
+  plot(mz_grp_zero[,i],mz_grp_mean[,i],main=names(mz_grp_zero)[i],xlab="No of zeroes",ylab="mean")
   text(1, 180, paste("R2 =", round(cor1, 3)),cex=1)
-  hist(mz_grp_cv[,i],main=names(mz_grp_zero)[i],xlab="Coefficient of variation",ylab="No of Features")
+  hist(mz_grp_mean[,i],main=names(mz_grp_zero)[i],xlab="mean",ylab="No of Features")
   
-  cor2<-cor(mz_grp_cv[,i+1],mz_grp_zero[,i+1], use="all.obs", method="pearson")  
-  plot(mz_grp_zero[,i+1],mz_grp_cv[,i+1],main=names(mz_grp_zero)[i+1],xlab="No of zeroes",ylab="Coefficient of variation")
+  cor2<-cor(mz_grp_mean[,i+1],mz_grp_zero[,i+1], use="all.obs", method="pearson")  
+  plot(mz_grp_zero[,i+1],mz_grp_mean[,i+1],main=names(mz_grp_zero)[i+1],xlab="No of zeroes",ylab="mean")
   text(1, 180, paste("R2 =", round(cor2, 3)),cex=1)
-  hist(mz_grp_cv[,i+1],main=names(mz_grp_zero)[i+1],xlab="Coefficient of variation",ylab="No of Features")
+  hist(mz_grp_mean[,i+1],main=names(mz_grp_zero)[i+1],xlab="mean",ylab="No of Features")
   
   dev.off()
 }
@@ -427,7 +436,7 @@ graphics.off()
 
 new_ms_data<-ms_data_tst[, lapply(.SD, function(v) { 
   len <- length(v)
-  if((sum(v==0)/len)>0.5) rep(0,len) else v
+  if((sum(v< 1e-3)/len)>0.5) rep(0,len) else v
 }), by=V2]
 
 rownames(new_ms_data)<-colnames(ms_data)
@@ -593,7 +602,7 @@ legend("bottomleft", legend = c("Day4","Day12"), pch = 1:2,col = c("blue","red")
 # Testing the influence of number of zeroes on separation of samples
 
 pcoa_scores_axis1<-scores(pc)[,c(1)]
-cor_zero_pcoa1<-cor.test(pcoa_scores_axis1,zeroes_in_column_day4, use="all.obs", method="kendall")  
+cor_zero_pcoa1<-cor.test(pcoa_scores_axis1,zeroes_in_column, use="all.obs", method="kendall")  
 #(for complete dataset, including blanks)
 # Pearson's product-moment correlation
 # data:  pcoa_scores_axis1 and zeroes_in_column

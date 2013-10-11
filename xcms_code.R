@@ -7,5 +7,5 @@ set2 <- group(set1,bw=5,mzwid=0.015,minsamp=1,minfrac=0)
 set3 <- retcor(set2,method="obiwarp",plottype="none")
 set4 <- group(set3,bw=5,mzwid=0.015,minsamp=1,minfrac=0)
 set5 <- fillPeaks(set4) 
-peaklist<-peakTable(set5,filebase="algae_4setblanks_060913")
+peaklist<-peakTable(set5,filebase="algae_blanks")
    

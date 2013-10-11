@@ -1,7 +1,9 @@
 #--analysis log for preprocessing of Shiv TT8 experiment--
-#--started on 16 May 2013--
-#-- Modified by Shiv for TT8
-#--Author: Rohan
+# Author(s): Shiv
+# Version: 04102013 
+# Input: ".tsv" file from XCMS 
+# Software: XCMS
+# Modified By :Shivshankar Umashankar 
 #--Comparing tt8 4 bioreps with 3 bioreps
 #############
 # Clear all #
@@ -18,9 +20,6 @@ library(stringr)
 library(vegan)
 library(ape)
 library(gplots)
-library(AStream)
-library(marray)
-library(qvalue)
 
 
 #############
@@ -29,7 +28,7 @@ library(qvalue)
 # Variables #
 #############
 
-directory<-"D:/Shiv_data/Shiv_NUS/PhD_Project/Integrating_Omics/Analysis_R/MetabolomicsSoftwareComparison/Data/TT8_RawData_Metabolomics/Agilent/MZXML_PEAK/"; 
+#directory<-"D:/Shiv_data/Shiv_NUS/PhD_Project/Integrating_Omics/Analysis_R/MetabolomicsSoftwareComparison/Data/TT8_RawData_Metabolomics/Agilent/MZXML_PEAK/"; 
 #Contains path for .tsv file
 
 #directory<-"D:/Shiv_data/Shiv_NUS/PhD_Project/Integrating_Omics/Analysis_R/MetabolomicsSoftwareComparison/Data/TT8_RawData_Metabolomics/Agilent/MZXML_MS1/RemovedNoisyBiorep/WS/"
@@ -42,23 +41,79 @@ setwd(directory)
 
 ####### reading in the mass spec data 
 
-mzfilename<-"XCMS_TT8_21052013_PEAK.tsv"
+mzfilename<-"TT8_WS_agilent_041013.tsv"
 filename<-gsub(".tsv","",mzfilename)
 
 ms_data_total<-read.table(mzfilename,sep="\t",header=T,check.names=FALSE)
 xsannotated<-ms_data_total
 str(ms_data_total)
 
+
+################Formatting column names
+
+names(ms_data_total)<-gsub('\\[', '', names(ms_data_total))
+names(ms_data_total)<-gsub('\\]', '', names(ms_data_total))
+a<-names(ms_data_total)
+b<-gsub('\\(raw)', '', a)
+c<-gsub('\\, ','\\-', b)
+names(ms_data_total)<-c
+rm(a,b,c)
+
+# Assigning sample groups
+
+SampleGroups<-sapply(names(ms_data_total), function(x) paste(strsplit(x,"_")[[1]][1:2],collapse = "_"))
+SampleGroups<-as.vector(SampleGroups)
+
+SampleGroups<-gsub('b1','',SampleGroups)
+SampleGroups<-gsub('b2','',SampleGroups)
+SampleGroups<-gsub('b3','',SampleGroups)
+
+#write.table(SampleGroups0,"SampleGroups.txt",row.name=FALSE,quote=F)
+#SampleGroups1<-read.table("SampleGroups.txt",header=F)
+
+#no_of_info_cols<-1
+#data_start_index<-no_of_info_cols+1;
+#data_end_index<-dim(ms_data_total)[2];
+
+
 xsannotated<-ms_data_total
 
-no_of_info_cols<-9
+no_of_info_cols<-2
 data_start_index<-no_of_info_cols+1;
 data_end_index<-dim(ms_data_total)[2];
 
 ms_data<-ms_data_total[,data_start_index:data_end_index]
+ms_data<-ms_data[,order(colnames(ms_data))]
 names(ms_data)
 dim(ms_data)
 xsannotated1<-as.matrix(ms_data)
+
+SampleGroup<-SampleGroups[3:26]
+
+#######################################
+###### Exploratory data analysis ######
+#######################################
+
+##########################
+# Histogram of mz and rt #
+##########################
+
+png("TT8vsWS.png")
+plot(ms_data_total$rt,ms_data_total$mz,pch=1,main="TT8vsWS",ylab="m/z",xlab="rt")
+dev.off()
+
+### Measure of variation ########
+
+png('boxplot.png',width=1000)
+boxplot(log(ms_data),range=0,xlab="Samples",ylab="Log2 feature counts",las=1,cex.axis=0.7)
+dev.off()
+
+## Counting zeros in each column
+
+zero_count_column<-function(x){ d=as.vector(x); sum(d == 1) }# here zero is given as 1
+zeroes_in_column<-lapply(ms_data,zero_count_column) 
+zeroes_in_column<-as.numeric(zeroes_in_column)
+
 
 
 ms_data_avg_biorep<-byapply(ms_data,3,rowMeans)
