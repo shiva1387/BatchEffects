@@ -102,6 +102,7 @@ rm(a,b,c)
 
 metadata<-read.table("Algae_indreps_22strains_blanks_matrix_metadata.txt",header=TRUE,row.name=1,sep="\t")
 metadata<-as.data.frame(metadata)
+metadata_strains<-unique(metadata)
 metadata<-t(metadata)
 RunDay<-metadata[3,]
 GrowthStage<-metadata[1,]
@@ -127,11 +128,11 @@ names(ms_data)
 dim(ms_data)
 SampleGroup<-SampleGroups[1:311]
 
+
 #ms_data<-log(ms_data)
 
 #ms_data_day4<-ms_data[, grep('D4', names(ms_data))] 
 #ms_data_day12<-ms_data[, grep('D12', names(ms_data))] 
-
 
 #name_list <- strsplit(SampleGroup, "_")
 #GrowthStage<-sapply(name_list , function (x) if(length(x) == 2) x[1] else as.character(NA))
@@ -139,6 +140,80 @@ SampleGroup<-SampleGroups[1:311]
 #StrainName<-as.factor(names(ms_data))
 #StrainName0<-names(ms_data)
 
+
+###### Data: inclusion and exclusion, removing replicates(samples with large variance) from the dataset 
+
+rem <- c('D4_094_b1_r002','D4_104_b3_r002','D4_245b1_r001','D4_254b1_r001','D4_325_b1_r002')
+
+ms_data_rem<-ms_data[, !names(ms_data) %in% rem]
+names(ms_data_rem[25:281])
+
+metadata_rem<-metadata[, !colnames(metadata) %in% rem]
+RunDay_rem<-metadata_rem[3,]
+GrowthStage_rem<-metadata_rem[1,]
+RunDay_rem<-as.vector(RunDay_rem)
+GrowthStage_rem<-as.vector(GrowthStage_rem)
+
+GrowthStage_rem<-gsub('D4', 1, GrowthStage_rem)
+GrowthStage_rem<-gsub('D12', 2, GrowthStage_rem)
+
+GrowthStage_strains<-GrowthStage[25:286]
+GrowthStage_strains<-gsub('D4', 1, GrowthStage_strains)
+GrowthStage_strains<-gsub('D12', 2, GrowthStage_strains)
+
+RunDay_strains<-as.numeric(RunDay[25:286])
+
+z1<-t(zeroes_in_column)
+colnames(z1)<-colnames(ms_data)
+zeroes_in_column_rem<-z1[, !colnames(z1) %in% rem]
+
+GrowthStage_day4<-GrowthStage[grep('D4', names(GrowthStage))]
+GrowthStage_day12<-GrowthStage[grep('D12', names(GrowthStage))] 
+
+RunDay_day4<-as.numeric(RunDay[grep('D4', names(RunDay))])
+RunDay_day12<-as.numeric(RunDay[grep('D12', names(RunDay))])
+
+zeroes_in_column_day4<-z1[grep('D4', colnames(z1))] 
+zeroes_in_column_day12<-z1[grep('D12', colnames(z1))] 
+
+#Measure of variation between replicates of each strain #based on boxplot
+
+groups<-unique(SampleGroup)
+
+groups_with_outliers<-0
+a<-1
+
+for(i in 1:length(groups))
+{
+  ms_data_grp1<-ms_data[, grep(groups[i], names(ms_data))]
+  ms_data_grp1<-log(ms_data_grp1)
+  boxplot_replicates<-boxplot(ms_data_grp1,plot=FALSE)
+  if(ncol(ms_data_grp1)==6)
+  {
+  cv_group<-c(round(cv(ms_data_grp1[,1]), 2),round(cv(ms_data_grp1[,2]), 2),round(cv(ms_data_grp1[,3]), 2),
+              round(cv(ms_data_grp1[,4]), 2),round(cv(ms_data_grp1[,5]), 2),round(cv(ms_data_grp1[,6]), 2))
+  boxplot_cv<-boxplot(cv_group,plot=FALSE)
+  }
+  if(ncol(ms_data_grp1)==4)
+  {
+    cv_group<-c(round(cv(ms_data_grp1[,1]), 2),round(cv(ms_data_grp1[,2]), 2),
+                round(cv(ms_data_grp1[,3]), 2),round(cv(ms_data_grp1[,4]), 2))
+    boxplot_cv<-boxplot(cv_group,plot=FALSE)
+  }
+  if(ncol(ms_data_grp1)==7)
+  {
+    cv_group<-c(round(cv(ms_data_grp1[,1]), 2),round(cv(ms_data_grp1[,2]), 2),round(cv(ms_data_grp1[,3]), 2),
+                round(cv(ms_data_grp1[,4]), 2),round(cv(ms_data_grp1[,5]), 2),round(cv(ms_data_grp1[,6]), 2),
+                round(cv(ms_data_grp1[,7]), 2))
+    boxplot_cv<-boxplot(cv_group,plot=FALSE)
+  }
+  
+  if(length(boxplot_cv$out)>0)
+  {
+    groups_with_outliers[a]<-groups[i]
+    a<-a+1
+  }
+}
 #######################################
 ###### Exploratory data analysis ######
 #######################################
@@ -312,11 +387,14 @@ png("cv_samples.png",width=4000)
 plot(1:ncol(ms_data),apply(ms_data,2,cv)) # For each column 
 dev.off()
 
-# cv for each feature in each sample group
+# converting to data.table format
 
 ms_data_tst<-data.table(t(log(ms_data)))
 ms_data_tst<-cbind(ms_data_tst,as.factor(SampleGroup))
 lapply(ms_data_tst,class) #checking col classes
+
+# cv for each feature in each sample group
+
 cv1 <- function(x) (sd(x)/mean(x)) * 100
 cv_mz_feature2<-t(ms_data_tst[,lapply(.SD,cv1),by=V2])
 #lapply(cv_mz_feature,class)
@@ -335,11 +413,30 @@ write.table(mean_mz_feature,"mz_features_mean.txt",quote=FALSE,sep="\t")
 mz_grp_mean<-read.table("mz_features_mean.txt",sep='\t',header=TRUE,row.name=1)
 mz_grp_mean[is.na(mz_grp_mean)]<-0
 
+# mean for each feature(excluding zeroes) in each sample group
+
+set.seed(1234) 
+testvec <- sample(0:10, 100, replace=TRUE) 
+mean_wo_zero <- function(x) {
+  no_of_zero<-sum(x < 1e-3)
+  mean1<-sum(x)/(length(x)-no_of_zero)
+  return(mean1)}
+
+#mean(testvec)
+#[1] 4.31
+#mean(testvec[testvec != 0]) 
+#[1] 4.842697
+# mean_wo_zero(testvec)
+# [1] 4.842697
+
+mean_non_zero_mz_feature2<-t(ms_data_tst[,lapply(.SD,mean_wo_zero),by=V2])
+mean_non_zero_mz_feature<-as.data.frame(mean_non_zero_mz_feature2[2:nrow(mean_non_zero_mz_feature2),])
+colnames(mean_non_zero_mz_feature)<-unique(SampleGroup)
+write.table(mean_non_zero_mz_feature,"mean_non_zero_mz_feature.txt",quote=FALSE,sep="\t")
+mz_grp_mean_non_zero<-read.table("mean_non_zero_mz_feature.txt",sep='\t',header=TRUE,row.name=1)
+mz_grp_mean_non_zero[is.na(mz_grp_mean_non_zero)]<-0
 
 ####
-
-internalStandard_cv<-mz_grp_cv[4473,]
-internalStandard_mean<-mz_grp_cv[4473,]
 
 mz_grp_mean<-data.frame(cbind(mz,rt,mz_grp_mean))
 for (i in seq(3,ncol(mz_grp_mean),4))
@@ -432,6 +529,44 @@ for (i in seq(3,ncol(mz_grp_mean),2))
 }
 graphics.off()
 
+####
+
+#4473
+
+png("internalStandard_reps.png",height=800,width=800)
+par(xpd=TRUE,mar=c(10,4,4,2))
+plot(1:311,log(ms_data[4473,]),xaxt='n',las=2,xlab="replicates",ylab="log(counts)",pch=1,main=paste("Internal standard replicates-fmoc"," ",row.names(ms_data)[4473]),col=ifelse(metadata$RunDay==15,'blue',
+                                                                                                                              ifelse(metadata$RunDay==17,'green',
+                                                                                                                                     ifelse(metadata$RunDay==21,'orange','red'))))
+
+legend(2.8,-1.5,legend = c("15","17","21","23"), ncol=4,text.col = c("blue","green","orange","red"),cex=1)
+dev.off()
+
+internalStandard_cv<-mz_grp_cv[4473,]
+internalStandard_mean<-mz_grp_mean[4473,]
+internalStandard_mean_non_zero<-mz_grp_mean_non_zero[4473,]
+internalStandard_zeroes<-mz_grp_zero[4473,]
+
+
+png("internalStandard.png",height=800,width=800)
+par(xpd=TRUE,mar=c(10,4,4,2))
+plot(1:52,internalStandard_mean_non_zero,xaxt='n',las=2,xlab="",ylab="values",pch=1,main=paste("Internal standard replicates-fmoc"," ",row.names(ms_data)[4473]),col=ifelse(metadata_strains$RunDay==15,'blue',
+                                                                                                                                   ifelse(metadata_strains$RunDay==17,'green',
+                                                                                                                                          ifelse(metadata_strains$RunDay==21,'orange','red'))))
+points(1:52,internalStandard_mean,pch=15,col=ifelse(metadata_strains$RunDay==15,'blue',
+                                               ifelse(metadata_strains$RunDay==17,'green',
+                                                      ifelse(metadata_strains$RunDay==21,'orange','red'))))
+points(1:52,internalStandard_cv,pch=16,col=ifelse(metadata_strains$RunDay==15,'blue',
+                                             ifelse(metadata_strains$RunDay==17,'green',
+                                                    ifelse(metadata_strains$RunDay==21,'orange','red'))))
+points(1:52,internalStandard_zeroes,pch=17,col=ifelse(metadata_strains$RunDay==15,'blue',
+                                                                ifelse(metadata_strains$RunDay==17,'green',
+                                                                       ifelse(metadata_strains$RunDay==21,'orange','red'))))
+axis(1, at=1:52, labels=colnames(mz_grp_mean_non_zero)[1:52],las=3)
+legend(2.8,-2.5,legend = c("15","17","21","23"), ncol=2,text.col = c("blue","green","orange","red"),cex=1)
+legend(9.8,-2.5, legend = c("Mean without zero","Mean","CV","Zeroes"), ncol=2,pch = c(1,15,16,17),cex=1)
+dev.off()
+
 ######### Converting values based on 50% zero count per sample group
 
 new_ms_data<-ms_data_tst[, lapply(.SD, function(v) { 
@@ -441,48 +576,6 @@ new_ms_data<-ms_data_tst[, lapply(.SD, function(v) {
 
 rownames(new_ms_data)<-colnames(ms_data)
 new_ms_data<-as.data.frame(t(new_ms_data))
-
-###### Data: inclusion and exclusion, removing replicates(samples with large variance) from the dataset 
-
-rem <- c('D4_094_b1_r002','D4_104_b3_r002','D4_245b1_r001','D4_254b1_r001','D4_325_b1_r002')
-
-ms_data_rem<-ms_data[, !names(ms_data) %in% rem]
-names(ms_data_rem[25:281])
-
-metadata_rem<-metadata[, !colnames(metadata) %in% rem]
-RunDay_rem<-metadata_rem[3,]
-GrowthStage_rem<-metadata_rem[1,]
-RunDay_rem<-as.vector(RunDay_rem)
-GrowthStage_rem<-as.vector(GrowthStage_rem)
-
-GrowthStage_rem<-gsub('D4', 1, GrowthStage_rem)
-GrowthStage_rem<-gsub('D12', 2, GrowthStage_rem)
-
-GrowthStage_strains<-GrowthStage[25:286]
-GrowthStage_strains<-gsub('D4', 1, GrowthStage_strains)
-GrowthStage_strains<-gsub('D12', 2, GrowthStage_strains)
-
-
-RunDay_strains<-as.numeric(RunDay[25:286])
-
-z1<-t(zeroes_in_column)
-colnames(z1)<-colnames(ms_data)
-zeroes_in_column_rem<-z1[, !colnames(z1) %in% rem]
-
-
-GrowthStage_day4<-GrowthStage[grep('D4', names(GrowthStage))]
-GrowthStage_day12<-GrowthStage[grep('D12', names(GrowthStage))] 
-
-RunDay_day4<-as.numeric(RunDay[grep('D4', names(RunDay))])
-RunDay_day12<-as.numeric(RunDay[grep('D12', names(RunDay))])
-
-zeroes_in_column_day4<-z1[grep('D4', colnames(z1))] 
-zeroes_in_column_day12<-z1[grep('D12', colnames(z1))] 
-
-#df[, lapply(.SD, function(v) { 
-#  len <- length(v)
-#  if((sum(v==0)/len)>0.5) rep(0L,len) else v
-#}), by="Group", .SDcols=c("r1","r2","r3")]
 
 
 ########################################
