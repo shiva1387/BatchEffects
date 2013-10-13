@@ -415,8 +415,8 @@ mz_grp_mean[is.na(mz_grp_mean)]<-0
 
 # mean for each feature(excluding zeroes) in each sample group
 
-set.seed(1234) 
-testvec <- sample(0:10, 100, replace=TRUE) 
+#set.seed(1234) 
+#testvec <- sample(0:10, 100, replace=TRUE) 
 mean_wo_zero <- function(x) {
   no_of_zero<-sum(x < 1e-3)
   mean1<-sum(x)/(length(x)-no_of_zero)
@@ -439,6 +439,8 @@ mz_grp_mean_non_zero[is.na(mz_grp_mean_non_zero)]<-0
 ####
 
 mz_grp_mean<-data.frame(cbind(mz,rt,mz_grp_mean))
+mz_grp_cv<-data.frame(cbind(mz,rt,mz_grp_cv))
+
 for (i in seq(3,ncol(mz_grp_mean),4))
 {
   mz<-as.vector(mz_grp_mean$mz)
@@ -505,7 +507,7 @@ for (i in seq(3,ncol(mz_grp_cv),2))
 }
 graphics.off()
 
-#CoefofVar-Vs-Zeros
+#Mean-Vs-Zeros
 
 for (i in seq(3,ncol(mz_grp_mean),2))
 {
@@ -517,27 +519,28 @@ for (i in seq(3,ncol(mz_grp_mean),2))
   
   cor1<-cor(mz_grp_zero[,i],mz_grp_mean[,i], use="all.obs", method="pearson")
   plot(mz_grp_zero[,i],mz_grp_mean[,i],main=names(mz_grp_zero)[i],xlab="No of zeroes",ylab="mean")
-  text(1, 180, paste("R2 =", round(cor1, 3)),cex=1)
+  text(3, 10, paste("R2 =", round(cor1, 3)),cex=1)
   hist(mz_grp_mean[,i],main=names(mz_grp_zero)[i],xlab="mean",ylab="No of Features")
   
-  cor2<-cor(mz_grp_mean[,i+1],mz_grp_zero[,i+1], use="all.obs", method="pearson")  
+  cor2<-cor(mz_grp_zero[,i+1],mz_grp_mean[,i+1], use="all.obs", method="pearson")  
   plot(mz_grp_zero[,i+1],mz_grp_mean[,i+1],main=names(mz_grp_zero)[i+1],xlab="No of zeroes",ylab="mean")
-  text(1, 180, paste("R2 =", round(cor2, 3)),cex=1)
+  text(3, 10, paste("R2 =", round(cor2, 3)),cex=1)
   hist(mz_grp_mean[,i+1],main=names(mz_grp_zero)[i+1],xlab="mean",ylab="No of Features")
   
   dev.off()
 }
 graphics.off()
 
-####
+#### Internal standard
 
 #4473
 
 png("internalStandard_reps.png",height=800,width=800)
 par(xpd=TRUE,mar=c(10,4,4,2))
-plot(1:311,log(ms_data[4473,]),xaxt='n',las=2,xlab="replicates",ylab="log(counts)",pch=1,main=paste("Internal standard replicates-fmoc"," ",row.names(ms_data)[4473]),col=ifelse(metadata$RunDay==15,'blue',
-                                                                                                                              ifelse(metadata$RunDay==17,'green',
-                                                                                                                                     ifelse(metadata$RunDay==21,'orange','red'))))
+plot(1:311,log(ms_data[4473,]),xaxt='n',las=2,xlab="replicates",ylab="log(counts)",pch=1,main=paste("Internal standard replicates-fmoc"," ",row.names(ms_data)[4473]),
+     col=ifelse(metadata$RunDay==15,'blue',
+         ifelse(metadata$RunDay==17,'green',
+         ifelse(metadata$RunDay==21,'orange','red'))))
 
 legend(2.8,-1.5,legend = c("15","17","21","23"), ncol=4,text.col = c("blue","green","orange","red"),cex=1)
 dev.off()
@@ -550,18 +553,23 @@ internalStandard_zeroes<-mz_grp_zero[4473,]
 
 png("internalStandard.png",height=800,width=800)
 par(xpd=TRUE,mar=c(10,4,4,2))
-plot(1:52,internalStandard_mean_non_zero,xaxt='n',las=2,xlab="",ylab="values",pch=1,main=paste("Internal standard replicates-fmoc"," ",row.names(ms_data)[4473]),col=ifelse(metadata_strains$RunDay==15,'blue',
-                                                                                                                                   ifelse(metadata_strains$RunDay==17,'green',
-                                                                                                                                          ifelse(metadata_strains$RunDay==21,'orange','red'))))
+plot(1:52,internalStandard_mean_non_zero,xaxt='n',las=2,xlab="",ylab="values",pch=1,main=paste("Internal standard replicates-fmoc"," ",row.names(ms_data)[4473]),
+     col=ifelse(metadata_strains$RunDay==15,'blue',
+         ifelse(metadata_strains$RunDay==17,'green',
+         ifelse(metadata_strains$RunDay==21,'orange','red'))))
+
 points(1:52,internalStandard_mean,pch=15,col=ifelse(metadata_strains$RunDay==15,'blue',
-                                               ifelse(metadata_strains$RunDay==17,'green',
-                                                      ifelse(metadata_strains$RunDay==21,'orange','red'))))
-points(1:52,internalStandard_cv,pch=16,col=ifelse(metadata_strains$RunDay==15,'blue',
                                              ifelse(metadata_strains$RunDay==17,'green',
-                                                    ifelse(metadata_strains$RunDay==21,'orange','red'))))
+                                             ifelse(metadata_strains$RunDay==21,'orange','red'))))
+
+points(1:52,internalStandard_cv,pch=16,col=ifelse(metadata_strains$RunDay==15,'blue',
+                                           ifelse(metadata_strains$RunDay==17,'green',
+                                           ifelse(metadata_strains$RunDay==21,'orange','red'))))
+
 points(1:52,internalStandard_zeroes,pch=17,col=ifelse(metadata_strains$RunDay==15,'blue',
-                                                                ifelse(metadata_strains$RunDay==17,'green',
-                                                                       ifelse(metadata_strains$RunDay==21,'orange','red'))))
+                                               ifelse(metadata_strains$RunDay==17,'green',
+                                               ifelse(metadata_strains$RunDay==21,'orange','red'))))
+
 axis(1, at=1:52, labels=colnames(mz_grp_mean_non_zero)[1:52],las=3)
 legend(2.8,-2.5,legend = c("15","17","21","23"), ncol=2,text.col = c("blue","green","orange","red"),cex=1)
 legend(9.8,-2.5, legend = c("Mean without zero","Mean","CV","Zeroes"), ncol=2,pch = c(1,15,16,17),cex=1)
