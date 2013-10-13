@@ -59,6 +59,7 @@ library(ape)
 library(gplots)
 library(raster)
 library(gridBase)
+library(EMT)
 
 #############
 # User      #
@@ -591,6 +592,17 @@ new_ms_data<-as.data.frame(t(new_ms_data))
 ########################################
 
 #heatmap.2(as.matrix(mz_grp_cv),dendrogram="column",trace="none",mar=c(10,10),Rowv=FALSE,labRow= NULL, ylab=NULL)
+
+######## Multinomial test
+
+observed <- c(4,2)   # observed data: 5 items in category one, 2 items in category two, 1 item in category three
+prob <- c(0.6, 0.4) # model: hypothetical probability that an item falls into category one, two, or three
+out <- multinomial.test(observed, prob)
+
+# Exact Multinomial Test, distance measure: p
+# 
+# Events    pObs    p.value
+# 7   0.311          1
 
 ########ttest
 
