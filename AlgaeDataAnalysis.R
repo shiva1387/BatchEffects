@@ -2,7 +2,7 @@
 # Data Analysis in R-Malaysian algae data #
 ###########################################
 # Author(s): Shiv
-# Version: 06102013 
+# Version: 01122013 
 # Input: ".tsv" file from XCMS 
 # Software: XCMS
 # Modified By :Shivshankar Umashankar 
@@ -60,13 +60,17 @@ library(gplots)
 library(raster)
 library(gridBase)
 library(EMT)
+library(RColorBrewer)
+library(agricolae)
+library(reshape2)
+library(affy)
+library(preprocessCore)
 
 #############
 # User      #
 # Specific  #
 # Variables #
 #############
-
 
 directory<- "F:/Vinay's Algae Data/Aug2013/Data"
 #Contains path for .tsv file
@@ -108,6 +112,12 @@ metadata<-t(metadata)
 RunDay<-metadata[3,]
 GrowthStage<-metadata[1,]
 
+# Biochemical paramters for 11 strains in day 12 group
+
+biochem_para<-read.table("biochemicalparam_day12_replicates.txt",header=TRUE,row.name=1,sep="\t")
+biochem_para<-as.data.frame(biochem_para)
+biochem_para<-biochem_para[order(biochem_para[,1]),]
+
 # Assigning sample groups
 
 SampleGroups<-sapply(names(ms_data_total), function(x) paste(strsplit(x,"_")[[1]][1:2],collapse = "_"))
@@ -132,9 +142,6 @@ SampleGroup<-SampleGroups[1:311]
 
 #ms_data<-log(ms_data)
 
-#ms_data_day4<-ms_data[, grep('D4', names(ms_data))] 
-#ms_data_day12<-ms_data[, grep('D12', names(ms_data))] 
-
 #name_list <- strsplit(SampleGroup, "_")
 #GrowthStage<-sapply(name_list , function (x) if(length(x) == 2) x[1] else as.character(NA))
 #StrainId<-sapply(name_list , function (x) if(length(x) == 2) x[2] else as.character(NA))
@@ -156,9 +163,9 @@ for(i in 1:length(groups))
   boxplot_replicates<-boxplot(ms_data_grp1,plot=FALSE)
   if(ncol(ms_data_grp1)==6)
   {
-  cv_group<-c(round(cv(ms_data_grp1[,1]), 2),round(cv(ms_data_grp1[,2]), 2),round(cv(ms_data_grp1[,3]), 2),
-              round(cv(ms_data_grp1[,4]), 2),round(cv(ms_data_grp1[,5]), 2),round(cv(ms_data_grp1[,6]), 2))
-  boxplot_cv<-boxplot(cv_group,plot=FALSE)
+    cv_group<-c(round(cv(ms_data_grp1[,1]), 2),round(cv(ms_data_grp1[,2]), 2),round(cv(ms_data_grp1[,3]), 2),
+                round(cv(ms_data_grp1[,4]), 2),round(cv(ms_data_grp1[,5]), 2),round(cv(ms_data_grp1[,6]), 2))
+    boxplot_cv<-boxplot(cv_group,plot=FALSE)
   }
   if(ncol(ms_data_grp1)==4)
   {
@@ -191,49 +198,80 @@ outlier_replicates<-unlist(outlier_replicates)
 # [1] "23rd_ACN_Blank01" "D12_001b3_r001"   "D12_006b1_r002"   "D12_14b2_r002"    "D12_14b3_r001"    "D12_051b3_r002"   "D12_104b1_r001"   "D12_207b2_r002"   "D12_255b1_r001"  
 # [10] "D12_283b1_r002"   "D4_094_b1_r002"   "D4_104_b3_r002"   "D4_245b1_r001"    "D4_252b2_r001"    "D4_254b1_r001"    "D4_254b1_r002"    "D4_268_b1_r002"   "D4_325_b1_r002"  
 
+#strains_with_biochem<-c("D12_253","D12_051","D12_252","D12_187","D12_255","D12_001","D12_177","D12_258","D12_254","D12_184","D12_87")
 
 ###### Data: inclusion and exclusion, removing replicates(samples with large variance) from the dataset 
 
 #rem <- c('D4_094_b1_r002','D4_104_b3_r002','D4_245b1_r001','D4_254b1_r001','D4_325_b1_r002')
 
-ms_data_rem<-ms_data[, !names(ms_data) %in% outlier_replicates] #without the outlier replicates
-names(ms_data_rem)
+ms_data<-ms_data[, !names(ms_data) %in% outlier_replicates] #without the outlier replicates
+rownames(ms_data)<-rownames(ms_data_total)
+#write.table(ms_data,"ms_data_wo_outliers.tsv",sep='\t',quote=FALSE,col.names=NA)
 
-SampleGroup_rem#Sample group without the outlier replicates
-SampleGroup_rem<-sapply(names(ms_data_rem), function(x) paste(strsplit(x,"_")[[1]][1:2],collapse = "_"))
-SampleGroup_rem<-as.vector(SampleGroup_rem)
-SampleGroup_rem<-gsub('b1','',SampleGroup_rem)
-SampleGroup_rem<-gsub('b2','',SampleGroup_rem)
-SampleGroup_rem<-gsub('b3','',SampleGroup_rem)
+#### ALL FURTHER ANALYSIS TO BE PERFORMED ON STRAINS AFTER REMOIER OUTLIERS ####
 
+SampleGroup<-sapply(names(ms_data), function(x) paste(strsplit(x,"_")[[1]][1:2],collapse = "_"))
+SampleGroup<-as.vector(SampleGroup)
+SampleGroup<-gsub('b1','',SampleGroup)
+SampleGroup<-gsub('b2','',SampleGroup)
+SampleGroup<-gsub('b3','',SampleGroup)
+SampleGroup#Sample group without the outlier replicates
+
+SampleGroup_day4<-SampleGroup[grep('D4', SampleGroup)] 
+SampleGroup_day12<-SampleGroup[grep('D12',SampleGroup)] 
 
 metadata_rem<-metadata[, !colnames(metadata) %in% outlier_replicates]
-RunDay_rem<-metadata_rem[3,]
-GrowthStage_rem<-metadata_rem[1,]
-RunDay_rem<-as.vector(RunDay_rem)
-GrowthStage_rem<-as.vector(GrowthStage_rem)
+RunDay<-metadata_rem[3,]
+GrowthStage<-metadata_rem[1,]
+#RunDay_rem<-as.vector(RunDay_rem)
+GrowthStage<-as.vector(GrowthStage)
 
-GrowthStage_rem<-gsub('D4', 1, GrowthStage_rem)
-GrowthStage_rem<-gsub('D12', 2, GrowthStage_rem)
+GrowthStage<-gsub('D4', 1, GrowthStage)
+GrowthStage<-gsub('D12', 2, GrowthStage)
 
-GrowthStage_strains<-GrowthStage[25:286]
+#strains alone 24:268
+
+GrowthStage_strains<-GrowthStage[24:268]
 GrowthStage_strains<-gsub('D4', 1, GrowthStage_strains)
 GrowthStage_strains<-gsub('D12', 2, GrowthStage_strains)
 
-RunDay_strains<-as.numeric(RunDay[25:286])
+RunDay_strains<-as.numeric(RunDay[24:268])
+names(RunDay_strains)<-colnames(ms_data)[24:268]
 
-z1<-t(zeroes_in_column)
-colnames(z1)<-colnames(ms_data)
-zeroes_in_column_rem<-z1[, !colnames(z1) %in% outlier_replicates]
+ms_data_day4<-ms_data[, grep('D4', names(ms_data))] 
+ms_data_day12<-ms_data[, grep('D12', names(ms_data))] 
+ms_data_day12_bc<-ms_data[, grepl(paste(strains_with_biochem,collapse="|"),names(ms_data))] #11 strains with biochemical param
 
 GrowthStage_day4<-GrowthStage[grep('D4', names(GrowthStage))]
 GrowthStage_day12<-GrowthStage[grep('D12', names(GrowthStage))] 
 
-RunDay_day4<-as.numeric(RunDay[grep('D4', names(RunDay))])
-RunDay_day12<-as.numeric(RunDay[grep('D12', names(RunDay))])
 
+RunDay_day4<-RunDay[grep('D4',names(RunDay_strains),perl=TRUE, value=TRUE)]
+RunDay_day12<-RunDay[grep('D12', names(RunDay_strains),perl=TRUE, value=TRUE)]
+
+zeroes_in_column_rem<-z1[, !colnames(z1) %in% outlier_replicates]
 zeroes_in_column_day4<-z1[grep('D4', colnames(z1))] 
-zeroes_in_column_day12<-z1[grep('D12', colnames(z1))] 
+zeroes_in_column_day12<-z1[grep('D12', colnames(z1))]
+
+mz_grp_zero_day4<-mz_grp_zero[, grep('D4', names(mz_grp_zero))] 
+mz_grp_zero_day12<-mz_grp_zero[, grep('D12', names(mz_grp_zero))]
+
+
+# converting to data.table format
+
+ms_data_table<-data.table(t(log(ms_data))) #log transformed
+ms_data_table<-cbind(ms_data_table,as.factor(SampleGroup))
+lapply(ms_data_table,class) #checking col classes
+
+ms_data_day12_zero[is.na(ms_data_day12_zero)]<-0
+ms_data_day12_zero_table<-data.table(t(log(ms_data_day12_zero)))
+ms_data_day12_zero_table<-cbind(ms_data_day12_zero_table,as.factor(SampleGroup_day12))
+lapply(ms_data_day12_zero_table,class) #checking col classes
+
+ms_data_day4_zero[is.na(ms_data_day4_zero)]<-0
+ms_data_day4_zero_table<-data.table(t(log(ms_data_day4_zero)))
+ms_data_day4_zero_table<-cbind(ms_data_day4_zero_table,as.factor(SampleGroup_day4))
+lapply(ms_data_day4_zero_table,class) #checking col classes
 
 #######################################
 ###### Exploratory data analysis ######
@@ -257,22 +295,208 @@ png('boxplot.png',width=8000)
 boxplot(log(ms_data),range=0,xlab="Samples",ylab="Log2 feature counts",las=1,cex.axis=0.7)
 dev.off()
 
-## Counting zeros in each column
+### Visual representation of runday Vs strains ####
 
-zero_count_column<-function(x){ d=as.vector(x); sum(d < 1+1e-3) }# here zero is given as 1
+runday_strains<-read.table("algae_metainfor_runday_strains.txt",header=TRUE,sep="\t")
+acast(tmp, x~y, value.var="z")
+runday_strains_matrix<-acast(runday_strains, SampleName~RunDay, value.var="Value")
+runday_strains_matrix[is.na(runday_strains_matrix)]<-0
+pdf("RunDayVsStrains.pdf",width=16,height=16)
+pheatmap(runday_strains_matrix,cluster_rows=FALSE,cluster_cols=FALSE,scale="none",breaks=c(12,16,18,22,25),col=brewer.pal(4,"Accent"),fontsize=12)
+dev.off()
+
+########################################################################
+###### Systems level analysis of non-detected features in ms data ######
+########################################################################
+
+zero_count_column<-function(x){ d=as.vector(x); sum(d < 1+1e-3) } ### Counting zeros in each column # here zero is given as 1
+total_feature_strain<-function(x) length(x)                       ### Counting number of features for each m/z feature in each group
+zero_count<-function(x) sum(x < 1+1e-3)                             ### Counting number of zeroes for each m/z feature in each group
+
+feature_present_count<-function(x) {                              ### Counting number of features observed for each m/z feature in each group
+  no_of_zero<-sum(x < 1+1e-3) 
+  no_feature<-length(x)-no_of_zero
+  return(no_feature)
+}
+
+zero_percent_strain<-function(x) {                              ### Counting number of features observed for each m/z feature in each group
+  no_of_zero<-sum(x < 1+1e-3) 
+  zero_percent<-round((no_of_zero/length(x)),2)
+  return(zero_percent)
+}
+
+all_zero<-function(x){ d=as.vector(x); sum(d == 1) } 
+
+#column numbers
+#blanks: 1:23
+#day12: 24:144
+#day4: 145:268
+#matrix: 269:293
+
 zeroes_in_column<-lapply(ms_data,zero_count_column) 
 zeroes_in_column<-as.numeric(zeroes_in_column)
+z1<-t(zeroes_in_column)
+names(z1)<-colnames(ms_data)
+
+
+zero_bins<-c(0,500,1000,1500,2000,2500,3000,3500,8000,14000)
+
+
+png("zeros_per_column.png",res=150,width=1200,height=1200)
+par(mfrow=c(2,2))
+hist(z1[1:23],breaks=zero_bins, xaxt='n',main="Blanks",xlab="No of zeros",ylab="No of samples:n-23",freq=TRUE)
+axis(side=1, at=zero_bins, labels=zero_bins)
+hist(z1[145:268],breaks=zero_bins, xaxt='n',main="Day4",xlab="No of zeros",ylab="No of samples:n-124",freq=TRUE)
+axis(side=1, at=zero_bins, labels=zero_bins)
+hist(z1[269:293],breaks=zero_bins, xaxt='n',main="Matrix",xlab="No of zeros",ylab="No of samples:n-25",freq=TRUE)
+axis(side=1, at=zero_bins, labels=zero_bins)
+hist(z1[24:144],breaks=zero_bins, xaxt='n',main="Day12",xlab="No of zeros",ylab="No of samples:n-121",freq=TRUE)
+axis(side=1, at=zero_bins, labels=zero_bins)
+dev.off()
+
+
+mz_feature_total2<-t(ms_data_table[,lapply(.SD,total_feature_strain),by=V2])
+mz_feature_total<-as.data.frame(mz_feature_total2[2:nrow(mz_feature_total2),])
+colnames(mz_feature_total)<-unique(SampleGroup)
+
+write.table(mz_feature_total,"mz_features_total.txt",quote=FALSE,sep="\t",col.names=NA)
+mz_grp_total<-read.table("mz_features_total.txt",sep='\t',header=TRUE,row.name=1)
+
+mz_feature_observed2<-t(ms_data_table[,lapply(.SD,feature_present_count),by=V2])
+mz_feature_observed<-as.data.frame(mz_feature_observed2[2:nrow(mz_feature_observed2),])
+colnames(mz_feature_observed)<-unique(SampleGroup)
+
+write.table(mz_feature_observed,"mz_features_observed.txt",quote=FALSE,sep="\t",col.names=NA)
+mz_grp_observed<-read.table("mz_features_observed.txt",sep='\t',header=TRUE,row.name=1)
+
+
+zero_mz_feature2<-t(ms_data_table[,lapply(.SD,zero_count),by=V2])
+zero_mz_feature<-as.data.frame(zero_mz_feature2[2:nrow(zero_mz_feature2),])
+colnames(zero_mz_feature)<-unique(SampleGroup)
+write.table(zero_mz_feature,"mz_features_zeroes.txt",quote=FALSE,sep="\t",col.names=NA)
+mz_grp_zero<-read.table("mz_features_zeroes.txt",sep='\t',header=TRUE,row.name=1)
+
+
+ms_data_d4_zerocount2<-t(ms_data_day4_zero_table[,lapply(.SD,zero_count),by=V2])
+ms_data_d4_zerocount<-as.data.frame(ms_data_d4_zerocount2[2:nrow(ms_data_d4_zerocount2),])
+colnames(ms_data_d4_zerocount)<-unique(SampleGroup_day4)
+write.table(ms_data_d4_zerocount,"ms_data_d4_zerocount.txt",quote=FALSE,sep="\t",col.names=NA)
+ms_data_d4_zerocount<-read.table("ms_data_d4_zerocount.txt",sep='\t',header=TRUE,row.name=1)
+
+ms_data_d12_zerocount2<-t(ms_data_day12_zero_table[,lapply(.SD,zero_count),by=V2])
+ms_data_d12_zerocount<-as.data.frame(ms_data_d12_zerocount2[2:nrow(ms_data_d12_zerocount2),])
+colnames(ms_data_d12_zerocount)<-unique(SampleGroup_day12)
+write.table(ms_data_d12_zerocount,"ms_data_d12_zerocount.txt",quote=FALSE,sep="\t",col.names=NA)
+ms_data_d12_zerocount<-read.table("ms_data_d12_zerocount.txt",sep='\t',header=TRUE,row.name=1)
+
+zero_percent_mz_feature2<-t(ms_data_table[,lapply(.SD,zero_percent_strain),by=V2])
+zero_percent_mz_feature<-as.data.frame(zero_percent_mz_feature2[2:nrow(zero_percent_mz_feature2),])
+colnames(zero_percent_mz_feature)<-unique(SampleGroup)
+write.table(zero_percent_mz_feature,"mz_features_zero_percent.txt",quote=FALSE,sep="\t",col.names=NA)
+mz_grp_zero_percent<-read.table("mz_features_zero_percent.txt",sep='\t',header=TRUE,row.name=1)
+
+no_features_all_zero<-lapply(mz_grp_zero_percent,all_zero) 
+names(no_features_all_zero)<-unique(SampleGroup)
+
+png("nof-features-allblanks.png",res=150,width=1200,height=1200)
+par(mfrow=c(2,2))
+plot(1:4,no_features_all_zero[1:4], xaxt = "n",xlab='Blanks', ylab='no of features-all reps zero')
+axis(1, at=1:4, labels=names(no_features_all_zero)[1:4])
+plot(1:22,no_features_all_zero[27:48], xaxt = "n",xlab='Day 4 Strains', ylab='no of features-all reps zero')
+axis(1, at=1:22, labels=names(no_features_all_zero)[5:26],cex.axis=0.6)
+plot(1:4,no_features_all_zero[49:52], xaxt = "n",xlab='Matrix', ylab='no of features-all reps zero')
+axis(1, at=1:4, labels=names(no_features_all_zero)[49:52])
+plot(1:22,no_features_all_zero[5:26], xaxt = "n",xlab='Day 12 Strains', ylab='no of features-all reps zero')
+axis(1, at=1:22, labels=names(no_features_all_zero)[5:26],cex.axis=0.6)
+dev.off()
+
+#day12 is columns 5:26 and day 4 is columns 27:48
+
+ms_data_day4_zero_nonzero<-ms_data_day4
+ms_data_day4_zero_nonzero[ms_data_day4_zero_nonzero<1+1e-3]<-NA
+ms_data_day4_nonzero<- ms_data_day4_zero_nonzero[complete.cases(ms_data_day4_zero_nonzero),]
+ms_data_day4_zero<- ms_data_day4_zero_nonzero[!complete.cases(ms_data_day4_zero_nonzero),]
+ms_data_day4_nonzero[is.na(ms_data_day4_nonzero)]<-0
+write.table(ms_data_day4_nonzero,"ms_data_day4_nonzero.txt",quote=FALSE,sep="\t",col.names=NA)
+
+ms_data_day12_zero_nonzero<-ms_data_day12
+ms_data_day12_zero_nonzero[ms_data_day12_zero_nonzero<1+1e-3]<-NA
+ms_data_day12_nonzero<- ms_data_day12_zero_nonzero[complete.cases(ms_data_day12_zero_nonzero),]
+ms_data_day12_zero<- ms_data_day12_zero_nonzero[!complete.cases(ms_data_day12_zero_nonzero),]
+ms_data_day12_nonzero[is.na(ms_data_day12_nonzero)]<-0
+write.table(ms_data_day12_nonzero,"ms_data_day12_nonzero.txt",quote=FALSE,sep="\t",col.names=NA)
+
+ms_data_day12_nonzero_bc<-ms_data_day12_nonzero[, grepl(paste(strains_with_biochem,collapse="|"),names(ms_data_day12_nonzero))] #11 strains with biochemical param
+ms_data_day12_nonzero_bc<-ms_data_day12_nonzero_bc[,order(names(ms_data_day12_nonzero_bc))]
+
+mz_grp_zero<-data.frame(cbind(mz,rt,mz_grp_zero))
+
+for (i in seq(3,ncol(mz_grp_zero),2))
+{
+  mz<-as.vector(mz_grp_zero$mz)
+  rt<-as.vector(mz_grp_zero$rt)
+  ## now plot scatter plot
+  png(paste("noofZeros/", i, ".png", sep = ""),height=800,width=1200)
+  par(mfrow=c(2,2))
+  plot(mz,mz_grp_zero[,i],main=names(mz_grp_zero)[i],xlab="mz",ylab="No of zeros")
+  hist(mz_grp_zero[,i],main=names(mz_grp_zero)[i],xlab="no of zeroes",ylab="Features", breaks=6)
+  plot(mz,mz_grp_zero[,i+1],main=names(mz_grp_zero)[i+1],xlab="mz",ylab="No of zeros")
+  hist(mz_grp_zero[,i+1],main=names(mz_grp_zero)[i+1],xlab="no of zeroes",ylab="Features", breaks=6)
+  dev.off()
+}
+graphics.off()
+
+# plotting %of zeroes for each feature
+
+mz_grp_zero_percent<-data.frame(cbind(mz,rt,mz_grp_zero_percent))
+
+for (i in seq(3,ncol(mz_grp_zero_percent),4))
+{
+  mz<-as.vector(mz_grp_zero_percent$mz)
+  rt<-as.vector(mz_grp_zero_percent$rt)
+  ## now plot scatter plot
+  png(paste("percentofzeroes/", i, ".png", sep = ""),height=800,width=1200)
+  par(mfrow=c(2,2))
+  hist(mz_grp_zero_percent[,i],main=names(mz_grp_zero)[i],xlab="% of replicates which are zeros",ylab="no of Features", breaks=6)
+  hist(mz_grp_zero_percent[,i+1],main=names(mz_grp_zero)[i+1],xlab="% of replicates which are zeros",ylab="no of Features", breaks=6)
+  hist(mz_grp_zero_percent[,i],main=names(mz_grp_zero)[i+2],xlab="% of replicates which are zeros",ylab="no of Features", breaks=6)
+  hist(mz_grp_zero_percent[,i],main=names(mz_grp_zero)[i+3],xlab="% of replicates which are zeros",ylab="no of Features", breaks=6)
+  dev.off()
+}
+graphics.off()
+
+
+
+#Mean-Vs-Zeros
+
+for (i in seq(3,ncol(mz_grp_mean),2))
+{
+  mz<-as.vector(mz_grp_mean$mz)
+  rt<-as.vector(mz_grp_mean$rt)
+  ## now plot scatter plot
+  png(paste("Mean-Vs-Zeros/", i, ".png", sep = ""),height=800,width=1200)
+  par(mfrow=c(2,2))
+  
+  cor1<-cor(mz_grp_zero[,i],mz_grp_mean[,i], use="all.obs", method="pearson")
+  plot(mz_grp_zero[,i],mz_grp_mean[,i],main=names(mz_grp_zero)[i],xlab="No of zeroes",ylab="mean")
+  text(3, 10, paste("R2 =", round(cor1, 3)),cex=1)
+  hist(mz_grp_mean[,i],main=names(mz_grp_zero)[i],xlab="mean",ylab="No of Features")
+  
+  cor2<-cor(mz_grp_zero[,i+1],mz_grp_mean[,i+1], use="all.obs", method="pearson")  
+  plot(mz_grp_zero[,i+1],mz_grp_mean[,i+1],main=names(mz_grp_zero)[i+1],xlab="No of zeroes",ylab="mean")
+  text(3, 10, paste("R2 =", round(cor2, 3)),cex=1)
+  hist(mz_grp_mean[,i+1],main=names(mz_grp_zero)[i+1],xlab="mean",ylab="No of Features")
+  
+  dev.off()
+}
+graphics.off()
+
+
+############################################################################
+###### End-Systems level analysis of non-detected features in ms data ######
+############################################################################
 
 ## Generating boxplot and cv/mean for each sample group
-
-# #scatterplot matrix for mean,cv,no of zeroes
-# d<-data.frame(c(1,2,3,4,5,6),
-#               c(round(mean(ms_data_grp1[,1]), 2),round(mean(ms_data_grp1[,2]), 2),round(mean(ms_data_grp1[,3]), 2),round(mean(ms_data_grp1[,4]), 2),round(mean(ms_data_grp1[,5]), 2),round(mean(ms_data_grp1[,6]), 2)),
-#               c(round(cv(ms_data_grp1[,1]), 2),round(cv(ms_data_grp1[,2]), 2),round(cv(ms_data_grp1[,3]), 2),round(cv(ms_data_grp1[,4]), 2),round(cv(ms_data_grp1[,5]), 2),round(cv(ms_data_grp1[,6]), 2)),
-#               c(zeroes_in_column[no+1],zeroes_in_column[no+2],zeroes_in_column[no+3],zeroes_in_column[no+4],zeroes_in_column[no+5],zeroes_in_column[no+6]))
-# colnames(d)<-c('replicates','mean','cv','zeroes')
-# 
-# plot(d,pch=16,col=rainbow(9),cex=2,main=paste0(groups[i]))
 
 groups<-unique(SampleGroup)
 no<-1
@@ -281,122 +505,122 @@ no_of_features<-as.integer(nrow(ms_data_total))
 
 for(i in 1:length(groups))
 {
-png(paste(groups[i],".png"),width=2000,height=800)
-ms_data_grp1<-ms_data[, grep(groups[i], names(ms_data))]
-par(mar=c(10,2,4,2),mfrow=c(1,2))
-ms_data_grp1<-log(ms_data_grp1)
-boxplot(ms_data_grp1,range=0,ylab="Log2 feature counts", main=paste0(groups[i],"\n","For each col:mean,cv,no of zeroes"),xaxt="n",las=1)
-if(ncol(ms_data_grp1)==6)
-{
-  axis(side=1,cex.axis=1,at=seq(1,6,1),as.character(c(paste0(names(ms_data_grp1[1]),"\n",round(mean(ms_data_grp1[,1]), 2),",",round(cv(ms_data_grp1[,1]), 2),"\n",zeroes_in_column[no]),
-                                                      paste0(names(ms_data_grp1[2]),"\n",round(mean(ms_data_grp1[,2]), 2),",",round(cv(ms_data_grp1[,2]), 2),"\n",zeroes_in_column[no+1]),
-                                                      paste0(names(ms_data_grp1[3]),"\n",round(mean(ms_data_grp1[,3]), 2),",",round(cv(ms_data_grp1[,3]), 2),"\n",zeroes_in_column[no+2]),
-                                                      paste0(names(ms_data_grp1[4]),"\n",round(mean(ms_data_grp1[,4]), 2),",",round(cv(ms_data_grp1[,4]), 2),"\n",zeroes_in_column[no+3]),
-                                                      paste0(names(ms_data_grp1[5]),"\n",round(mean(ms_data_grp1[,5]), 2),",",round(cv(ms_data_grp1[,5]), 2),"\n",zeroes_in_column[no+4]),
-                                                      paste0(names(ms_data_grp1[6]),"\n",round(mean(ms_data_grp1[,6]), 2),",",round(cv(ms_data_grp1[,6]), 2),"\n",zeroes_in_column[no+5])   
-  )))
-
-
-  
- ### Plotting colored bar charts explaining % of values in each col
-  
-  c = c(((no_of_features-zeroes_in_column[no])/no_of_features)*100,(zeroes_in_column[no]/no_of_features)*100,((no_of_features-zeroes_in_column[no+1])/no_of_features)*100,(zeroes_in_column[no+1]/no_of_features)*100,
-        ((no_of_features-zeroes_in_column[no+2])/no_of_features)*100,(zeroes_in_column[no+2]/no_of_features)*100,((no_of_features-zeroes_in_column[no+3])/no_of_features)*100,(zeroes_in_column[no+3]/no_of_features)*100,
-        ((no_of_features-zeroes_in_column[no+4])/no_of_features)*100,(zeroes_in_column[no+4]/no_of_features)*100,((no_of_features-zeroes_in_column[no+5])/no_of_features)*100,(zeroes_in_column[no+5]/no_of_features)*100)
-  a = c("Present","Zero","Present","Zero","Present","Zero","Present","Zero","Present","Zero","Present","Zero")
-  b = c(names(ms_data_grp1[1]),names(ms_data_grp1[1]),names(ms_data_grp1[2]),names(ms_data_grp1[2]),names(ms_data_grp1[3]),names(ms_data_grp1[3]),
-        names(ms_data_grp1[4]),names(ms_data_grp1[4]),names(ms_data_grp1[5]),names(ms_data_grp1[5]),names(ms_data_grp1[6]),names(ms_data_grp1[6]))
-  
-  dat = data.frame(Group=a, Member=b, Percentage=c)
-  
-  ## the last one is the current plot
-  plot.new()              ## suggested by @Josh
-  vps <- baseViewports()
-  pushViewport(vps$figure) ##   I am in the space of the autocorrelation plot
-  vp1 <-plotViewport(c(1,1,0,1)) ## create new vp with margins, you play with this values 
-  require(ggplot2)
-  
-  p <-  ggplot(dat, aes(x = factor(Member),  y = Percentage, fill=Group))+ xlab("Replicates") + geom_bar(stat = "identity")+ labs(title= "Features Pres Vs Abs\n")+
-    ## some setting in the title to get something near to the other plots
-    theme(plot.title = element_text(size = rel(2),face ='bold'),axis.text.x = element_text(size=15))+scale_fill_manual(values = c('red','green'))
-  print(p,vp = vp1)        ## suggested by @bpatiste
-  
-  no<-no+6
-  
-}
-else if(ncol(ms_data_grp1)==4)
-{
-  axis(side=1,at=seq(1,4,1),as.character(c(paste0(names(ms_data_grp1[1]),"\n",round(mean(ms_data_grp1[,1]), 2),",",round(cv(ms_data_grp1[,1]), 2),"\n",zeroes_in_column[no]),
-                                           paste0(names(ms_data_grp1[2]),"\n",round(mean(ms_data_grp1[,2]), 2),",",round(cv(ms_data_grp1[,2]), 2),"\n",zeroes_in_column[no+1]),
-                                           paste0(names(ms_data_grp1[3]),"\n",round(mean(ms_data_grp1[,3]), 2),",",round(cv(ms_data_grp1[,3]), 2),"\n",zeroes_in_column[no+2]),
-                                           paste0(names(ms_data_grp1[4]),"\n",round(mean(ms_data_grp1[,4]), 2),",",round(cv(ms_data_grp1[,4]), 2),"\n",zeroes_in_column[no+3])   
-  )))
- 
-  ### Plotting colored bar charts explaining % of values in each col
-  
-  c = c(((no_of_features-zeroes_in_column[no])/no_of_features)*100,(zeroes_in_column[no]/no_of_features)*100,((no_of_features-zeroes_in_column[no+1])/no_of_features)*100,(zeroes_in_column[no+1]/no_of_features)*100,
-        ((no_of_features-zeroes_in_column[no+2])/no_of_features)*100,(zeroes_in_column[no+2]/no_of_features)*100,((no_of_features-zeroes_in_column[no+3])/no_of_features)*100,(zeroes_in_column[no+3]/no_of_features)*100)
-  a = c("Present","Zero","Present","Zero","Present","Zero","Present","Zero")
-  b = c(names(ms_data_grp1[1]),names(ms_data_grp1[1]),names(ms_data_grp1[2]),names(ms_data_grp1[2]),
-        names(ms_data_grp1[3]),names(ms_data_grp1[3]),names(ms_data_grp1[4]),names(ms_data_grp1[4]))
-  
-  dat = data.frame(Group=a, Member=b, Percentage=c)
-  
-  ## the last one is the current plot
-  plot.new()              ## suggested by @Josh
-  vps <- baseViewports()
-  pushViewport(vps$figure) ##   I am in the space of the autocorrelation plot
-  vp1 <-plotViewport(c(1,1,0,1)) ## create new vp with margins, you play with this values 
-  require(ggplot2)
-  
-  p <-  ggplot(dat, aes(x = factor(Member),  y = Percentage, fill=Group))+ xlab("Replicates") + geom_bar(stat = "identity")+ labs(title= "Features Pres Vs Abs\n")+
-    ## some setting in the title to get something near to the other plots
-    theme(plot.title = element_text(size = rel(1.4),face ='bold'),axis.text.x = element_text(size=15))+scale_fill_manual(values = c('red','green'))
-  print(p,vp = vp1)        ## suggested by @bpatiste
-  
-  no<-no+4
-  
-}
-else if(ncol(ms_data_grp1)==7)
-{
-  axis(side=1,at=seq(1,7,1),as.character(c(paste0(names(ms_data_grp1[1]),"\n",round(mean(ms_data_grp1[,1]), 2),",",round(cv(ms_data_grp1[,1]), 2),"\n",zeroes_in_column[no]),
-                                           paste0(names(ms_data_grp1[2]),"\n",round(mean(ms_data_grp1[,2]), 2),",",round(cv(ms_data_grp1[,2]), 2),"\n",zeroes_in_column[no+1]),
-                                           paste0(names(ms_data_grp1[3]),"\n",round(mean(ms_data_grp1[,3]), 2),",",round(cv(ms_data_grp1[,3]), 2),"\n",zeroes_in_column[no+2]),
-                                           paste0(names(ms_data_grp1[4]),"\n",round(mean(ms_data_grp1[,4]), 2),",",round(cv(ms_data_grp1[,4]), 2),"\n",zeroes_in_column[no+3]),
-                                           paste0(names(ms_data_grp1[5]),"\n",round(mean(ms_data_grp1[,5]), 2),",",round(cv(ms_data_grp1[,5]), 2),"\n",zeroes_in_column[no+4]),
-                                           paste0(names(ms_data_grp1[6]),"\n",round(mean(ms_data_grp1[,6]), 2),",",round(cv(ms_data_grp1[,6]), 2),"\n",zeroes_in_column[no+5]),
-                                           paste0(names(ms_data_grp1[7]),"\n",round(mean(ms_data_grp1[,7]), 2),",",round(cv(ms_data_grp1[,7]), 2),"\n",zeroes_in_column[no+6])
-  )))
-  
-  ### Plotting colored bar charts explaining % of values in each col
-  
-  c = c(((no_of_features-zeroes_in_column[no])/no_of_features)*100,(zeroes_in_column[no]/no_of_features)*100,((no_of_features-zeroes_in_column[no+1])/no_of_features)*100,(zeroes_in_column[no+1]/no_of_features)*100,
-        ((no_of_features-zeroes_in_column[no+2])/no_of_features)*100,(zeroes_in_column[no+2]/no_of_features)*100,((no_of_features-zeroes_in_column[no+3])/no_of_features)*100,(zeroes_in_column[no+3]/no_of_features)*100,
-        ((no_of_features-zeroes_in_column[no+4])/no_of_features)*100,(zeroes_in_column[no+4]/no_of_features)*100,((no_of_features-zeroes_in_column[no+5])/no_of_features)*100,(zeroes_in_column[no+5]/no_of_features)*100,
-        ((no_of_features-zeroes_in_column[no+5])/no_of_features)*100,(zeroes_in_column[no+5]/no_of_features)*100)
-  a = c("Present","Zero","Present","Zero","Present","Zero","Present","Zero","Present","Zero","Present","Zero","Present","Zero")
-  b = c(names(ms_data_grp1[1]),names(ms_data_grp1[1]),names(ms_data_grp1[2]),names(ms_data_grp1[2]),names(ms_data_grp1[3]),names(ms_data_grp1[3]),
-        names(ms_data_grp1[4]),names(ms_data_grp1[4]),names(ms_data_grp1[5]),names(ms_data_grp1[5]),names(ms_data_grp1[6]),names(ms_data_grp1[6]),
-        names(ms_data_grp1[7]),names(ms_data_grp1[7]))
-  
-  dat = data.frame(Group=a, Member=b, Percentage=c)
-  
-  ## the last one is the current plot
-  plot.new()              ## suggested by @Josh
-  vps <- baseViewports()
-  pushViewport(vps$figure) ##   I am in the space of the autocorrelation plot
-  vp1 <-plotViewport(c(1,1,0,1)) ## create new vp with margins, you play with this values 
-  require(ggplot2)
-  
-  p <-  ggplot(dat, aes(x = factor(Member),  y = Percentage, fill=Group))+ xlab("Replicates") + geom_bar(stat = "identity")+ labs(title= "Features Pres Vs Abs\n")+
-    ## some setting in the title to get something near to the other plots
-    theme(plot.title = element_text(size = rel(1.4),face ='bold'),axis.text.x = element_text(size=15))+scale_fill_manual(values = c('red','green'))
-  print(p,vp = vp1)        ## suggested by @bpatiste
-  
-  no<-no+7
-}
-dev.off()
-graphics.off()
+  png(paste(groups[i],".png"),width=2000,height=800)
+  ms_data_grp1<-ms_data[, grep(groups[i], names(ms_data))]
+  par(mar=c(10,2,4,2),mfrow=c(1,2))
+  ms_data_grp1<-log(ms_data_grp1)
+  boxplot(ms_data_grp1,range=0,ylab="Log2 feature counts", main=paste0(groups[i],"\n","For each col:mean,cv,no of zeroes"),xaxt="n",las=1)
+  if(ncol(ms_data_grp1)==6)
+  {
+    axis(side=1,cex.axis=1,at=seq(1,6,1),as.character(c(paste0(names(ms_data_grp1[1]),"\n",round(mean(ms_data_grp1[,1]), 2),",",round(cv(ms_data_grp1[,1]), 2),"\n",zeroes_in_column[no]),
+                                                        paste0(names(ms_data_grp1[2]),"\n",round(mean(ms_data_grp1[,2]), 2),",",round(cv(ms_data_grp1[,2]), 2),"\n",zeroes_in_column[no+1]),
+                                                        paste0(names(ms_data_grp1[3]),"\n",round(mean(ms_data_grp1[,3]), 2),",",round(cv(ms_data_grp1[,3]), 2),"\n",zeroes_in_column[no+2]),
+                                                        paste0(names(ms_data_grp1[4]),"\n",round(mean(ms_data_grp1[,4]), 2),",",round(cv(ms_data_grp1[,4]), 2),"\n",zeroes_in_column[no+3]),
+                                                        paste0(names(ms_data_grp1[5]),"\n",round(mean(ms_data_grp1[,5]), 2),",",round(cv(ms_data_grp1[,5]), 2),"\n",zeroes_in_column[no+4]),
+                                                        paste0(names(ms_data_grp1[6]),"\n",round(mean(ms_data_grp1[,6]), 2),",",round(cv(ms_data_grp1[,6]), 2),"\n",zeroes_in_column[no+5])   
+    )))
+    
+    
+    
+    ### Plotting colored bar charts explaining % of values in each col
+    
+    c = c(((no_of_features-zeroes_in_column[no])/no_of_features)*100,(zeroes_in_column[no]/no_of_features)*100,((no_of_features-zeroes_in_column[no+1])/no_of_features)*100,(zeroes_in_column[no+1]/no_of_features)*100,
+          ((no_of_features-zeroes_in_column[no+2])/no_of_features)*100,(zeroes_in_column[no+2]/no_of_features)*100,((no_of_features-zeroes_in_column[no+3])/no_of_features)*100,(zeroes_in_column[no+3]/no_of_features)*100,
+          ((no_of_features-zeroes_in_column[no+4])/no_of_features)*100,(zeroes_in_column[no+4]/no_of_features)*100,((no_of_features-zeroes_in_column[no+5])/no_of_features)*100,(zeroes_in_column[no+5]/no_of_features)*100)
+    a = c("Present","Zero","Present","Zero","Present","Zero","Present","Zero","Present","Zero","Present","Zero")
+    b = c(names(ms_data_grp1[1]),names(ms_data_grp1[1]),names(ms_data_grp1[2]),names(ms_data_grp1[2]),names(ms_data_grp1[3]),names(ms_data_grp1[3]),
+          names(ms_data_grp1[4]),names(ms_data_grp1[4]),names(ms_data_grp1[5]),names(ms_data_grp1[5]),names(ms_data_grp1[6]),names(ms_data_grp1[6]))
+    
+    dat = data.frame(Group=a, Member=b, Percentage=c)
+    
+    ## the last one is the current plot
+    plot.new()              ## suggested by @Josh
+    vps <- baseViewports()
+    pushViewport(vps$figure) ##   I am in the space of the autocorrelation plot
+    vp1 <-plotViewport(c(1,1,0,1)) ## create new vp with margins, you play with this values 
+    require(ggplot2)
+    
+    p <-  ggplot(dat, aes(x = factor(Member),  y = Percentage, fill=Group))+ xlab("Replicates") + geom_bar(stat = "identity")+ labs(title= "Features Pres Vs Abs\n")+
+      ## some setting in the title to get something near to the other plots
+      theme(plot.title = element_text(size = rel(2),face ='bold'),axis.text.x = element_text(size=15))+scale_fill_manual(values = c('red','green'))
+    print(p,vp = vp1)        ## suggested by @bpatiste
+    
+    no<-no+6
+    
+  }
+  else if(ncol(ms_data_grp1)==4)
+  {
+    axis(side=1,at=seq(1,4,1),as.character(c(paste0(names(ms_data_grp1[1]),"\n",round(mean(ms_data_grp1[,1]), 2),",",round(cv(ms_data_grp1[,1]), 2),"\n",zeroes_in_column[no]),
+                                             paste0(names(ms_data_grp1[2]),"\n",round(mean(ms_data_grp1[,2]), 2),",",round(cv(ms_data_grp1[,2]), 2),"\n",zeroes_in_column[no+1]),
+                                             paste0(names(ms_data_grp1[3]),"\n",round(mean(ms_data_grp1[,3]), 2),",",round(cv(ms_data_grp1[,3]), 2),"\n",zeroes_in_column[no+2]),
+                                             paste0(names(ms_data_grp1[4]),"\n",round(mean(ms_data_grp1[,4]), 2),",",round(cv(ms_data_grp1[,4]), 2),"\n",zeroes_in_column[no+3])   
+    )))
+    
+    ### Plotting colored bar charts explaining % of values in each col
+    
+    c = c(((no_of_features-zeroes_in_column[no])/no_of_features)*100,(zeroes_in_column[no]/no_of_features)*100,((no_of_features-zeroes_in_column[no+1])/no_of_features)*100,(zeroes_in_column[no+1]/no_of_features)*100,
+          ((no_of_features-zeroes_in_column[no+2])/no_of_features)*100,(zeroes_in_column[no+2]/no_of_features)*100,((no_of_features-zeroes_in_column[no+3])/no_of_features)*100,(zeroes_in_column[no+3]/no_of_features)*100)
+    a = c("Present","Zero","Present","Zero","Present","Zero","Present","Zero")
+    b = c(names(ms_data_grp1[1]),names(ms_data_grp1[1]),names(ms_data_grp1[2]),names(ms_data_grp1[2]),
+          names(ms_data_grp1[3]),names(ms_data_grp1[3]),names(ms_data_grp1[4]),names(ms_data_grp1[4]))
+    
+    dat = data.frame(Group=a, Member=b, Percentage=c)
+    
+    ## the last one is the current plot
+    plot.new()              ## suggested by @Josh
+    vps <- baseViewports()
+    pushViewport(vps$figure) ##   I am in the space of the autocorrelation plot
+    vp1 <-plotViewport(c(1,1,0,1)) ## create new vp with margins, you play with this values 
+    require(ggplot2)
+    
+    p <-  ggplot(dat, aes(x = factor(Member),  y = Percentage, fill=Group))+ xlab("Replicates") + geom_bar(stat = "identity")+ labs(title= "Features Pres Vs Abs\n")+
+      ## some setting in the title to get something near to the other plots
+      theme(plot.title = element_text(size = rel(1.4),face ='bold'),axis.text.x = element_text(size=15))+scale_fill_manual(values = c('red','green'))
+    print(p,vp = vp1)        ## suggested by @bpatiste
+    
+    no<-no+4
+    
+  }
+  else if(ncol(ms_data_grp1)==7)
+  {
+    axis(side=1,at=seq(1,7,1),as.character(c(paste0(names(ms_data_grp1[1]),"\n",round(mean(ms_data_grp1[,1]), 2),",",round(cv(ms_data_grp1[,1]), 2),"\n",zeroes_in_column[no]),
+                                             paste0(names(ms_data_grp1[2]),"\n",round(mean(ms_data_grp1[,2]), 2),",",round(cv(ms_data_grp1[,2]), 2),"\n",zeroes_in_column[no+1]),
+                                             paste0(names(ms_data_grp1[3]),"\n",round(mean(ms_data_grp1[,3]), 2),",",round(cv(ms_data_grp1[,3]), 2),"\n",zeroes_in_column[no+2]),
+                                             paste0(names(ms_data_grp1[4]),"\n",round(mean(ms_data_grp1[,4]), 2),",",round(cv(ms_data_grp1[,4]), 2),"\n",zeroes_in_column[no+3]),
+                                             paste0(names(ms_data_grp1[5]),"\n",round(mean(ms_data_grp1[,5]), 2),",",round(cv(ms_data_grp1[,5]), 2),"\n",zeroes_in_column[no+4]),
+                                             paste0(names(ms_data_grp1[6]),"\n",round(mean(ms_data_grp1[,6]), 2),",",round(cv(ms_data_grp1[,6]), 2),"\n",zeroes_in_column[no+5]),
+                                             paste0(names(ms_data_grp1[7]),"\n",round(mean(ms_data_grp1[,7]), 2),",",round(cv(ms_data_grp1[,7]), 2),"\n",zeroes_in_column[no+6])
+    )))
+    
+    ### Plotting colored bar charts explaining % of values in each col
+    
+    c = c(((no_of_features-zeroes_in_column[no])/no_of_features)*100,(zeroes_in_column[no]/no_of_features)*100,((no_of_features-zeroes_in_column[no+1])/no_of_features)*100,(zeroes_in_column[no+1]/no_of_features)*100,
+          ((no_of_features-zeroes_in_column[no+2])/no_of_features)*100,(zeroes_in_column[no+2]/no_of_features)*100,((no_of_features-zeroes_in_column[no+3])/no_of_features)*100,(zeroes_in_column[no+3]/no_of_features)*100,
+          ((no_of_features-zeroes_in_column[no+4])/no_of_features)*100,(zeroes_in_column[no+4]/no_of_features)*100,((no_of_features-zeroes_in_column[no+5])/no_of_features)*100,(zeroes_in_column[no+5]/no_of_features)*100,
+          ((no_of_features-zeroes_in_column[no+5])/no_of_features)*100,(zeroes_in_column[no+5]/no_of_features)*100)
+    a = c("Present","Zero","Present","Zero","Present","Zero","Present","Zero","Present","Zero","Present","Zero","Present","Zero")
+    b = c(names(ms_data_grp1[1]),names(ms_data_grp1[1]),names(ms_data_grp1[2]),names(ms_data_grp1[2]),names(ms_data_grp1[3]),names(ms_data_grp1[3]),
+          names(ms_data_grp1[4]),names(ms_data_grp1[4]),names(ms_data_grp1[5]),names(ms_data_grp1[5]),names(ms_data_grp1[6]),names(ms_data_grp1[6]),
+          names(ms_data_grp1[7]),names(ms_data_grp1[7]))
+    
+    dat = data.frame(Group=a, Member=b, Percentage=c)
+    
+    ## the last one is the current plot
+    plot.new()              ## suggested by @Josh
+    vps <- baseViewports()
+    pushViewport(vps$figure) ##   I am in the space of the autocorrelation plot
+    vp1 <-plotViewport(c(1,1,0,1)) ## create new vp with margins, you play with this values 
+    require(ggplot2)
+    
+    p <-  ggplot(dat, aes(x = factor(Member),  y = Percentage, fill=Group))+ xlab("Replicates") + geom_bar(stat = "identity")+ labs(title= "Features Pres Vs Abs\n")+
+      ## some setting in the title to get something near to the other plots
+      theme(plot.title = element_text(size = rel(1.4),face ='bold'),axis.text.x = element_text(size=15))+scale_fill_manual(values = c('red','green'))
+    print(p,vp = vp1)        ## suggested by @bpatiste
+    
+    no<-no+7
+  }
+  dev.off()
+  graphics.off()
 }
 rm(no)
 #plot(t(log1p(ms_data))~SampleGroup,range=0,xlab="Samples",ylab="Log2 feature counts",las=1,col=SampleGroup)
@@ -407,12 +631,6 @@ rm(no)
 png("cv_samples.png",width=4000)
 plot(1:ncol(ms_data),apply(ms_data,2,cv)) # For each column 
 dev.off()
-
-# converting to data.table format
-
-ms_data_tst<-data.table(t(log(ms_data)))
-ms_data_tst<-cbind(ms_data_tst,as.factor(SampleGroup))
-lapply(ms_data_tst,class) #checking col classes
 
 # cv for each feature in each sample group
 
@@ -487,7 +705,7 @@ for (i in seq(3,ncol(mz_grp_mean),4))
   # hist(mz_grp_mean[,i+1],main=names(mz_grp_mean)[i+1],ylab="number of features",xlab="mean of log(counts)")
   # hist(mz_grp_mean[,i+2],main=names(mz_grp_mean)[i+2],ylab="number of features",xlab="mean of log(counts)")
   # hist(mz_grp_mean[,i+3],main=names(mz_grp_mean)[i+3],ylab="number of features",xlab="mean of log(counts)")
-    
+  
   png(paste("rt/", i, "_rt.png", sep = ""),height=800,width=1200)
   par(mfrow=c(2,2))
   plot(rt_mean[,1],rt_mean[,2],main=names(mz_grp_mean)[i],xlab="rt",ylab="mean of log(counts)")
@@ -501,57 +719,6 @@ graphics.off()
 dev.off()
 
 
-### Counting number of zeroes for each m/z feature in each group
-
-zero_count<-function(x) sum(x < 1e-3) 
-zero_mz_feature2<-t(ms_data_tst[,lapply(.SD,zero_count),by=V2])
-zero_mz_feature<-as.data.frame(zero_mz_feature2[2:nrow(zero_mz_feature2),])
-colnames(zero_mz_feature)<-unique(SampleGroup)
-
-write.table(zero_mz_feature,"mz_features_zeroes.txt",quote=FALSE,sep="\t")
-mz_grp_zero<-read.table("mz_features_zeroes.txt",sep='\t',header=TRUE,row.name=1)
-
-mz_grp_zero<-data.frame(cbind(mz,rt,mz_grp_zero))
-
-for (i in seq(3,ncol(mz_grp_cv),2))
-{
-  mz<-as.vector(mz_grp_cv$mz)
-  rt<-as.vector(mz_grp_cv$rt)
- ## now plot scatter plot
-  png(paste("noofZeros/", i, "_mz.png", sep = ""),height=800,width=1200)
-  par(mfrow=c(2,2))
-  plot(mz,mz_grp_zero[,i],main=names(mz_grp_zero)[i],xlab="mz",ylab="No of zeros")
-  hist(mz_grp_zero[,i],main=names(mz_grp_zero)[i],xlab="no of zeroes",ylab="Features", breaks=6)
-  plot(mz,mz_grp_zero[,i+1],main=names(mz_grp_zero)[i+1],xlab="mz",ylab="No of zeros")
-  hist(mz_grp_zero[,i+1],main=names(mz_grp_zero)[i+1],xlab="no of zeroes",ylab="Features", breaks=6)
-  dev.off()
-}
-graphics.off()
-
-#Mean-Vs-Zeros
-
-for (i in seq(3,ncol(mz_grp_mean),2))
-{
-  mz<-as.vector(mz_grp_mean$mz)
-  rt<-as.vector(mz_grp_mean$rt)
-  ## now plot scatter plot
-  png(paste("Mean-Vs-Zeros/", i, ".png", sep = ""),height=800,width=1200)
-  par(mfrow=c(2,2))
-  
-  cor1<-cor(mz_grp_zero[,i],mz_grp_mean[,i], use="all.obs", method="pearson")
-  plot(mz_grp_zero[,i],mz_grp_mean[,i],main=names(mz_grp_zero)[i],xlab="No of zeroes",ylab="mean")
-  text(3, 10, paste("R2 =", round(cor1, 3)),cex=1)
-  hist(mz_grp_mean[,i],main=names(mz_grp_zero)[i],xlab="mean",ylab="No of Features")
-  
-  cor2<-cor(mz_grp_zero[,i+1],mz_grp_mean[,i+1], use="all.obs", method="pearson")  
-  plot(mz_grp_zero[,i+1],mz_grp_mean[,i+1],main=names(mz_grp_zero)[i+1],xlab="No of zeroes",ylab="mean")
-  text(3, 10, paste("R2 =", round(cor2, 3)),cex=1)
-  hist(mz_grp_mean[,i+1],main=names(mz_grp_zero)[i+1],xlab="mean",ylab="No of Features")
-  
-  dev.off()
-}
-graphics.off()
-
 #### Internal standard
 
 #4473
@@ -560,8 +727,8 @@ png("internalStandard_reps.png",height=800,width=800)
 par(xpd=TRUE,mar=c(10,4,4,2))
 plot(1:311,log(ms_data[4473,]),xaxt='n',las=2,xlab="replicates",ylab="log(counts)",pch=1,main=paste("Internal standard replicates-fmoc"," ",row.names(ms_data)[4473]),
      col=ifelse(metadata$RunDay==15,'blue',
-         ifelse(metadata$RunDay==17,'green',
-         ifelse(metadata$RunDay==21,'orange','red'))))
+                ifelse(metadata$RunDay==17,'green',
+                       ifelse(metadata$RunDay==21,'orange','red'))))
 
 legend(2.8,-1.5,legend = c("15","17","21","23"), ncol=4,text.col = c("blue","green","orange","red"),cex=1)
 dev.off()
@@ -571,30 +738,63 @@ internalStandard_mean<-mz_grp_mean[4473,]
 internalStandard_mean_non_zero<-mz_grp_mean_non_zero[4473,]
 internalStandard_zeroes<-mz_grp_zero[4473,]
 
-
 png("internalStandard.png",height=800,width=800)
 par(xpd=TRUE,mar=c(10,4,4,2))
 plot(1:52,internalStandard_mean_non_zero,xaxt='n',las=2,xlab="",ylab="values",pch=1,main=paste("Internal standard replicates-fmoc"," ",row.names(ms_data)[4473]),
      col=ifelse(metadata_strains$RunDay==15,'blue',
-         ifelse(metadata_strains$RunDay==17,'green',
-         ifelse(metadata_strains$RunDay==21,'orange','red'))))
+                ifelse(metadata_strains$RunDay==17,'green',
+                       ifelse(metadata_strains$RunDay==21,'orange','red'))))
 
 points(1:52,internalStandard_mean,pch=15,col=ifelse(metadata_strains$RunDay==15,'blue',
-                                             ifelse(metadata_strains$RunDay==17,'green',
-                                             ifelse(metadata_strains$RunDay==21,'orange','red'))))
+                                                    ifelse(metadata_strains$RunDay==17,'green',
+                                                           ifelse(metadata_strains$RunDay==21,'orange','red'))))
 
 points(1:52,internalStandard_cv,pch=16,col=ifelse(metadata_strains$RunDay==15,'blue',
-                                           ifelse(metadata_strains$RunDay==17,'green',
-                                           ifelse(metadata_strains$RunDay==21,'orange','red'))))
+                                                  ifelse(metadata_strains$RunDay==17,'green',
+                                                         ifelse(metadata_strains$RunDay==21,'orange','red'))))
 
 points(1:52,internalStandard_zeroes,pch=17,col=ifelse(metadata_strains$RunDay==15,'blue',
-                                               ifelse(metadata_strains$RunDay==17,'green',
-                                               ifelse(metadata_strains$RunDay==21,'orange','red'))))
+                                                      ifelse(metadata_strains$RunDay==17,'green',
+                                                             ifelse(metadata_strains$RunDay==21,'orange','red'))))
 
 axis(1, at=1:52, labels=colnames(mz_grp_mean_non_zero)[1:52],las=3)
 legend(2.8,-2.5,legend = c("15","17","21","23"), ncol=2,text.col = c("blue","green","orange","red"),cex=1)
 legend(9.8,-2.5, legend = c("Mean without zero","Mean","CV","Zeroes"), ncol=2,pch = c(1,15,16,17),cex=1)
 dev.off()
+
+png("internalStandard_reps_boxplot.png",width=2000)
+boxplot(log(as.numeric(ms_data[4473,25:311]))~as.factor(SampleGroup[25:311]),las=2,cex=0.7)
+dev.off()
+
+
+groups<-unique(SampleGroup)
+
+internalStandard_with_outliers<-0
+internalStandard_outlier_replicates<-0
+a<-1
+
+for(i in 1:length(groups))
+{
+  ms_data_grp1<-ms_data[4473, grep(groups[i], names(ms_data))]
+  ms_data_grp1<-log(ms_data_grp1)
+  boxplot_cv<-boxplot(as.numeric(ms_data_grp1),plot=FALSE)
+  #print(paste0(i," ",boxplot_cv$out))
+  if(length(boxplot_cv$out)>0)
+  {
+    internalStandard_with_outliers[a]<-groups[i]
+    internalStandard_outlier_replicates[a]<-list(names(ms_data_grp1)[which(ms_data_grp1%in%boxplot_cv$out)])
+    a<-a+1
+  }
+}
+internalStandard_outlier_replicates<-unlist(internalStandard_outlier_replicates)
+
+# > internalStandard_with_outliers
+# [1] "D12_001"  "D12_84"   "D12_94"   "D12_207"  "D12_245"  "D12_255"  "D4_14"    "D4_177"   "D4_187"   "D4_207"   "D4_245"   "D4_253"   "D4_254"   "D4_258"   "D4_325"  
+# [16] "matri_02"
+# 
+# > internalStandard_outlier_replicates
+# [1] "D12_001b1_r001" "D12_84b3_r002"  "D12_94b1_r001"  "D12_207b1_r001" "D12_207b2_r002" "D12_245b1_r002" "D12_255b2_r002" "D4_14b3_r001"   "D4_177b1_r001"  "D4_187_b3_r002"
+# [11] "D4_207_b2_r001" "D4_245b1_r001"  "D4_253b1_r002"  "D4_254b2_r001"  "D4_258b3_r002"  "D4_325_b3_r002" "matri_02_r004" 
 
 ######### Converting values based on 50% zero count per sample group
 
@@ -611,18 +811,30 @@ new_ms_data<-as.data.frame(t(new_ms_data))
 ###### Multivariate data analysis ######
 ########################################
 
-#heatmap.2(as.matrix(mz_grp_cv),dendrogram="column",trace="none",mar=c(10,10),Rowv=FALSE,labRow= NULL, ylab=NULL)
+#
+png("heatmap_fulldata_day12.png",height=800,width=800)
+heatmap.2(as.matrix(mz_grp_zero_day12),dendrogram="col",scale="none",main="day12-full data-zerocount",col = brewer.pal(6,"Accent"),trace="none",mar=c(10,10),Rowv=FALSE,labRow= NA)
+dev.off()
+#heatmap.2(as.matrix(mz_grp_zero_day4),dendrogram="none",trace="none",mar=c(10,10),Rowv=FALSE,Colv=FALSE,labRow= NA, ylab=NULL,)
 
 ######## Multinomial test
 
-observed <- c(4,2)   # observed data: 5 items in category one, 2 items in category two, 1 item in category three
-prob <- c(0.6, 0.4) # model: hypothetical probability that an item falls into category one, two, or three
-out <- multinomial.test(observed, prob)
+# observed <- c(4,1)   # observed data: 5 items in category one, 2 items in category two, 1 item in category three
+# prob <- c(0.8,0.2)# model: hypothetical probability that an item falls into category one, two, or three
+# out <- multinomial.test(observed, prob)
 
-# Exact Multinomial Test, distance measure: p
-# 
-# Events    pObs    p.value
-# 7   0.311          1
+multinomial_prob_value<-0
+multinomial_prob_pval<-0
+feature_probability<-list()
+
+for (i in 1:5)#nrow(mz_grp_total))
+{
+  mz_observed<-as.numeric(mz_grp_observed[i,5:26]) #for day 12, it is 5:28, day 4 it is 27:28
+  mz_probability<-as.numeric(c(mz_grp_total[i,5:26]/sum(mz_grp_total[i,5:26])))
+  multinomial_prob_value<-multinomial.test(mz_observed,mz_probability,MonteCarlo=TRUE)
+  feature_probability[i]<-list(c(row.names(mz_grp_total)[i],multinomial_prob_value$p.value))
+  multinomial_prob_pval[i]<-multinomial_prob_value$p.value
+}
 
 ########ttest
 
@@ -632,15 +844,15 @@ combos <- combn(ncol(ms_data),2)
 
 adply(combos, 2, function(x) {
   test <- t.test(ms_data_test[, x[1]], ms_data_test[, x[2]],paired=F,var.equal=F,p.adjust="BH")
-
+  
   out <- data.frame("var1" = colnames(ms_data)[x[1]]
                     , "var2" = colnames(ms_data[x[2]])
                     , "t.value" = sprintf("%.3f", test$statistic)
                     ,  "df"= test$parameter
                     ,  "p.value" = sprintf("%.3f", test$p.value)
-                    )
+  )
   return(out)
-
+  
 })
 
 
@@ -651,7 +863,7 @@ adply(combos, 2, function(x) {
 ## ttest on rows
 t.list <- apply(ms_data,1,function(x){t.test(x[1:6],x[61:66],paired=TRUE,var.equal=F,p.adjust=BH)$p.value}) 
 a.list <- apply(ms_data,1,function(x){wilcox.test(x[1:42],x[43:84],paired=TRUE,var.equal=F,p.adj=BH,exact=F)$p.value})
- 
+
 id.sig <- which(a.list < 0.01 );
 metab.sig<-names(id.sig)
 ttest.table <- cbind(ms_data[metab.sig, ])
@@ -671,6 +883,57 @@ write.table(pairwise_ttest_strains$p.value,"paiwise_day4.txt",sep='\t',col.names
 day4_strains<-read.table("paiwise_day4.txt",sep='\t',header=TRUE,row.names=1)
 
 #apply(d, 2, function(d) {t.test(x = d[,1], y = d[,2])$p.value})
+
+########## Identifying differential features ######
+
+#day4-complete cases
+
+day4_sig_features<-apply(ms_data_day4_nonzero,1,function(x){kruskal.test(x ~ as.factor(SampleGroup_day4))$p.value})
+#day4_sig_features<-apply(ms_data_day4_nonzero,1,function(x){kruskal(y=x,trt=as.factor(RunDay_day4),group=TRUE,p.adj="bon")$statistics$p.chisq})
+id.sig_day4 <- which(day4_sig_features < 0.05 );
+metab.sig_day4<-cbind(ms_data_day4_nonzero[id.sig_day4,],round(day4_sig_features[id.sig_day4],5))
+
+#day12-complete cases
+
+day12_sig_features<-apply(ms_data_day12_nonzero,1,function(x){kruskal.test(x ~ as.factor(SampleGroup_day12))$p.value})
+#day12_sig_features<-apply(ms_data_day12_nonzero,1,function(x){kruskal(y=x,trt=as.factor(RunDay_day12),group=TRUE,p.adj="bon")$statistics$p.chisq})
+id.sig_day12 <- which(day12_sig_features < 0.05 );
+metab.sig_day12<-cbind(ms_data_day12_nonzero[id.sig_day12,],round(day12_sig_features[id.sig_day12],5))
+
+#plotting results
+
+#pval_bins<-c(0,0.001,0.01,0.05,1)
+
+png('pval_sig_strain.png',width=800,height=800)
+par(mfrow=c(2,1))
+hist(day4_sig_features,breaks=20,main="day4",freq=TRUE)
+hist(day12_sig_features,breaks=20,main="day12",freq=TRUE)
+dev.off()
+
+mz_rt_day4 <- strsplit(rownames(metab.sig_day4), "\\@")
+mz_day4<-sapply(mz_rt_day4 , function (x) if(length(x) == 2) x[1] else as.character(NA))
+rt_day4<-sapply(mz_rt_day4 , function (x) if(length(x) == 2) x[2] else as.character(NA))
+
+mz_rt_day12 <- strsplit(rownames(metab.sig_day12), "\\@")
+mz_day12<-sapply(mz_rt_day12 , function (x) if(length(x) == 2) x[1] else as.character(NA))
+rt_day12<-sapply(mz_rt_day12 , function (x) if(length(x) == 2) x[2] else as.character(NA))
+
+png('mzrt_sig_features_strain_kruskal.png',height=800,width=800)
+plot(rt,mz,pch=1,main="sig featuresVsStrain(0.05)",ylab="m/z",xlab="rt",col="#00000033")
+points(rt_day4,mz_day4,pch=1,col="green")
+points(rt_day12,mz_day12,pch=1,col="red")
+legend("topright", title="Colors", c("full data","day4","day12"), fill=c("#00000033","green","red"), cex=0.5)
+dev.off()
+
+png("sig_features_strain_kruskal.png",height=800,width=800)
+par(mfrow=c(2,2))
+hist(as.numeric(mz_day12),main="mz-day12",xlab=paste("sig n:",length(mz_day12),"total=",nrow(ms_data_day12_nonzero)))
+hist(as.numeric(rt_day12),main="rt-day12")
+hist(as.numeric(mz_day4),main="mz-day4",xlab=paste("sig n:",length(mz_day4),"total=",nrow(ms_data_day4_nonzero)))
+hist(as.numeric(rt_day4),main="rt-day4")
+#mtext("Kruskal-featuresVsStrains",line=30,outer=TRUE)
+dev.off()
+
 
 ########## Clustering ######
 
@@ -705,15 +968,76 @@ clusDendro<-dendrapply(clusDendro, colLab)
 png('hclust_reps_blanks_matrix_rem5rep.png',width=8000,height=1200)
 plot(clusDendro)
 dev.off()
-  
+
 #### PCOA
 
-bray_grps.D <- vegdist(t(log(ms_data_day12)), "bray") #calculating distance matrix using bray curtis
+bray_grps.D <- vegdist(t(log(ms_data_day12_nonzero)), "bray") #calculating distance matrix using bray curtis
 # res_grps <- pcoa(bray_grps.D)
 # res_grps$values
-pc<-cmdscale(bray_grps.D, k=10, eig=TRUE, add=TRUE, x.ret =TRUE) 
 #PCoA.res<-capscale(bray_grps.D~1,distance="bray") 
 
+pc<-cmdscale(bray_grps.D, eig=TRUE, add=TRUE, x.ret =TRUE) 
+scores_pcoa<-as.data.frame(pc$x)
+eig<-eigenvals(pc) 
+var_exp<-cumsum(eig)/sum(eig)
+var_exp[1:3]
+
+#day4 non zero  cumsum 0.1906465 0.3345288 0.4094569
+#day4           cumsum 0.2041412 0.3663344 0.4326650
+#day12 non zero cumsum 0.2075193 0.3309860 0.4153886
+#day12          cumsum 0.2972361 0.3891566 0.4529161
+
+#number of zeroes play a huge role in differentiating between day12 and day12non_zero
+
+#eig/sum(eig)
+
+plot(cumsum(pc$eig) / sum(pc$eig), type="h", lwd=5, las=1,xlab="Number of dimensions",ylab=expression(R^2))
+plot(pc$eig, type="h", lwd=5, las=1, xlab="Number of dimensions", ylab="Eigenvalues")
+
+kruskal_pcoa_scores<-sapply(scores_pcoa, function(x) kruskal.test(x~ as.factor(RunDay)) )
+aov_pcoa_scores<-sapply(scores_pcoa, function(x) aov(x~ as.factor(RunDay)) )
+
+lm_pcoa_scores<-sapply(scores_pcoa, function(x) 
+{
+  lm_val<-lm(x~ as.factor(RunDay[24:268])) 
+  lm_cor<-summary(lm_val)
+  return(lm_cor$r.squared)
+})
+
+## for day 4
+bray_grps.D_day4 <- vegdist(t(log(ms_data_day4)), "bray") #calculating distance matrix using bray curtis
+pc_day4<-cmdscale(bray_grps.D_day4, eig=TRUE, add=TRUE, x.ret =TRUE) 
+scores_pcoa_day4<-as.data.frame(pc_day4$x)
+eig<-eigenvals(pc_day4)
+cumsum(eig/sum(eig))
+kruskal_pcoa_scores_day4<-sapply(scores_pcoa_day4, function(x) kruskal.test(x~ as.factor(RunDay_day4)) )
+aov_pcoa_scores_day4<-sapply(scores_pcoa_day4, function(x) aov(x~ as.factor(RunDay_day4)) )
+
+cor_pcoa_scores_day4<-sapply(scores_pcoa_day4, function(x) cor.test(x,RunDay_day4,method="kendall",use="all.obs"))
+
+lm_pcoa_scores_day4<-sapply(scores_pcoa_day4, function(x) 
+{
+  lm_val<-lm(x~ as.factor(RunDay_day4)) 
+  lm_cor<-summary(lm_val)
+  return(lm_cor$r.squared)
+})
+
+## for day 12
+bray_grps.D_day12 <- vegdist(t(log(ms_data_day12)), "bray") #calculating distance matrix using bray curtis
+pc_day12<-cmdscale(bray_grps.D_day12, eig=TRUE, add=TRUE, x.ret =TRUE) 
+scores_pcoa_day12<-as.data.frame(pc_day12$x)
+eig<-eigenvals(pc_day12)
+cumsum(eig/sum(eig))
+kruskal_pcoa_scores_day12<-sapply(scores_pcoa_day12, function(x) kruskal.test(x~ as.factor(RunDay_day12)) )
+aov_pcoa_scores_day12<-sapply(scores_pcoa_day12, function(x) aov(x~ as.factor(RunDay_day12)) )
+cor_pcoa_scores_day12<-sapply(scores_pcoa_day12, function(x) cor.test(x,RunDay_day12,method="kendall",use="all.obs"))
+
+lm_pcoa_scores_day12<-sapply(scores_pcoa_day12, function(x) 
+{
+  lm_val<-lm(x~ as.factor(RunDay_day12)) 
+  lm_cor<-summary(lm_val)
+  return(lm_cor$r.squared)
+})
 
 # pdf(file="PCOA_samples.pdf")
 # biplot(res_grps)
@@ -737,68 +1061,17 @@ legend("bottomleft", legend = c("Day4","Day12"), pch = 1:2,col = c("blue","red")
 pcoa_scores_axis1<-scores(pc)[,c(1)]
 cor_zero_pcoa1<-cor.test(pcoa_scores_axis1,zeroes_in_column, use="all.obs", method="kendall")  
 #(for complete dataset, including blanks)
-# Pearson's product-moment correlation
-# data:  pcoa_scores_axis1 and zeroes_in_column
-# t = -123.828, df = 309, p-value < 2.2e-16
-# alternative hypothesis: true correlation is not equal to 0
-# 95 percent confidence interval:
-# -0.9920528 -0.9876049
-# sample estimates:
-# cor 
-# -0.9900737 
-# Kendall's rank correlation tau 
-# -0.8620787
 
 cor_zero_pcoa1<-cor.test(pcoa_scores_axis1,zeroes_in_column[25:286], use="all.obs", method="kendall")  
 #(without blanks,matrix)
-# Pearson's product-moment correlation
-# data:  pcoa_scores_axis1 and zeroes_in_column[25:286]
-# t = 40.629, df = 260, p-value < 2.2e-16
-# alternative hypothesis: true correlation is not equal to 0
-# 95 percent confidence interval:
-#   0.9108919 0.9442969
-# sample estimates:
-#   cor 
-# 0.9294758 
-# Kendall's rank correlation tau 
-# 0.7178032
 
 cor_zero_pcoa1<-cor.test(pcoa_scores_axis1,zeroes_in_column_rem[25:281], use="all.obs", method="pearson") 
 #(without blanks,matrix and 5 bioreps)
-# Pearson's product-moment correlation
-# data:  pcoa_scores_axis1 and as.numeric(as.character(zeroes_in_column_v1[25:281]))
-# t = 27.7962, df = 255, p-value < 2.2e-16
-# alternative hypothesis: true correlation is not equal to 0
-# 95 percent confidence interval:
-# 0.8331291 0.8945476
-# sample estimates:
-# cor 
-# 0.8670966 
-# Kendall's rank correlation tau 
-# 0.592765
-
 
 cor_zero_pcoa1<-cor.test(pcoa_scores_axis1,zeroes_in_column_day4, use="all.obs", method="kendall") 
 #for day 4 strains
-# Kendall's rank correlation tau
-# 
-# data:  pcoa_scores_axis1 and zeroes_in_column_day4
-# z = -12.7119, p-value < 2.2e-16
-# alternative hypothesis: true tau is not equal to 0
-# sample estimates:
-# tau 
-# -0.7477437 
-
 cor_zero_pcoa1<-cor.test(pcoa_scores_axis1,zeroes_in_column_day12, use="all.obs", method="kendall") 
 #for day 12 strains
-# Kendall's rank correlation tau
-# 
-# data:  pcoa_scores_axis1 and zeroes_in_column_day12
-# z = -12.0514, p-value < 2.2e-16
-# alternative hypothesis: true tau is not equal to 0
-# sample estimates:
-# tau 
-# -0.7145159 
 
 
 # Correlation PCOA-axis2 and RunDay of each column(sample)
@@ -807,40 +1080,11 @@ cor_zero_pcoa1<-cor.test(pcoa_scores_axis1,zeroes_in_column_day12, use="all.obs"
 pcoa_scores_axis2<-scores(pc)[,c(2)]
 cor_runday_pcoa2<-cor.test(pcoa_scores_axis2,as.numeric(RunDay_rem[25:281]), use="all.obs", method="kendall")                
 #(without blanks,matrix and 5 bioreps)
-# Pearson's product-moment correlation
-#data:  pcoa_scores_axis2 and as.numeric(RunDay_rem[25:281])
-# t = 23.5807, df = 255, p-value < 2.2e-16
-# alternative hypothesis: true correlation is not equal to 0
-# 95 percent confidence interval:
-#   0.7851964 0.8629379
-# sample estimates:
-#   cor 
-# 0.8280054
-# Kendall's rank correlation tau 
-# 0.6448284
 
 cor_runday_pcoa2<-cor.test(pcoa_scores_axis2,as.numeric(RunDay_day4), use="all.obs", method="kendall")
 #for day4 strains
-# Kendall's rank correlation tau
-# 
-# data:  pcoa_scores_axis2 and as.numeric(RunDay_day4)
-# z = 10.3382, p-value < 2.2e-16
-# alternative hypothesis: true tau is not equal to 0
-# sample estimates:
-# tau 
-# 0.7000252 
-
 cor_runday_pcoa2<-cor.test(pcoa_scores_axis2,as.numeric(RunDay_day12), use="all.obs", method="kendall")                
 #for day12 strains
-# Kendall's rank correlation tau
-# 
-# data:  pcoa_scores_axis2 and as.numeric(RunDay_day12)
-# z = -7.9067, p-value = 2.643e-15
-# alternative hypothesis: true tau is not equal to 0
-# sample estimates:
-# tau 
-# -0.5436908 
-
 
 # Correlation PCOA-axis2 and GrowthStage of each column(sample)
 # Testing the influence of GrowthStage on separation of samples
@@ -849,92 +1093,700 @@ pcoa_scores_axis2<-scores(pc)[,c(2)]
 cor_runday_pcoa3<-cor.test(pcoa_scores_axis2,as.numeric(GrowthStage_rem[25:281]), use="all.obs", method="kendall") 
 #(without blanks,matrix and 5 bioreps)
 # Pearson's product-moment correlation
-# # data:  pcoa_scores_axis2 and as.numeric(GrowthStage_rem[25:281])
-# t = -15.5856, df = 255, p-value < 2.2e-16
-# alternative hypothesis: true correlation is not equal to 0
-# 95 percent confidence interval:
-# -0.7562032 -0.6299474
-# sample estimates:
-# cor 
-# -0.6984706 
-# Kendall's rank correlation tau 
-# -0.570355 
 
 #Correlation between zeroes in column and runday for strains
 cor.test(zeroes_in_column[25:286],RunDay_strains,method="kendall",use="all.obs")
-
 # Kendall's rank correlation tau
-# 
-# data:  zeroes_in_column[25:286] and RunDay_strains
-# z = 0.3597, p-value = 0.7191
-# alternative hypothesis: true tau is not equal to 0
-# sample estimates:
-#        tau 
-# 0.01676437 
 
 #Correlation between zeroes in column and runday for strains
 cor.test(zeroes_in_column[25:286],as.numeric(GrowthStage_strains),method="kendall",use="all.obs")
 # Kendall's rank correlation tau
-# 
-# data:  zeroes_in_column[25:286] and as.numeric(GrowthStage_strains)
-# z = -2.2307, p-value = 0.0257
-# alternative hypothesis: true tau is not equal to 0
-# sample estimates:
-# tau 
-# -0.1130019 
 
 #Correlation between Growth stage and RunDay for strains
 cor.test(as.numeric(GrowthStage_strains),RunDay_strains,method="kendall",use="all.obs")
 # Kendall's rank correlation tau
-# 
-# data:  as.numeric(GrowthStage_strains) and RunDay_strains
-# z = -9.8696, p-value < 2.2e-16
-# alternative hypothesis: true tau is not equal to 0
-# sample estimates:
-# tau 
-# -0.5618739 
 
 #Correlation between zeroes in column and RunDay for strain at groth stage-day4
 cor.test(zeroes_in_column_day4,RunDay_day4,method="kendall",use="all.obs")
-
 # Kendall's rank correlation tau
-# 
-# data:  zeroes_in_column_day4 and RunDay_day4
-# z = 1.9832, p-value = 0.04735
-# alternative hypothesis: true tau is not equal to 0
-# sample estimates:
-# tau 
-# 0.1343476 
-# 
 
 #Correlation between zeroes in column and RunDay for strain at groth stage-day12
 cor.test(zeroes_in_column_day12,RunDay_day12,method="kendall",use="all.obs")
-# 
 # Kendall's rank correlation tau
-# 
-# data:  zeroes_in_column_day12 and RunDay_day12
-# z = -4.6396, p-value = 3.491e-06
-# alternative hypothesis: true tau is not equal to 0
-# sample estimates:
-#   tau 
-# -0.3192004 
 
-#### PCA
+###############################################
+## PCA using prcomp on samp by mz ###########
+###############################################
 
-fit <- princomp(new_ms_data, scale=TRUE)
+fit <- princomp(log(ms_data_rem), scale=TRUE)
 summary(fit) # print variance accounted for 
-loadings(fit) # pc loadings 
+d<-loadings(fit) # pc loadings 
 screeplot(fit,type="lines") # scree plot 
 fit$scores # the principal components
 biplot(fit)
 
-fit <- prcomp(new_ms_data,scale=TRUE)
-mycolors <- c("red", "green", "blue", "magenta", "black")
-plot(fit$x, type="n"); text(fit$x, rownames(fit$x), cex=0.5)
+fit <- prcomp(log(t(ms_data_rem[24:268])),scale=TRUE) #uses SVD
+#mycolors <- c("red", "green", "blue", "magenta", "black")
+#plot(fit_day12$x, type="n"); text(fit_day12$x, rownames(fit_day12$x), cex=0.5)
+#summary(fit) # print variance accounted for 
+#d<-loadings(fit) # pc loadings 
+#screeplot(fit,type="lines") # scree plot 
+scores_pca_prcomp<-as.data.frame(fit$x)
+kruskal_pca_scores<-sapply(scores_pca_prcomp, function(x) kruskal.test(x~ as.factor(RunDay)) )
+aov_pca_scores<-sapply(scores_pca_prcomp, function(x) 
+{
+  aov_model<-aov(x~ as.factor(RunDay)) 
+  #aic_value<-extractAIC(aov_model)
+  #return(aic_value)
+}
+)
 
-library(psych)
-fit <- principal(log1p(ms_data), nfactors=5, rotate="varimax")
-fit
+lm_pca_scores<-sapply(scores_pca_prcomp, function(x) 
+{
+  lm_val<-lm(x~ as.factor(RunDay_rem[24:268])) 
+  lm_cor<-summary(lm_val)
+  return(lm_cor$r.squared)
+})
+
+
+# for day 4
+
+d<-as.data.frame(t(ms_data_day4))
+d<-d[,apply(d, 2, var, na.rm=TRUE) != 0] #removing mz features which have constant variance
+
+fit_day4 <- prcomp(log(d),scale=TRUE) #uses SVD
+scores_pca_prcomp_day4<-as.data.frame(fit_day4$x)
+kruskal_pca_scores_day4<-sapply(scores_pca_prcomp_day4, function(x) kruskal.test(x~ as.factor(RunDay_day4)))
+aov_pca_scores_day4<-sapply(scores_pca_prcomp_day4, function(x) aov_model<-aov(x~ as.factor(RunDay_day4)))
+cor_pca_scores_day4<-sapply(scores_pca_prcomp_day4, function(x) cor.test(x,RunDay_day4,method="kendall",use="all.obs"))
+
+lm_pca_scores_runday4<-apply(scores_pca_prcomp_day4,2, function(x) 
+{
+  lm_val<-lm(x~ as.factor(RunDay_day4)) 
+  lm_cor<-summary(lm_val)
+  return(lm_cor$r.squared)
+})
+
+lm_pca_scores_strain_day4<-apply(scores_pca_prcomp_day4,2, function(x) 
+{
+  lm_val<-lm(x~ as.factor(SampleGroup_day4)) 
+  lm_cor<-summary(lm_val)
+  return(lm_cor$r.squared)
+})
+# head(sort(lm_pca_scores_day4,decreasing=TRUE))
+# PC8      PC11       PC6       PC7       PC9      PC21 
+# 0.2152218 0.1933180 0.1894001 0.1865741 0.1360567 0.1352894
+
+#for non-zero
+d<-as.data.frame(t(ms_data_day4_nonzero))
+d<-d[,apply(d, 2, var, na.rm=TRUE) != 0] #removing mz features which have constant variance
+fit_day4 <- prcomp(log(d),scale=TRUE) #uses SVD
+scores_pca_prcomp_day4_nonzero<-as.data.frame(fit_day4$x)
+lm_pca_scores_runday4_nonzero<-apply(scores_pca_prcomp_day4_nonzero,2, function(x) 
+{
+  lm_val<-lm(x~ as.factor(RunDay_day4)) 
+  lm_cor<-summary(lm_val)
+  return(lm_cor$r.squared)
+})
+lm_pca_scores_strain_day4_nonzero<-apply(scores_pca_prcomp_day4_nonzero,2, function(x) 
+{
+  lm_val<-lm(x~ as.factor(SampleGroup_day4)) 
+  lm_cor<-summary(lm_val)
+  return(lm_cor$r.squared)
+})
+# > head(sort(lm_pca_scores_runday12_nonzero,decreasing=TRUE))
+# PC12      PC14       PC2       PC6       PC8      PC20 
+# 0.2687165 0.1748026 0.1737839 0.1549156 0.1445072 0.1373533
+
+
+#for day 12
+
+d<-as.data.frame(t(ms_data_day12))
+d<-d[,apply(d, 2, var, na.rm=TRUE) != 0] #removing mz features which have constant variance
+fit_day12 <- prcomp(log(d),scale=TRUE) #uses SVD
+scores_pca_prcomp_day12<-as.data.frame(fit_day12$x)
+kruskal_pca_scores_day12<-sapply(scores_pca_prcomp_day12, function(x) kruskal.test(x~ as.factor(RunDay_day12)))
+aov_pca_scores_day12<-sapply(scores_pca_prcomp_day12, function(x) aov_model<-aov(x~ as.factor(RunDay_day12)))
+cor_pca_scores_day12<-sapply(scores_pca_prcomp_day12, function(x) cor.test(x,RunDay_day12,method="kendall",use="all.obs"))
+
+lm_pca_scores_runday12<-apply(scores_pca_prcomp_day12,2, function(x) 
+{
+  lm_val<-lm(x~ as.factor(RunDay_day12)) 
+  lm_cor<-summary(lm_val)
+  return(lm_cor$r.squared)
+})
+lm_pca_scores_strain_day12<-apply(scores_pca_prcomp_day12,2, function(x) 
+{
+  lm_val<-lm(x~ as.factor(SampleGroup_day12)) 
+  lm_cor<-summary(lm_val)
+  return(lm_cor$r.squared)
+})
+
+# head(sort(lm_pca_scores_day12,decreasing=TRUE))
+# PC2       PC8      PC11       PC6      PC12      PC13 
+# 0.2133751 0.1975413 0.1872261 0.1438924 0.1260683 0.1243714 
+
+#for non-zero
+d<-as.data.frame(t(ms_data_day12_nonzero))
+#d<-as.data.frame(ms_data_day12_nonzero)
+d<-d[,apply(d, 2, var, na.rm=TRUE) != 0] #removing mz features which have constant variance
+fit_day12 <- prcomp(log(d),scale=TRUE) #uses SVD
+#matplot(cbind(fit_day12_mzbysam$sdev,fit_day12_sambymz$sdev))
+scores_pca_prcomp_day12_nonzero<-as.data.frame(fit_day12$x)
+#per_var_exp<-fit_day12$sdev^2/sum(fit_day12$sdev^2)
+
+summary(fit_day12)
+
+lm_pca_scores_runday12_nonzero_loadings<-apply(fit_day12_mzbysam_princomp$loadings,2, function(x) 
+{
+  lm_val<-lm(x~ as.factor(RunDay_day12)) 
+  lm_cor<-summary(lm_val)
+  return(lm_cor$r.squared)
+})
+
+lm_pca_scores_strain_day12_nonzero_loadings<-apply(fit_day12_mzbysam_princomp$loadings,2, function(x) 
+{
+  lm_val<-lm(x~ as.factor(SampleGroup_day12)) 
+  lm_cor<-summary(lm_val)
+  return(lm_cor$r.squared)
+})
+
+plot(1:length(lm_pca_scores_runday12_nonzero_loadings),lm_pca_scores_runday12_nonzero_loadings,col="green",ylab="Multiple R2",xlab="PC's",main="Day 12",
+     ylim=c(0,max(c(max(lm_pca_scores_runday12_nonzero_loadings),max(lm_pca_scores_strain_day12_nonzero_loadings)))))
+points(1:length(lm_pca_scores_strain_day12_nonzero_loadings),lm_pca_scores_strain_day12_nonzero_loadings,col="red")
+rug(c(1:length(lm_pca_scores_runday12_nonzero_loadings)), side = 1, col="#00000033")
+legend("topright", inset=.05,c("Strain","RunDay"),fill=c("red","green"),cex=0.5)
+
+
+######
+
+pdf("pcscores.pdf",height=16,width=16)
+par(mfrow=c(2,2))
+plot(1:length(lm_pca_scores_runday12),lm_pca_scores_runday12,col="green",ylab="Multiple R2",xlab="PC's",main="Day 12",
+     ylim=c(0,max(c(max(lm_pca_scores_runday12),max(lm_pca_scores_strain_day12)))))
+points(1:length(lm_pca_scores_strain_day12),lm_pca_scores_strain_day12,col="red")
+rug(c(1:length(lm_pca_scores_runday12)), side = 1, col="#00000033")
+legend("topright", inset=.05,c("Strain","RunDay"),fill=c("red","green"),cex=1)
+
+plot(1:length(lm_pca_scores_runday12_nonzero),lm_pca_scores_runday12_nonzero,col="green",ylab="Multiple R2",xlab="PC's",main="Day 12(non zero)",
+     ylim=c(0,max(c(max(lm_pca_scores_runday12_nonzero),max(lm_pca_scores_strain_day12_nonzero)))))
+points(1:length(lm_pca_scores_strain_day12_nonzero),lm_pca_scores_strain_day12_nonzero,col="red")
+rug(c(1:length(lm_pca_scores_runday12_nonzero)), side = 1, col="#00000033")
+legend("topright", inset=.05,c("Strain","RunDay"),fill=c("red","green"),cex=1)
+
+plot(1:length(lm_pca_scores_runday4),lm_pca_scores_runday4,col="green",ylab="Multiple R2",xlab="PC's",main="Day 4",
+     ylim=c(0,max(c(max(lm_pca_scores_runday4),max(lm_pca_scores_strain_day4)))))
+points(1:length(lm_pca_scores_strain_day4),lm_pca_scores_strain_day4,col="red")
+rug(c(1:length(lm_pca_scores_runday4)), side = 1, col="#00000033")
+legend("topright", inset=.05,c("Strain","RunDay"),fill=c("red","green"),cex=1)
+
+plot(1:length(lm_pca_scores_runday4_nonzero),lm_pca_scores_runday4_nonzero,col="green",ylab="Multiple R2",xlab="PC's",main="Day 4(non zero)",
+     ylim=c(0,max(c(max(lm_pca_scores_runday4_nonzero),max(lm_pca_scores_strain_day4_nonzero)))))
+points(1:length(lm_pca_scores_strain_day4_nonzero),lm_pca_scores_strain_day4_nonzero,col="red")
+rug(c(1:length(lm_pca_scores_runday4_nonzero)), side = 1, col="#00000033")
+legend("topright", inset=.05,c("Strain","RunDay"),fill=c("red","green"),cex=1)
+
+dev.off()
+
+# > head(sort(lm_pca_scores_runday12_nonzero,decreasing=TRUE))
+# PC12      PC14       PC2       PC6       PC8      PC20 
+# 0.2687165 0.1748026 0.1737839 0.1549156 0.1445072 0.1373533
+
+#for non-zero with biochemical parameters
+
+d<-as.data.frame(t(ms_data_day12_nonzero_bc))
+d<-d[,apply(d, 2, var, na.rm=TRUE) != 0] #remoing mz features which have constant variance
+fit_day12 <- prcomp(log(d),scale=TRUE) #uses SVD
+scores_pca_prcomp_day12_nonzero_bc<-as.data.frame(fit_day12$x)
+
+lm_pca_scores_runday12_nonzero_bc<-apply(scores_pca_prcomp_day12_nonzero_bc,2, function(x) 
+{
+  lm_val<-lm(x~ as.factor(biochem_para$max.biomass.density)) 
+  lm_cor<-summary(lm_val)
+  return(lm_cor$r.squared)
+})
+
+#Strain > head(sort(lm_pca_scores_runday12_nonzero_bc,decreasing=TRUE))
+# PC2       PC6       PC5       PC3       PC1       PC7 
+# 0.9730438 0.9624849 0.9447193 0.9439467 0.8268231 0.8241385 
+#Runday > head(sort(lm_pca_scores_runday12_nonzero_bc,decreasing=TRUE))
+# PC3        PC1        PC2        PC4        PC5        PC9 
+# 0.83266228 0.48948676 0.40686647 0.10063913 0.02586452 0.02507212 
+
+
+###############################################
+## PCA using princomp on mz by samp ###########
+###############################################
+
+#day4 non-zero
+
+d4<-as.data.frame(log(ms_data_day4_nonzero))
+#d<-d[,apply(d, 2, var, na.rm=TRUE) != 0] #removing mz features which have constant variance
+#d<-scale(d,T,F)
+
+d4.norm<-normalize.quantiles(as.matrix(d4),copy=TRUE)
+d4.scale.min<-scale(d4,center=T,scale=T)
+d4.scale<-d4.scale.min-min(d4.scale.min)
+
+mean_scaled <- apply(d4.scale,1,mean) 
+sd_scaled <- apply(d4.scale,1,sd) 
+
+mean_norm_ <- apply(d4.norm,1,mean) 
+sd_norm <- apply(d4.norm,1,sd) 
+
+png("mean_sd_day4nonzero.png",,width=1200,height=800)
+par(mfrow=c(2,2))
+plot(1:length(mean_scaled),mean_scaled,main="mean scaled",col="#00000033",xlab="m/z features")
+plot(1:length(sd_scaled),sd_scaled,main="sd scaled",col="#00000033",xlab="m/z features")
+plot(1:length(mean_norm),mean_norm,main="mean norm",col="#00000033",xlab="m/z features")
+plot(1:length(sd_norm),sd_norm,main="sd norm",col="#00000033",xlab="m/z features")
+dev.off()
+
+png("meanVssd_day4nonzero.png",,width=1200,height=800)
+par(mfrow=c(2,1))
+plot(mean_norm,sd_norm,main="norm",col="#00000033",xlab="mean",ylab="sd")
+plot(mean_scaled,sd_scaled,main="scaled",col="#00000033",xlab="mean",ylab="sd")
+dev.off()
+
+png("d4_nonzero_scaled.png",width=1200)
+boxplot(d4.scale)
+dev.off()
+png("d4_nonzero_norm.png",width=1200)
+boxplot(d4.norm)
+dev.off()
+
+fit_day4_mzbysam_princomp <- princomp(d4.scale,cor=F,scores=T) ### IMP: choose quantile normalized or scaled data
+
+prop.variation<-fit_day4_mzbysam_princomp$sdev^2/sum(fit_day4_mzbysam_princomp$sdev^2)
+prop.variation[1:6]
+
+# pdf("eigenStrain_d4.pdf",width=16,height=16)
+# par(mfrow=c(2,2))
+# stripchart(fit_day4_mzbysam_princomp$loadings[,1]~ as.factor(RunDay_day4),cex=0.5)
+# stripchart(fit_day4_mzbysam_princomp$loadings[,2]~ as.factor(RunDay_day4),cex=0.5)
+# stripchart(fit_day4_mzbysam_princomp$loadings[,7]~ as.factor(RunDay_day4),cex=0.5)
+# stripchart(fit_day4_mzbysam_princomp$loadings[,12]~ as.factor(RunDay_day4),cex=0.5)
+# dev.off()
+# 
+# pdf("eigenStrain_d12.pdf",width=16,height=16)
+# par(mfrow=c(2,2))
+# stripchart(fit_day12_mzbysam_princomp$loadings[,1]~ as.factor(RunDay_day12),cex=0.5)
+# stripchart(fit_day12_mzbysam_princomp$loadings[,2]~ as.factor(RunDay_day12),cex=0.5)
+# stripchart(fit_day12_mzbysam_princomp$loadings[,7]~ as.factor(RunDay_day12),cex=0.5)
+# stripchart(fit_day12_mzbysam_princomp$loadings[,12]~ as.factor(RunDay_day12),cex=0.5)
+# dev.off()
+
+
+lm_pca_scores_runday4_nonzero_loadings<-apply(fit_day4_mzbysam_princomp$loadings,2, function(x) 
+{
+  lm_val<-lm(x~ as.factor(RunDay_day4)) 
+  lm_cor<-summary(lm_val)
+  p.val<-anova(lm_val)$'Pr(>F)'[1]
+  return(list(lm_cor$r.squared,p.val))
+})
+
+lm_pca_scores_runday4_nonzero_loadings_r.sq<-sapply(lm_pca_scores_runday4_nonzero_loadings, function(x){as.numeric(x[1])})
+lm_pca_scores_runday4_nonzero_loadings_pval<-sapply(lm_pca_scores_runday4_nonzero_loadings, function(x){as.numeric(x[2])})
+
+#d4.norm
+# > head(sort(lm_pca_scores_runday4_nonzero_loadings_pval))
+# Comp.2       Comp.1       Comp.8       Comp.6      Comp.11       Comp.5 
+# 3.007729e-43 3.378846e-22 4.523162e-09 2.494628e-08 2.296277e-07 7.847854e-06 
+# > head(sort(lm_pca_scores_runday4_nonzero_loadings_r.sq,decreasing=TRUE))
+# Comp.2    Comp.1    Comp.8    Comp.6   Comp.11    Comp.5 
+# 0.8110657 0.5750203 0.2928821 0.2720464 0.2439658 0.1967930 
+
+#d4.scale
+# > head(sort(lm_pca_scores_runday4_nonzero_loadings_pval))
+# Comp.2       Comp.1       Comp.8       Comp.6      Comp.11       Comp.5 
+# 2.484598e-43 4.553474e-21 3.490789e-09 1.489811e-08 3.768702e-07 6.002051e-06 
+# > head(sort(lm_pca_scores_runday4_nonzero_loadings_r.sq,decreasing=TRUE))
+# Comp.2    Comp.1    Comp.8    Comp.6   Comp.11    Comp.5 
+# 0.8116675 0.5560723 0.2959875 0.2784050 0.2375382 0.2004892 
+
+
+
+lm_pca_scores_strain_day4_nonzero_loadings<-apply(fit_day4_mzbysam_princomp$loadings,2, function(x) 
+{
+  lm_val<-lm(x~ as.factor(SampleGroup_day4)) 
+  lm_cor<-summary(lm_val)
+  p.val<-anova(lm_val)$'Pr(>F)'[1]
+  return(list(lm_cor$r.squared,p.val))
+})
+
+lm_pca_scores_strain_day4_nonzero_loadings_r.sq<-sapply(lm_pca_scores_strain_day4_nonzero_loadings, function(x){as.numeric(x[1])})
+lm_pca_scores_strain_day4_nonzero_loadings_pval<-sapply(lm_pca_scores_strain_day4_nonzero_loadings, function(x){as.numeric(x[2])})
+
+#d4.norm
+# > head(sort(lm_pca_scores_strain_day4_nonzero_loadings_pval))
+# Comp.2       Comp.5       Comp.7       Comp.4       Comp.9       Comp.1 
+# 4.025754e-77 9.199554e-61 7.579502e-52 1.539036e-46 4.895831e-31 4.481195e-30
+# > head(sort(lm_pca_scores_strain_day4_nonzero_loadings_r.sq,decreasing=TRUE))
+# Comp.2    Comp.5    Comp.7    Comp.4    Comp.9    Comp.1 
+# 0.9802100 0.9584097 0.9375464 0.9203670 0.8368493 0.8293305
+
+#d4.scale
+# > head(sort(lm_pca_scores_strain_day4_nonzero_loadings_pval))
+# Comp.2       Comp.5       Comp.7       Comp.4       Comp.9      Comp.14 
+# 3.640142e-76 1.222249e-60 1.912080e-48 1.325017e-46 3.170344e-31 4.595111e-31
+# > head(sort(lm_pca_scores_strain_day4_nonzero_loadings_r.sq,decreasing=TRUE))
+# Comp.2    Comp.5    Comp.7    Comp.4    Comp.9   Comp.14 
+# 0.9793335 0.9581755 0.9270283 0.9206042 0.8382839 0.8370594 
+
+png("pc_plot_d4_nonzero_scale.png",height=800,width=800)
+par(mfrow=c(2,1))
+plot(1:length(lm_pca_scores_runday4_nonzero_loadings_r.sq),lm_pca_scores_runday4_nonzero_loadings_r.sq,col="green",ylab="Multiple R2-Loadings Vs Runday",xlab="PC's",main="Day 4",
+     ylim=c(0,max(c(max(lm_pca_scores_runday4_nonzero_loadings_r.sq),max(lm_pca_scores_strain_day4_nonzero_loadings_r.sq)))))
+points(1:length(lm_pca_scores_strain_day4_nonzero_loadings_r.sq),lm_pca_scores_strain_day4_nonzero_loadings_r.sq,col="red")
+rug(c(1:length(lm_pca_scores_strain_day4_nonzero_loadings_r.sq)), side = 1, col="#00000033")
+legend("topright", inset=.05,c("Strain","RunDay"),fill=c("red","green"),cex=1)
+
+plot(1:length(lm_pca_scores_runday4_nonzero_loadings_pval),lm_pca_scores_runday4_nonzero_loadings_pval,col="green",ylab="pval(r2)-Loadings Vs Runday",xlab="PC's",main="Day 4",
+     ylim=c(0,max(c(max(lm_pca_scores_runday4_nonzero_loadings_pval),max(lm_pca_scores_strain_day4_nonzero_loadings_pval)))))
+points(1:length(lm_pca_scores_strain_day4_nonzero_loadings_pval),lm_pca_scores_strain_day4_nonzero_loadings_pval,col="red")
+rug(c(1:length(lm_pca_scores_strain_day4_nonzero_loadings_pval)), side = 1, col="#00000033")
+legend("topright", inset=.05,c("Strain","RunDay"),fill=c("red","green"),cex=1)
+
+dev.off()
+
+write.table(cbind(lm_pca_scores_runday4_nonzero_loadings_r.sq,lm_pca_scores_runday4_nonzero_loadings_pval),"day4_lm_model_loadings-vs-runday_scale.txt",quote=FALSE,sep="\t")
+write.table(cbind(lm_pca_scores_strain_day4_nonzero_loadings_r.sq,lm_pca_scores_strain_day4_nonzero_loadings_pval),"day4_lm_model_loadings-vs-strains_scale.txt",quote=FALSE,sep="\t")
+
+######## SVD
+#for day 4
+
+svd_day4_nonzero <- svd(d4.scale)
+str(svd_day4_nonzero)
+
+svd_day4_nonzero$d1<-svd_day4_nonzero$d
+svd_day4_nonzero$d1[c(7,12)]<-0 #Removing the variation caused by runday(id using pca)
+d4_scale_rmbatch<-svd_day4_nonzero$u %*% diag(svd_day4_nonzero$d1) %*% t(svd_day4_nonzero$v)
+
+rownames(d4_scale_rmbatch)<-rownames(ms_data_day4_nonzero)
+colnames(d4_scale_rmbatch)<-names(ms_data_day4_nonzero)
+
+#u1 %*% d1 %*% t(v1)   #ms.svd$u%*%diag(ms.svd$d) #http://www.ats.ucla.edu/stat/r/pages/svd_demos.htm
+
+#day4-complete cases ##non-corrected
+
+#day4_sig_features_nc<-apply(d4.scale,1,function(x){kruskal(y=x,trt=as.factor(SampleGroup_day4),group=TRUE,p.adj="BH")$statistics$p.chisq})
+
+day4_sig_features_nc<-apply(d4.scale,1,function(x){kruskal.test(x ~ as.factor(SampleGroup_day4))$p.value})
+day4_sig_features_nc_cor<-p.adjust(day4_sig_features_nc,method="BH")
+id.sig_day4_nc <- which(day4_sig_features_nc_cor < 0.05 );
+metab.sig_day4_nc<-cbind(d4.scale[id.sig_day4_nc,],round(day4_sig_features_nc[id.sig_day4_nc],5))
+
+##corrected
+
+#day4_sig_features<-apply(d4_scale_rmbatch,1,function(x){kruskal(y=x,trt=as.factor(SampleGroup_day4),group=TRUE,p.adj="BH")$statistics$p.chisq})
+
+day4_sig_features<-apply(d4_scale_rmbatch,1,function(x){kruskal.test(x ~ as.factor(SampleGroup_day4))$p.value})
+day4_sig_features_cor<-p.adjust(day4_sig_features,method="BH")
+id.sig_day4 <- which(day4_sig_features < 0.05 );
+metab.sig_day4<-cbind(d4.scale[id.sig_day4,],round(day4_sig_features[id.sig_day4],5))
+
+
+###################
+#### Against runday
+###################
+
+day4_sig_features_nc_r<-apply(d4.scale,1,function(x){kruskal.test(x ~ as.factor(RunDay_day4))$p.value})
+day4_sig_features_nc_r_cor<-p.adjust(day4_sig_features_nc_r,method="BH")
+id.sig_day4_nc_r <- which(day4_sig_features_nc_r < 0.05 );
+metab.sig_day4_nc_r<-cbind(d4.scale[id.sig_day4_nc_r,],round(day4_sig_features_nc_r[id.sig_day4_nc_r],5))
+
+##corrected
+
+#day4_sig_features<-apply(d4_scale_rmbatch,1,function(x){kruskal(y=x,trt=as.factor(SampleGroup_day4),group=TRUE,p.adj="BH")$statistics$p.chisq})
+
+day4_sig_features_r<-apply(d4_scale_rmbatch,1,function(x){kruskal.test(x ~ as.factor(RunDay_day4))$p.value})
+day4_sig_features_r_cor<-p.adjust(day4_sig_features_r,method="BH")
+id.sig_day4_r <- which(day4_sig_features_r < 0.05 );
+metab.sig_day4_r<-cbind(d4.scale[id.sig_day4_r,],round(day4_sig_features_r[id.sig_day4_r],5))
+
+#plotting results
+
+#pval_bins<-c(0,0.001,0.01,0.05,1)
+
+png('pval_day4.png',width=1200,height=1200)
+par(mfrow=c(2,2))
+hist(day4_sig_features_nc,breaks=20,main="Strain",freq=TRUE,xlab=paste("no of. sig feat(0.05)=",length(id.sig_day4_nc)))
+hist(day4_sig_features_nc_r,breaks=20,main="Runday",freq=TRUE,xlab=paste("no of. sig feat(0.05)=",length(id.sig_day4_nc_r)))
+hist(day4_sig_features,breaks=20,main="Strain-corrected",freq=TRUE,xlab=paste("no of. sig feat(0.05)=",length(id.sig_day4)))
+hist(day4_sig_features_r,breaks=20,main="Runday-corrected",freq=TRUE,xlab=paste("no of. sig feat(0.05)=",length(id.sig_day4_r)))
+dev.off()
+
+mz_rt_day4_nc <- strsplit(rownames(metab.sig_day4_nc), "\\@")
+mz_day4_nc<-sapply(mz_rt_day4_nc , function (x) if(length(x) == 2) x[1] else as.character(NA))
+rt_day4_nc<-sapply(mz_rt_day4_nc , function (x) if(length(x) == 2) x[2] else as.character(NA))
+
+mz_rt_day4 <- strsplit(rownames(metab.sig_day4), "\\@")
+mz_day4<-sapply(mz_rt_day4 , function (x) if(length(x) == 2) x[1] else as.character(NA))
+rt_day4<-sapply(mz_rt_day4 , function (x) if(length(x) == 2) x[2] else as.character(NA))
+
+png('d4_mzrt_sig_features_strain_kruskal.png',height=800,width=800)
+plot(rt,mz,pch=1,main="sig featuresVsStrain(0.05)",ylab="m/z",xlab="rt",col="#00000033")
+points(rt_day4_nc,mz_day4_nc,pch=1,col="green")
+points(rt_day4,mz_day4,pch=1,col="red")
+legend("topright", title="Colors", c("full data","non-cor","corr"), fill=c("#00000033","green","red"), cex=0.5)
+dev.off()
+
+mz_rt_day4_nc_r <- strsplit(rownames(metab.sig_day4_nc_r), "\\@")
+mz_day4_nc_r<-sapply(mz_rt_day4_nc_r , function (x) if(length(x) == 2) x[1] else as.character(NA))
+rt_day4_nc_r<-sapply(mz_rt_day4_nc_r , function (x) if(length(x) == 2) x[2] else as.character(NA))
+
+mz_rt_day4_r <- strsplit(rownames(metab.sig_day4_r), "\\@")
+mz_day4_r<-sapply(mz_rt_day4_r , function (x) if(length(x) == 2) x[1] else as.character(NA))
+rt_day4_r<-sapply(mz_rt_day4_r , function (x) if(length(x) == 2) x[2] else as.character(NA))
+
+png('d4_mzrt_sig_features_runday_kruskal.png',height=600,width=600)
+par(mfrow=c(2,1))
+plot(rt,mz,pch=1,main="d4 sig featuresVsRunday-nc",ylab="m/z",xlab="rt",col="#00000033")
+points(rt_day4_nc_r,mz_day4_nc_r,pch=1,col="green")
+plot(rt,mz,pch=1,main="d4 sig featuresVsRunday-Corrected",ylab="m/z",xlab="rt",col="#00000033")
+points(rt_day4_r,mz_day4_r,pch=1,col="green")
+dev.off()
+
+
+###############
+#day12 non-zero
+###############
+
+d12<-as.data.frame(log(ms_data_day12_nonzero))
+#d<-d[,apply(d, 2, var, na.rm=TRUE) != 0] #removing mz features which have constant variance
+#d<-scale(d,T,F)
+
+d12.norm<-normalize.quantiles(as.matrix(d12),copy=TRUE)
+d12.scale.min<-scale(d12,center=T,scale=T)
+d12.scale<-d12.scale.min-min(d12.scale.min)
+
+mean_scaled <- apply(d12.scale,1,mean) 
+sd_scaled <- apply(d12.scale,1,sd) 
+
+mean_norm <- apply(d12.norm,1,mean) 
+sd_norm <- apply(d12.norm,1,sd) 
+
+png("meanVssd_day12nonzero.png",,width=1200,height=800)
+par(mfrow=c(2,1))
+plot(mean_norm,sd_norm,main="norm",col="#00000033",xlab="mean",ylab="sd")
+plot(mean_scaled,sd_scaled,main="scaled",col="#00000033",xlab="mean",ylab="sd")
+dev.off()
+
+png("mean_sd_day12nonzero.png",width=1200,height=800)
+par(mfrow=c(2,2))
+plot(1:length(mean_scaled),mean_scaled,main="mean scaled",col="#00000033",xlab="m/z features")
+plot(1:length(sd_scaled),sd_scaled,main="sd scaled",col="#00000033",xlab="m/z features")
+plot(1:length(mean_norm),mean_norm,main="mean norm",col="#00000033",xlab="m/z features")
+plot(1:length(sd_norm),sd_norm,main="sd norm",col="#00000033",xlab="m/z features")
+dev.off()
+
+png("d12_nonzero_scaled.png",width=1200)
+boxplot(d12.scale)
+dev.off()
+png("d12_nonzero_norm.png",width=1200)
+boxplot(d12.norm)
+dev.off()
+
+fit_day12_mzbysam_princomp <- princomp(d12.norm,cor=F,scores=T) ### IMP: choose quantile normalized or scaled data
+
+prop.variation<-fit_day12_mzbysam_princomp$sdev^2/sum(fit_day12_mzbysam_princomp$sdev^2)
+prop.variation[1:6]
+
+lm_pca_scores_runday12_nonzero_loadings<-apply(fit_day12_mzbysam_princomp$loadings,2, function(x) 
+{
+  lm_val<-lm(x~ as.factor(RunDay_day12)) 
+  lm_cor<-summary(lm_val)
+  p.val<-anova(lm_val)$'Pr(>F)'[1]
+  return(list(lm_cor$r.squared,p.val))
+})
+
+lm_pca_scores_runday12_nonzero_loadings_r.sq<-sapply(lm_pca_scores_runday12_nonzero_loadings, function(x){as.numeric(x[1])})
+lm_pca_scores_runday12_nonzero_loadings_pval<-sapply(lm_pca_scores_runday12_nonzero_loadings, function(x){as.numeric(x[2])})
+
+#d12.norm
+# > head(sort(lm_pca_scores_runday12_nonzero_loadings_pval))
+# Comp.3       Comp.1       Comp.4       Comp.2      Comp.12      Comp.10 
+# 1.406748e-30 1.098893e-19 2.908428e-18 1.277628e-14 1.242495e-02 2.728178e-02
+# > head(sort(lm_pca_scores_runday12_nonzero_loadings_r.sq,decreasing=TRUE))
+# Comp.3     Comp.1     Comp.4     Comp.2    Comp.12    Comp.10 
+# 0.68808406 0.52284414 0.49560140 0.41854605 0.07167529 0.05921720 
+#d12.scale
+# > head(sort(lm_pca_scores_runday12_nonzero_loadings_pval))
+# Comp.3       Comp.4       Comp.1       Comp.2      Comp.12      Comp.10 
+# 4.187723e-30 1.694542e-18 1.891703e-18 9.571292e-15 7.223229e-03 3.225789e-02 
+# > head(sort(lm_pca_scores_runday12_nonzero_loadings_r.sq,decreasing=TRUE))
+# Comp.3     Comp.4     Comp.1     Comp.2    Comp.12    Comp.10 
+# 0.68226327 0.50019857 0.49926531 0.42138548 0.08017055 0.05654185 
+
+lm_pca_scores_strain_day12_nonzero_loadings<-apply(fit_day12_mzbysam_princomp$loadings,2, function(x) 
+{
+  lm_val<-lm(x~ as.factor(SampleGroup_day12)) 
+  lm_cor<-summary(lm_val)
+  p.val<-anova(lm_val)$'Pr(>F)'[1]
+  return(list(lm_cor$r.squared,p.val))
+})
+
+lm_pca_scores_strain_day12_nonzero_loadings_r.sq<-sapply(lm_pca_scores_strain_day12_nonzero_loadings, function(x){as.numeric(x[1])})
+lm_pca_scores_strain_day12_nonzero_loadings_pval<-sapply(lm_pca_scores_strain_day12_nonzero_loadings, function(x){as.numeric(x[2])})
+
+#d12.norm
+# > head(sort(lm_pca_scores_strain_day12_nonzero_loadings_pval))
+# Comp.4       Comp.2       Comp.3      Comp.12       Comp.6       Comp.7 
+# 9.610950e-72 1.268507e-70 2.174531e-50 6.660495e-49 3.655435e-43 3.847701e-39
+# > head(sort(lm_pca_scores_strain_day12_nonzero_loadings_r.sq,decreasing=TRUE))
+# Comp.4    Comp.2    Comp.3   Comp.12    Comp.6    Comp.7 
+# 0.9773030 0.9760830 0.9382406 0.9337606 0.9131266 0.8948542 
+
+#d12.scale
+# > head(sort(lm_pca_scores_strain_day12_nonzero_loadings_pval))
+# Comp.4       Comp.2       Comp.3      Comp.12       Comp.6       Comp.7 
+# 1.412532e-71 2.911773e-70 1.810829e-50 4.063847e-42 5.404252e-42 9.048145e-41
+# > head(sort(lm_pca_scores_strain_day12_nonzero_loadings_r.sq,decreasing=TRUE))
+# Comp.4    Comp.2    Comp.3   Comp.12    Comp.6    Comp.7 
+# 0.9771250 0.9756762 0.9384714 0.9087122 0.9081748 0.9026850
+
+png("pc_plot_d12_nonzero_norm.png",height=800,width=800)
+par(mfrow=c(2,1))
+plot(1:length(lm_pca_scores_runday12_nonzero_loadings_r.sq),lm_pca_scores_runday12_nonzero_loadings_r.sq,col="green",ylab="Multiple R2-Loadings Vs Runday",xlab="PC's",main="Day 12",
+     ylim=c(0,max(c(max(lm_pca_scores_runday12_nonzero_loadings_r.sq),max(lm_pca_scores_strain_day12_nonzero_loadings_r.sq)))))
+points(1:length(lm_pca_scores_strain_day12_nonzero_loadings_r.sq),lm_pca_scores_strain_day12_nonzero_loadings_r.sq,col="red")
+rug(c(1:length(lm_pca_scores_strain_day12_nonzero_loadings_r.sq)), side = 1, col="#00000033")
+legend("topright", inset=.05,c("Strain","RunDay"),fill=c("red","green"),cex=1)
+
+plot(1:length(lm_pca_scores_runday12_nonzero_loadings_pval),lm_pca_scores_runday12_nonzero_loadings_pval,col="green",ylab="pval(r2)-Loadings Vs Runday",xlab="PC's",main="Day 12",
+     ylim=c(0,max(c(max(lm_pca_scores_runday12_nonzero_loadings_pval),max(lm_pca_scores_strain_day12_nonzero_loadings_pval)))))
+points(1:length(lm_pca_scores_strain_day12_nonzero_loadings_pval),lm_pca_scores_strain_day12_nonzero_loadings_pval,col="red")
+rug(c(1:length(lm_pca_scores_strain_day12_nonzero_loadings_pval)), side = 1, col="#00000033")
+legend("topright", inset=.05,c("Strain","RunDay"),fill=c("red","green"),cex=1)
+
+dev.off()
+
+
+write.table(cbind(lm_pca_scores_runday12_nonzero_loadings_r.sq,lm_pca_scores_runday12_nonzero_loadings_pval),"day12_lm_model_loadings-vs-runday_norm.txt",quote=FALSE,sep="\t")
+write.table(cbind(lm_pca_scores_strain_day12_nonzero_loadings_r.sq,lm_pca_scores_strain_day12_nonzero_loadings_pval),"day12_lm_model_loadings-vs-strains_norm.txt",quote=FALSE,sep="\t")
+
+
+######## SVD
+#for day 12
+
+svd_day12_nonzero <- svd(d12.scale)
+str(svd_day12_nonzero)
+
+svd_day12_nonzero$d1<-svd_day12_nonzero$d
+svd_day12_nonzero$d1[c(7,12)]<-0 #Removing the variation caused by runday(id using pca)
+d12_scale_rmbatch<-svd_day12_nonzero$u %*% diag(svd_day12_nonzero$d1) %*% t(svd_day12_nonzero$v)
+
+rownames(d12_scale_rmbatch)<-rownames(ms_data_day12_nonzero)
+colnames(d12_scale_rmbatch)<-names(ms_data_day12_nonzero)
+
+#u1 %*% d1 %*% t(v1)   #ms.svd$u%*%diag(ms.svd$d) #http://www.ats.ucla.edu/stat/r/pages/svd_demos.htm
+
+#day12-complete cases
+##non-corrected
+
+day12_sig_features_nc<-apply(d12.scale,1,function(x){kruskal.test(x ~ as.factor(SampleGroup_day12))$p.value})
+day12_sig_features_nc_cor<-p.adjust(day12_sig_features_nc,method="BH")
+id.sig_day12_nc <- which(day12_sig_features_nc < 0.05 );
+metab.sig_day12_nc<-cbind(d12.scale[id.sig_day12_nc,],round(day12_sig_features_nc[id.sig_day12_nc],5))
+
+##corrected
+
+#day12_sig_features<-apply(d12_scale_rmbatch,1,function(x){kruskal(y=x,trt=as.factor(SampleGroup_day12),group=TRUE,p.adj="BH")$statistics$p.chisq})
+
+day12_sig_features<-apply(d12_scale_rmbatch,1,function(x){kruskal.test(x ~ as.factor(SampleGroup_day12))$p.value})
+day12_sig_features_cor<-p.adjust(day12_sig_features,method="BH")
+id.sig_day12 <- which(day12_sig_features < 0.05 );
+metab.sig_day12<-cbind(d12.scale[id.sig_day12,],round(day12_sig_features[id.sig_day12],5))
+
+###################
+#### Against runday
+###################
+
+day12_sig_features_nc_r<-apply(d12.scale,1,function(x){kruskal.test(x ~ as.factor(RunDay_day12))$p.value})
+day12_sig_features_nc_r_cor<-p.adjust(day12_sig_features_nc_r,method="BH")
+id.sig_day12_nc_r <- which(day12_sig_features_nc_r < 0.05 );
+metab.sig_day12_nc_r<-cbind(d12.scale[id.sig_day12_nc_r,],round(day12_sig_features_nc_r[id.sig_day12_nc_r],5))
+
+##corrected
+
+#day12_sig_features<-apply(d12_scale_rmbatch,1,function(x){kruskal(y=x,trt=as.factor(SampleGroup_day12),group=TRUE,p.adj="BH")$statistics$p.chisq})
+
+day12_sig_features_r<-apply(d12_scale_rmbatch,1,function(x){kruskal.test(x ~ as.factor(RunDay_day12))$p.value})
+day12_sig_features_r_cor<-p.adjust(day12_sig_features_r,method="BH")
+id.sig_day12_r <- which(day12_sig_features_r < 0.05 );
+metab.sig_day12_r<-cbind(d12.scale[id.sig_day12_r,],round(day12_sig_features_r[id.sig_day12_r],5))
+
+#plotting results
+
+#pval_bins<-c(0,0.001,0.01,0.05,1)
+
+png('pval_day12.png',width=1200,height=1200)
+par(mfrow=c(2,2))
+hist(day12_sig_features_nc,breaks=20,main="Strain",freq=TRUE,xlab=paste("no of. sig feat(0.05)=",length(id.sig_day12_nc)))
+hist(day12_sig_features_nc_r,breaks=20,main="Runday",freq=TRUE,xlab=paste("no of. sig feat(0.05)=",length(id.sig_day12_nc_r)))
+hist(day12_sig_features,breaks=20,main="Strain-corrected",freq=TRUE,xlab=paste("no of. sig feat(0.05)=",length(id.sig_day12)))
+hist(day12_sig_features_r,breaks=20,main="Runday-corrected",freq=TRUE,xlab=paste("no of. sig feat(0.05)=",length(id.sig_day12_r)))
+dev.off()
+
+mz_rt_day12_nc <- strsplit(rownames(metab.sig_day12_nc), "\\@")
+mz_day12_nc<-sapply(mz_rt_day12_nc , function (x) if(length(x) == 2) x[1] else as.character(NA))
+rt_day12_nc<-sapply(mz_rt_day12_nc , function (x) if(length(x) == 2) x[2] else as.character(NA))
+
+mz_rt_day12 <- strsplit(rownames(metab.sig_day12), "\\@")
+mz_day12<-sapply(mz_rt_day12 , function (x) if(length(x) == 2) x[1] else as.character(NA))
+rt_day12<-sapply(mz_rt_day12 , function (x) if(length(x) == 2) x[2] else as.character(NA))
+
+png('d12_mzrt_sig_features_strain_kruskal.png',height=800,width=800)
+plot(rt,mz,pch=1,main="sig featuresVsStrain(0.05)",ylab="m/z",xlab="rt",col="#00000033")
+points(rt_day12_nc,mz_day12_nc,pch=1,col="green")
+points(rt_day12,mz_day12,pch=1,col="red")
+legend("topright", title="Colors", c("full data","non-cor","corr"), fill=c("#00000033","green","red"), cex=0.5)
+dev.off()
+
+mz_rt_day12_nc_r <- strsplit(rownames(metab.sig_day12_nc_r), "\\@")
+mz_day12_nc_r<-sapply(mz_rt_day12_nc_r , function (x) if(length(x) == 2) x[1] else as.character(NA))
+rt_day12_nc_r<-sapply(mz_rt_day12_nc_r , function (x) if(length(x) == 2) x[2] else as.character(NA))
+
+mz_rt_day12_r <- strsplit(rownames(metab.sig_day12_r), "\\@")
+mz_day12_r<-sapply(mz_rt_day12_r , function (x) if(length(x) == 2) x[1] else as.character(NA))
+rt_day12_r<-sapply(mz_rt_day12_r , function (x) if(length(x) == 2) x[2] else as.character(NA))
+
+png('d12_mzrt_sig_features_runday_kruskal.png',height=600,width=600)
+par(mfrow=c(2,1))
+plot(rt,mz,pch=1,main="d12 sig featuresVsRunday-nc",ylab="m/z",xlab="rt",col="#00000033")
+points(rt_day12_nc_r,mz_day12_nc_r,pch=1,col="green")
+plot(rt,mz,pch=1,main="d12 sig featuresVsRunday-Corrected",ylab="m/z",xlab="rt",col="#00000033")
+points(rt_day12_r,mz_day12_r,pch=1,col="green")
+dev.off()
+
+#matplot(cbind(fit_day12_mzbysam_princomp$sdev,svd_day12_nonzero$d))
+
+
+#################### Correlation with environmental parameters ############
+
+#Percent of vairation explained by biochemical parameters
+
+a<-adonis(t(log(ms_data_day12_nonzero_bc))~ biochem_para$Protein.percen+biochem_para$Carb.percent+
+            biochem_para$lipid.produc+biochem_para$max.biomass.density+biochem_para$avg.OD+biochem_para$RunDay+ biochem_para$Strain, 
+          method = "bray", perm=999)
+
+# Call:
+#   adonis(formula = t(log(ms_data_day12_nonzero_bc)) ~ biochem_para$Protein.percen +biochem_para$Carb.percent + biochem_para$lipid.produc + biochem_para$max.biomass.density +      biochem_para$avg.OD + biochem_para$RunDay + biochem_para$Strain,      permutations = 999, method = "bray") 
+# 
+# Terms added sequentially (first to last)
+# 
+# Df SumsOfSqs   MeanSqs F.Model      R2 Pr(>F)    
+# biochem_para$Protein.percen       1  0.003704 0.0037038  9.4517 0.04512  0.001 ***
+#   biochem_para$Carb.percent         1  0.005983 0.0059830 15.2679 0.07289  0.001 ***
+#   biochem_para$lipid.produc         1  0.009956 0.0099565 25.4077 0.12130  0.001 ***
+#   biochem_para$max.biomass.density  1  0.008528 0.0085277 21.7617 0.10389  0.001 ***
+#   biochem_para$avg.OD               1  0.009422 0.0094218 24.0433 0.11478  0.001 ***
+#   biochem_para$RunDay               1  0.008998 0.0089983 22.9625 0.10962  0.001 ***
+#   biochem_para$Strain               4  0.015115 0.0037788  9.6430 0.18414  0.001 ***
+#   Residuals                        52  0.020377 0.0003919         0.24825           
+# Total                            62  0.082083                   1.00000           
+# ---
+#   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 
 ####nn-graphs
@@ -996,8 +1848,8 @@ ggplot(log_blanks, aes(x=rt,value)) + geom_line(aes(colour = series)) +geom_rug(
 ######### TIC overlays #############################################
 
 getTIC <- function(file,rtcor=NULL) {
-     object <- xcmsRaw(file)
-     cbind(if (is.null(rtcor)) object@scantime else rtcor, rawEIC(object,mzrange=range(object@env$mz))$intensity) 
+  object <- xcmsRaw(file)
+  cbind(if (is.null(rtcor)) object@scantime else rtcor, rawEIC(object,mzrange=range(object@env$mz))$intensity) 
 }
 
 ##
@@ -1006,41 +1858,41 @@ getTIC <- function(file,rtcor=NULL) {
 getTICs <- function(xcmsSet=NULL,files=NULL, pdfname="TICs.pdf",rt=c("raw","corrected")) {
   if (is.null(xcmsSet)) {
     filepattern <- c("[Cc][Dd][Ff]", "[Nn][Cc]", "([Mm][Zz])?[Xx][Mm][Ll]",
-                      "[Mm][Zz][Dd][Aa][Tt][Aa]", "[Mm][Zz][Mm][Ll]")
+                     "[Mm][Zz][Dd][Aa][Tt][Aa]", "[Mm][Zz][Mm][Ll]")
     filepattern <- paste(paste("\\.", filepattern, "$", sep = ""), collapse = "|")
     if (is.null(files))
-        files <- getwd()
+      files <- getwd()
     info <- file.info(files)
     listed <- list.files(files[info$isdir], pattern = filepattern,
-                          recursive = TRUE, full.names = TRUE)
+                         recursive = TRUE, full.names = TRUE)
     files <- c(files[!info$isdir], listed)
   } else {
     files <- filepaths(xcmsSet)
   }
-
+  
   N <- length(files)
   TIC <- vector("list",N)
-
+  
   for (i in 1:N) {
-      cat(files[i],"\n")
-      if (!is.null(xcmsSet) && rt == "corrected")
-        rtcor <- xcmsSet@rt$corrected[[i]] else 
-          rtcor <- NULL
-      TIC[[i]] <- getTIC(files[i],rtcor=rtcor)
+    cat(files[i],"\n")
+    if (!is.null(xcmsSet) && rt == "corrected")
+      rtcor <- xcmsSet@rt$corrected[[i]] else 
+        rtcor <- NULL
+    TIC[[i]] <- getTIC(files[i],rtcor=rtcor)
   }
-
+  
   pdf(pdfname,w=16,h=10)
-      cols <- rainbow(N)
-      lty = 1:N
-      pch = 1:N
-      xlim = range(sapply(TIC, function(x) range(x[,1])))
-      ylim = range(sapply(TIC, function(x) range(x[,2])))
-      plot(0, 0, type="n", xlim = xlim, ylim = ylim, main = "Total Ion Chromatograms", xlab = "Retention Time", ylab = "TIC")
-      for (i in 1:N) {
-      tic <- TIC[[i]]
-      points(tic[,1], tic[,2], col = cols[i], pch = pch[i], type="l")
-      }
-      legend("topright",paste(basename(files)), col = cols, lty = lty, pch = pch)
+  cols <- rainbow(N)
+  lty = 1:N
+  pch = 1:N
+  xlim = range(sapply(TIC, function(x) range(x[,1])))
+  ylim = range(sapply(TIC, function(x) range(x[,2])))
+  plot(0, 0, type="n", xlim = xlim, ylim = ylim, main = "Total Ion Chromatograms", xlab = "Retention Time", ylab = "TIC")
+  for (i in 1:N) {
+    tic <- TIC[[i]]
+    points(tic[,1], tic[,2], col = cols[i], pch = pch[i], type="l")
+  }
+  legend("topright",paste(basename(files)), col = cols, lty = lty, pch = pch)
   dev.off()
   
   invisible(TIC)
@@ -1051,23 +1903,23 @@ getTICs <- function(xcmsSet=NULL,files=NULL, pdfname="TICs.pdf",rt=c("raw","corr
 # Average function 
 byapply <- function(x, by, fun, ...)
 {
-    # Create index list
-    if (length(by) == 1)
-    {
-        nc <- ncol(x)
-        split.index <- rep(1:ceiling(nc / by), each = by, length.out = nc)
-    } else # 'by' is a vector of groups
-    {
-        nc <- length(by)
-        split.index <- by
-    }
-    index.list <- split(seq(from = 1, to = nc), split.index)
-
-    # Pass index list to fun using sapply() and return object
-    sapply(index.list, function(i)
-            {
-                do.call(fun, list(x[, i], ...))
-            })
+  # Create index list
+  if (length(by) == 1)
+  {
+    nc <- ncol(x)
+    split.index <- rep(1:ceiling(nc / by), each = by, length.out = nc)
+  } else # 'by' is a vector of groups
+  {
+    nc <- length(by)
+    split.index <- by
+  }
+  index.list <- split(seq(from = 1, to = nc), split.index)
+  
+  # Pass index list to fun using sapply() and return object
+  sapply(index.list, function(i)
+  {
+    do.call(fun, list(x[, i], ...))
+  })
 }
 
 
@@ -1082,36 +1934,36 @@ byapply <- function(x, by, fun, ...)
 #--take a (named) distance matrix, for each element, find it's nearest neighbour, construct a graph based on non-redundant edges
 define.1nn.graph<-function(Dmat)
 {
- #--take a (named) distance matrix, Dmat, for each element, find it's nearest neighbour, construct a graph based on non-redundant edges
- #--Dmat should be class 'matrix' not 'dist'
- #--returns a graph
- 
- res=NULL
-
- #--define nodes and targets... 
- nodes<-colnames(Dmat)
- nnodes<-rep("",nrow(Dmat))
- val<-rep("",nrow(Dmat))
-
- #--remove diagonal...
- ndDmat<-Dmat
- diag(ndDmat)<-NA
-
- #--go through set of nodes and find nearest neighbour...
- for(i in (1:length(nodes)))
- {
-  curcol<-ndDmat[,nodes[i]]
-  nnodes[i]<-nodes[which.min(curcol)]
-  val[i]<-sort(curcol, FALSE)[1]
- }
-
- #--make edgelist...and define a directed graph..
- el<-cbind(nodes,nnodes)
- el1<-cbind(nodes,nnodes,val)
- res<-graph.edgelist(el)
-
- return(res)
- 
+  #--take a (named) distance matrix, Dmat, for each element, find it's nearest neighbour, construct a graph based on non-redundant edges
+  #--Dmat should be class 'matrix' not 'dist'
+  #--returns a graph
+  
+  res=NULL
+  
+  #--define nodes and targets... 
+  nodes<-colnames(Dmat)
+  nnodes<-rep("",nrow(Dmat))
+  val<-rep("",nrow(Dmat))
+  
+  #--remove diagonal...
+  ndDmat<-Dmat
+  diag(ndDmat)<-NA
+  
+  #--go through set of nodes and find nearest neighbour...
+  for(i in (1:length(nodes)))
+  {
+    curcol<-ndDmat[,nodes[i]]
+    nnodes[i]<-nodes[which.min(curcol)]
+    val[i]<-sort(curcol, FALSE)[1]
+  }
+  
+  #--make edgelist...and define a directed graph..
+  el<-cbind(nodes,nnodes)
+  el1<-cbind(nodes,nnodes,val)
+  res<-graph.edgelist(el)
+  
+  return(res)
+  
 }
 
 #--example
@@ -1168,7 +2020,6 @@ str(aracyc)
 # mz_id<-mz_id[,c('MZ','AracycMZ_Mass','Metabolite_name')]
 # 
 # write.table(mz_id,"mz_id.txt",quote=FALSE,sep="\t",row.name=FALSE)
-
 
 
 
