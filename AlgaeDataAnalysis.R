@@ -141,47 +141,12 @@ SampleGroup<-SampleGroups[1:311]
 #StrainName<-as.factor(names(ms_data))
 #StrainName0<-names(ms_data)
 
-
-###### Data: inclusion and exclusion, removing replicates(samples with large variance) from the dataset 
-
-rem <- c('D4_094_b1_r002','D4_104_b3_r002','D4_245b1_r001','D4_254b1_r001','D4_325_b1_r002')
-
-ms_data_rem<-ms_data[, !names(ms_data) %in% rem]
-names(ms_data_rem[25:281])
-
-metadata_rem<-metadata[, !colnames(metadata) %in% rem]
-RunDay_rem<-metadata_rem[3,]
-GrowthStage_rem<-metadata_rem[1,]
-RunDay_rem<-as.vector(RunDay_rem)
-GrowthStage_rem<-as.vector(GrowthStage_rem)
-
-GrowthStage_rem<-gsub('D4', 1, GrowthStage_rem)
-GrowthStage_rem<-gsub('D12', 2, GrowthStage_rem)
-
-GrowthStage_strains<-GrowthStage[25:286]
-GrowthStage_strains<-gsub('D4', 1, GrowthStage_strains)
-GrowthStage_strains<-gsub('D12', 2, GrowthStage_strains)
-
-RunDay_strains<-as.numeric(RunDay[25:286])
-
-z1<-t(zeroes_in_column)
-colnames(z1)<-colnames(ms_data)
-zeroes_in_column_rem<-z1[, !colnames(z1) %in% rem]
-
-GrowthStage_day4<-GrowthStage[grep('D4', names(GrowthStage))]
-GrowthStage_day12<-GrowthStage[grep('D12', names(GrowthStage))] 
-
-RunDay_day4<-as.numeric(RunDay[grep('D4', names(RunDay))])
-RunDay_day12<-as.numeric(RunDay[grep('D12', names(RunDay))])
-
-zeroes_in_column_day4<-z1[grep('D4', colnames(z1))] 
-zeroes_in_column_day12<-z1[grep('D12', colnames(z1))] 
-
 #Measure of variation between replicates of each strain #based on boxplot
 
 groups<-unique(SampleGroup)
 
 groups_with_outliers<-0
+outlier_replicates<-0
 a<-1
 
 for(i in 1:length(groups))
@@ -212,9 +177,64 @@ for(i in 1:length(groups))
   if(length(boxplot_cv$out)>0)
   {
     groups_with_outliers[a]<-groups[i]
+    outlier_replicates[a]<-list(names(ms_data_grp1)[which(cv_group%in%boxplot_cv$out)])
     a<-a+1
   }
 }
+outlier_replicates<-unlist(outlier_replicates)
+# 
+# > groups_with_outliers
+# [1] "23rd_ACN" "D12_001"  "D12_006"  "D12_14"   "D12_051"  "D12_104"  "D12_207"  "D12_255"  "D12_283"  "D4_094"   "D4_104"   "D4_245"   "D4_252"   "D4_254"   "D4_268"  
+# [16] "D4_325" 
+
+# > outlier_replicates
+# [1] "23rd_ACN_Blank01" "D12_001b3_r001"   "D12_006b1_r002"   "D12_14b2_r002"    "D12_14b3_r001"    "D12_051b3_r002"   "D12_104b1_r001"   "D12_207b2_r002"   "D12_255b1_r001"  
+# [10] "D12_283b1_r002"   "D4_094_b1_r002"   "D4_104_b3_r002"   "D4_245b1_r001"    "D4_252b2_r001"    "D4_254b1_r001"    "D4_254b1_r002"    "D4_268_b1_r002"   "D4_325_b1_r002"  
+
+
+###### Data: inclusion and exclusion, removing replicates(samples with large variance) from the dataset 
+
+#rem <- c('D4_094_b1_r002','D4_104_b3_r002','D4_245b1_r001','D4_254b1_r001','D4_325_b1_r002')
+
+ms_data_rem<-ms_data[, !names(ms_data) %in% outlier_replicates] #without the outlier replicates
+names(ms_data_rem)
+
+SampleGroup_rem#Sample group without the outlier replicates
+SampleGroup_rem<-sapply(names(ms_data_rem), function(x) paste(strsplit(x,"_")[[1]][1:2],collapse = "_"))
+SampleGroup_rem<-as.vector(SampleGroup_rem)
+SampleGroup_rem<-gsub('b1','',SampleGroup_rem)
+SampleGroup_rem<-gsub('b2','',SampleGroup_rem)
+SampleGroup_rem<-gsub('b3','',SampleGroup_rem)
+
+
+metadata_rem<-metadata[, !colnames(metadata) %in% outlier_replicates]
+RunDay_rem<-metadata_rem[3,]
+GrowthStage_rem<-metadata_rem[1,]
+RunDay_rem<-as.vector(RunDay_rem)
+GrowthStage_rem<-as.vector(GrowthStage_rem)
+
+GrowthStage_rem<-gsub('D4', 1, GrowthStage_rem)
+GrowthStage_rem<-gsub('D12', 2, GrowthStage_rem)
+
+GrowthStage_strains<-GrowthStage[25:286]
+GrowthStage_strains<-gsub('D4', 1, GrowthStage_strains)
+GrowthStage_strains<-gsub('D12', 2, GrowthStage_strains)
+
+RunDay_strains<-as.numeric(RunDay[25:286])
+
+z1<-t(zeroes_in_column)
+colnames(z1)<-colnames(ms_data)
+zeroes_in_column_rem<-z1[, !colnames(z1) %in% outlier_replicates]
+
+GrowthStage_day4<-GrowthStage[grep('D4', names(GrowthStage))]
+GrowthStage_day12<-GrowthStage[grep('D12', names(GrowthStage))] 
+
+RunDay_day4<-as.numeric(RunDay[grep('D4', names(RunDay))])
+RunDay_day12<-as.numeric(RunDay[grep('D12', names(RunDay))])
+
+zeroes_in_column_day4<-z1[grep('D4', colnames(z1))] 
+zeroes_in_column_day12<-z1[grep('D12', colnames(z1))] 
+
 #######################################
 ###### Exploratory data analysis ######
 #######################################
@@ -654,10 +674,10 @@ day4_strains<-read.table("paiwise_day4.txt",sep='\t',header=TRUE,row.names=1)
 
 ########## Clustering ######
 
-d <- dist(t(new_ms_data1), method = "euclidean") # distance matrix
+d <- dist(t(mz_grp_mean_non_zero), method = "euclidean") # distance matrix
 fit <- hclust(d, method="average") 
 #pdf('hclust.pdf',width=800)
-png('hclust_reps_zeroCor.png',width=8000)
+png('hclust_mz_grp_non_zero.png',width=800)
 plot (fit)
 dev.off()
 
