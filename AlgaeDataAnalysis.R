@@ -65,6 +65,7 @@ library(agricolae)
 library(reshape2)
 library(affy)
 library(preprocessCore)
+library(multtest)
 
 #############
 # User      #
@@ -198,7 +199,7 @@ outlier_replicates<-unlist(outlier_replicates)
 # [1] "23rd_ACN_Blank01" "D12_001b3_r001"   "D12_006b1_r002"   "D12_14b2_r002"    "D12_14b3_r001"    "D12_051b3_r002"   "D12_104b1_r001"   "D12_207b2_r002"   "D12_255b1_r001"  
 # [10] "D12_283b1_r002"   "D4_094_b1_r002"   "D4_104_b3_r002"   "D4_245b1_r001"    "D4_252b2_r001"    "D4_254b1_r001"    "D4_254b1_r002"    "D4_268_b1_r002"   "D4_325_b1_r002"  
 
-#strains_with_biochem<-c("D12_253","D12_051","D12_252","D12_187","D12_255","D12_001","D12_177","D12_258","D12_254","D12_184","D12_87")
+strains_with_biochem<-c("D12_253","D12_051","D12_252","D12_187","D12_255","D12_001","D12_177","D12_258","D12_254","D12_184","D12_87")
 
 ###### Data: inclusion and exclusion, removing replicates(samples with large variance) from the dataset 
 
@@ -242,9 +243,8 @@ ms_data_day4<-ms_data[, grep('D4', names(ms_data))]
 ms_data_day12<-ms_data[, grep('D12', names(ms_data))] 
 ms_data_day12_bc<-ms_data[, grepl(paste(strains_with_biochem,collapse="|"),names(ms_data))] #11 strains with biochemical param
 
-GrowthStage_day4<-GrowthStage[grep('D4', names(GrowthStage))]
-GrowthStage_day12<-GrowthStage[grep('D12', names(GrowthStage))] 
-
+GrowthStage_day4<-GrowthStage[grep('D4', names(GrowthStage),perl=TRUE, value=TRUE)]
+GrowthStage_day12<-GrowthStage[grep('D12', names(GrowthStage),perl=TRUE, value=TRUE)] 
 
 RunDay_day4<-RunDay[grep('D4',names(RunDay_strains),perl=TRUE, value=TRUE)]
 RunDay_day12<-RunDay[grep('D12', names(RunDay_strains),perl=TRUE, value=TRUE)]
@@ -412,6 +412,9 @@ dev.off()
 
 #day12 is columns 5:26 and day 4 is columns 27:48
 
+### Extracting features which are non-zero across all strains
+###
+
 ms_data_day4_zero_nonzero<-ms_data_day4
 ms_data_day4_zero_nonzero[ms_data_day4_zero_nonzero<1+1e-3]<-NA
 ms_data_day4_nonzero<- ms_data_day4_zero_nonzero[complete.cases(ms_data_day4_zero_nonzero),]
@@ -464,8 +467,6 @@ for (i in seq(3,ncol(mz_grp_zero_percent),4))
   dev.off()
 }
 graphics.off()
-
-
 
 #Mean-Vs-Zeros
 
@@ -836,9 +837,7 @@ for (i in 1:5)#nrow(mz_grp_total))
   multinomial_prob_pval[i]<-multinomial_prob_value$p.value
 }
 
-########ttest
-
-## ttest between columns 
+########ttest between columns 
 
 combos <- combn(ncol(ms_data),2)
 
@@ -854,7 +853,6 @@ adply(combos, 2, function(x) {
   return(out)
   
 })
-
 
 #t.test(log(ms_data[,1]),log(ms_data[,5]),paired=F,var.equal=F,p.adjust="BH")
 #pairwise_ttest_strains<-pairwise.t.test(t(ms_data_test),StrainName_test,p.adj="BH", paired=F, var.equal=T)
@@ -1148,7 +1146,6 @@ lm_pca_scores<-sapply(scores_pca_prcomp, function(x)
   return(lm_cor$r.squared)
 })
 
-
 # for day 4
 
 d<-as.data.frame(t(ms_data_day4))
@@ -1331,7 +1328,7 @@ d4.scale<-d4.scale.min-min(d4.scale.min)
 mean_scaled <- apply(d4.scale,1,mean) 
 sd_scaled <- apply(d4.scale,1,sd) 
 
-mean_norm_ <- apply(d4.norm,1,mean) 
+mean_norm <- apply(d4.norm,1,mean) 
 sd_norm <- apply(d4.norm,1,sd) 
 
 png("mean_sd_day4nonzero.png",,width=1200,height=800)
@@ -1358,7 +1355,7 @@ dev.off()
 fit_day4_mzbysam_princomp <- princomp(d4.scale,cor=F,scores=T) ### IMP: choose quantile normalized or scaled data
 
 prop.variation<-fit_day4_mzbysam_princomp$sdev^2/sum(fit_day4_mzbysam_princomp$sdev^2)
-prop.variation[1:6]
+prop.variation[c(2,1,8,6,11,5)]
 
 # pdf("eigenStrain_d4.pdf",width=16,height=16)
 # par(mfrow=c(2,2))
@@ -1404,7 +1401,10 @@ lm_pca_scores_runday4_nonzero_loadings_pval<-sapply(lm_pca_scores_runday4_nonzer
 # Comp.2    Comp.1    Comp.8    Comp.6   Comp.11    Comp.5 
 # 0.8116675 0.5560723 0.2959875 0.2784050 0.2375382 0.2004892 
 
-
+# Proportion of variation affected and to be removed
+#prop.variation[c(2,1)]
+# Comp.2      Comp.1      Comp.8      Comp.6     Comp.11      Comp.5 
+# 0.045272889 0.751478634 0.007723064 0.009516866 0.005849681 0.013362303 
 
 lm_pca_scores_strain_day4_nonzero_loadings<-apply(fit_day4_mzbysam_princomp$loadings,2, function(x) 
 {
@@ -1459,50 +1459,43 @@ svd_day4_nonzero <- svd(d4.scale)
 str(svd_day4_nonzero)
 
 svd_day4_nonzero$d1<-svd_day4_nonzero$d
-svd_day4_nonzero$d1[c(7,12)]<-0 #Removing the variation caused by runday(id using pca)
+svd_day4_nonzero$d1[c(2,1)]<-0 #Removing the variation caused by runday(id using pca) where the multiple r2 correlation is above 0.5
 d4_scale_rmbatch<-svd_day4_nonzero$u %*% diag(svd_day4_nonzero$d1) %*% t(svd_day4_nonzero$v)
 
 rownames(d4_scale_rmbatch)<-rownames(ms_data_day4_nonzero)
 colnames(d4_scale_rmbatch)<-names(ms_data_day4_nonzero)
 
 #u1 %*% d1 %*% t(v1)   #ms.svd$u%*%diag(ms.svd$d) #http://www.ats.ucla.edu/stat/r/pages/svd_demos.htm
+###################
+#### Against Strain
+###################
 
-#day4-complete cases ##non-corrected
-
+classlabel_samplegrp_d4<-as.numeric(as.factor(SampleGroup_day4))-1
+day4_sig_features_nc<-mt.maxT(d4.scale,classlabel_samplegrp_d4,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
 #day4_sig_features_nc<-apply(d4.scale,1,function(x){kruskal(y=x,trt=as.factor(SampleGroup_day4),group=TRUE,p.adj="BH")$statistics$p.chisq})
-
-day4_sig_features_nc<-apply(d4.scale,1,function(x){kruskal.test(x ~ as.factor(SampleGroup_day4))$p.value})
-day4_sig_features_nc_cor<-p.adjust(day4_sig_features_nc,method="BH")
-id.sig_day4_nc <- which(day4_sig_features_nc_cor < 0.05 );
-metab.sig_day4_nc<-cbind(d4.scale[id.sig_day4_nc,],round(day4_sig_features_nc[id.sig_day4_nc],5))
+#day4_sig_features_nc<-apply(d4.scale,1,function(x){kruskal.test(x ~ as.factor(SampleGroup_day4))$p.value})
+#day4_sig_features_nc_cor<-p.adjust(day4_sig_features_nc,method="BH")
+id.sig_day4_nc <- which(day4_sig_features_nc$adjp < 0.05 );
+metab.sig_day4_nc<-cbind(d4.scale[id.sig_day4_nc,],round(day4_sig_features_nc$adjp[id.sig_day4_nc],5))
 
 ##corrected
-
-#day4_sig_features<-apply(d4_scale_rmbatch,1,function(x){kruskal(y=x,trt=as.factor(SampleGroup_day4),group=TRUE,p.adj="BH")$statistics$p.chisq})
-
-day4_sig_features<-apply(d4_scale_rmbatch,1,function(x){kruskal.test(x ~ as.factor(SampleGroup_day4))$p.value})
-day4_sig_features_cor<-p.adjust(day4_sig_features,method="BH")
-id.sig_day4 <- which(day4_sig_features < 0.05 );
-metab.sig_day4<-cbind(d4.scale[id.sig_day4,],round(day4_sig_features[id.sig_day4],5))
-
+day4_sig_features<-mt.maxT(d4_scale_rmbatch,classlabel_samplegrp_d4,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
+id.sig_day4 <- which(day4_sig_features$adjp < 0.05 );
+metab.sig_day4<-cbind(d4.scale[id.sig_day4,],round(day4_sig_features$adjp[id.sig_day4],5))
 
 ###################
 #### Against runday
 ###################
 
-day4_sig_features_nc_r<-apply(d4.scale,1,function(x){kruskal.test(x ~ as.factor(RunDay_day4))$p.value})
-day4_sig_features_nc_r_cor<-p.adjust(day4_sig_features_nc_r,method="BH")
-id.sig_day4_nc_r <- which(day4_sig_features_nc_r < 0.05 );
-metab.sig_day4_nc_r<-cbind(d4.scale[id.sig_day4_nc_r,],round(day4_sig_features_nc_r[id.sig_day4_nc_r],5))
+classlabel_runday_d4<-as.numeric(as.factor(RunDay_day4))-1
+day4_sig_features_nc_r<-mt.maxT(d4.scale,classlabel_runday_d4,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
+id.sig_day4_nc_r <- which(day4_sig_features_nc_r$adjp < 0.05 );
+metab.sig_day4_nc_r<-cbind(d4.scale[id.sig_day4_nc_r,],round(day4_sig_features_nc_r$adjp[id.sig_day4_nc_r],5))
 
 ##corrected
-
-#day4_sig_features<-apply(d4_scale_rmbatch,1,function(x){kruskal(y=x,trt=as.factor(SampleGroup_day4),group=TRUE,p.adj="BH")$statistics$p.chisq})
-
-day4_sig_features_r<-apply(d4_scale_rmbatch,1,function(x){kruskal.test(x ~ as.factor(RunDay_day4))$p.value})
-day4_sig_features_r_cor<-p.adjust(day4_sig_features_r,method="BH")
-id.sig_day4_r <- which(day4_sig_features_r < 0.05 );
-metab.sig_day4_r<-cbind(d4.scale[id.sig_day4_r,],round(day4_sig_features_r[id.sig_day4_r],5))
+day4_sig_features_r<-mt.maxT(d4_scale_rmbatch,classlabel_runday_d4,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
+id.sig_day4_r <- which(day4_sig_features_r$adjp < 0.05 );
+metab.sig_day4_r<-cbind(d4.scale[id.sig_day4_r,],round(day4_sig_features_r$adjp[id.sig_day4_r],5))
 
 #plotting results
 
@@ -1524,7 +1517,7 @@ mz_rt_day4 <- strsplit(rownames(metab.sig_day4), "\\@")
 mz_day4<-sapply(mz_rt_day4 , function (x) if(length(x) == 2) x[1] else as.character(NA))
 rt_day4<-sapply(mz_rt_day4 , function (x) if(length(x) == 2) x[2] else as.character(NA))
 
-png('d4_mzrt_sig_features_strain_kruskal.png',height=800,width=800)
+png('d4_mzrt_sig_features_strain.png',height=800,width=800)
 plot(rt,mz,pch=1,main="sig featuresVsStrain(0.05)",ylab="m/z",xlab="rt",col="#00000033")
 points(rt_day4_nc,mz_day4_nc,pch=1,col="green")
 points(rt_day4,mz_day4,pch=1,col="red")
@@ -1587,10 +1580,10 @@ png("d12_nonzero_norm.png",width=1200)
 boxplot(d12.norm)
 dev.off()
 
-fit_day12_mzbysam_princomp <- princomp(d12.norm,cor=F,scores=T) ### IMP: choose quantile normalized or scaled data
+fit_day12_mzbysam_princomp <- princomp(d12.scale,cor=F,scores=T) ### IMP: choose quantile normalized or scaled data
 
 prop.variation<-fit_day12_mzbysam_princomp$sdev^2/sum(fit_day12_mzbysam_princomp$sdev^2)
-prop.variation[1:6]
+prop.variation[c(3,4,1,2)]
 
 lm_pca_scores_runday12_nonzero_loadings<-apply(fit_day12_mzbysam_princomp$loadings,2, function(x) 
 {
@@ -1673,48 +1666,47 @@ svd_day12_nonzero <- svd(d12.scale)
 str(svd_day12_nonzero)
 
 svd_day12_nonzero$d1<-svd_day12_nonzero$d
-svd_day12_nonzero$d1[c(7,12)]<-0 #Removing the variation caused by runday(id using pca)
+svd_day12_nonzero$d1[c(3,4,1)]<-0 #Removing the variation caused by runday(id using pca) where the multiple r2 correlation is above 0.5
 d12_scale_rmbatch<-svd_day12_nonzero$u %*% diag(svd_day12_nonzero$d1) %*% t(svd_day12_nonzero$v)
 
 rownames(d12_scale_rmbatch)<-rownames(ms_data_day12_nonzero)
 colnames(d12_scale_rmbatch)<-names(ms_data_day12_nonzero)
-
 #u1 %*% d1 %*% t(v1)   #ms.svd$u%*%diag(ms.svd$d) #http://www.ats.ucla.edu/stat/r/pages/svd_demos.htm
 
-#day12-complete cases
-##non-corrected
-
-day12_sig_features_nc<-apply(d12.scale,1,function(x){kruskal.test(x ~ as.factor(SampleGroup_day12))$p.value})
-day12_sig_features_nc_cor<-p.adjust(day12_sig_features_nc,method="BH")
-id.sig_day12_nc <- which(day12_sig_features_nc < 0.05 );
-metab.sig_day12_nc<-cbind(d12.scale[id.sig_day12_nc,],round(day12_sig_features_nc[id.sig_day12_nc],5))
+###################
+#### Against Strain
+###################
+classlabel_samplegrp_d12<-as.numeric(as.factor(SampleGroup_day12))-1
+day12_sig_features_nc<-mt.maxT(d12.scale,classlabel_samplegrp_d12,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
+#day12_sig_features_nc<-apply(d12.scale,1,function(x){kruskal.test(x ~ as.factor(SampleGroup_day12))$p.value})
+#day12_sig_features_nc_cor<-p.adjust(day12_sig_features_nc,method="BH")
+id.sig_day12_nc <- which(day12_sig_features_nc$adjp < 0.05 );
+metab.sig_day12_nc<-cbind(d12.scale[id.sig_day12_nc,],round(day12_sig_features_nc$adjp[id.sig_day12_nc],5))
 
 ##corrected
+day12_sig_features<-mt.maxT(d12_scale_rmbatch,classlabel_samplegrp_d12,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
+id.sig_day12 <- which(day12_sig_features$adjp < 0.05 );
+metab.sig_day12<-cbind(d12.scale[id.sig_day12,],round(day12_sig_features$adjp[id.sig_day12],5))
 
-#day12_sig_features<-apply(d12_scale_rmbatch,1,function(x){kruskal(y=x,trt=as.factor(SampleGroup_day12),group=TRUE,p.adj="BH")$statistics$p.chisq})
+##corrected
+day12_sig_features_nc<-mt.maxT(d12_scale_rmbatch,classlabel_samplegrp_d12,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
+#day12_sig_features_cor<-p.adjust(day12_sig_features,method="BH")
+id.sig_day12 <- which(day12_sig_features$adjp < 0.05 );
+metab.sig_day12<-cbind(d12.scale[id.sig_day12,],round(day12_sig_features$adjp[id.sig_day12],5))
 
-day12_sig_features<-apply(d12_scale_rmbatch,1,function(x){kruskal.test(x ~ as.factor(SampleGroup_day12))$p.value})
-day12_sig_features_cor<-p.adjust(day12_sig_features,method="BH")
-id.sig_day12 <- which(day12_sig_features < 0.05 );
-metab.sig_day12<-cbind(d12.scale[id.sig_day12,],round(day12_sig_features[id.sig_day12],5))
 
 ###################
 #### Against runday
 ###################
-
-day12_sig_features_nc_r<-apply(d12.scale,1,function(x){kruskal.test(x ~ as.factor(RunDay_day12))$p.value})
-day12_sig_features_nc_r_cor<-p.adjust(day12_sig_features_nc_r,method="BH")
-id.sig_day12_nc_r <- which(day12_sig_features_nc_r < 0.05 );
-metab.sig_day12_nc_r<-cbind(d12.scale[id.sig_day12_nc_r,],round(day12_sig_features_nc_r[id.sig_day12_nc_r],5))
+classlabel_runday_d12<-as.numeric(as.factor(RunDay_day12))-1
+day12_sig_features_nc_r<-mt.maxT(d12.scale,classlabel_runday_d12,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
+id.sig_day12_nc_r <- which(day12_sig_features_nc_r$adjp < 0.05 );
+metab.sig_day12_nc_r<-cbind(d12.scale[id.sig_day12_nc_r,],round(day12_sig_features_nc_r$adjp[id.sig_day12_nc_r],5))
 
 ##corrected
-
-#day12_sig_features<-apply(d12_scale_rmbatch,1,function(x){kruskal(y=x,trt=as.factor(SampleGroup_day12),group=TRUE,p.adj="BH")$statistics$p.chisq})
-
-day12_sig_features_r<-apply(d12_scale_rmbatch,1,function(x){kruskal.test(x ~ as.factor(RunDay_day12))$p.value})
-day12_sig_features_r_cor<-p.adjust(day12_sig_features_r,method="BH")
-id.sig_day12_r <- which(day12_sig_features_r < 0.05 );
-metab.sig_day12_r<-cbind(d12.scale[id.sig_day12_r,],round(day12_sig_features_r[id.sig_day12_r],5))
+day12_sig_features_r<-mt.maxT(d12_scale_rmbatch,classlabel_runday_d12,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
+id.sig_day12_r <- which(day12_sig_features_r$adjp < 0.05 );
+metab.sig_day12_r<-cbind(d12.scale[id.sig_day12_r,],round(day12_sig_features_r$adjp[id.sig_day12_r],5))
 
 #plotting results
 
@@ -1760,6 +1752,55 @@ points(rt_day12_r,mz_day12_r,pch=1,col="green")
 dev.off()
 
 #matplot(cbind(fit_day12_mzbysam_princomp$sdev,svd_day12_nonzero$d))
+
+#################### Plots for batch effect correction ####################
+
+pdf("LinearModel_PCStrainRunday.pdf",width=16)
+m<- matrix(c(1,2,3,4,5,5),ncol = 2,byrow = TRUE,heights = c(0.5,0.5,0.1))
+layout(mat = m)
+
+plot(lm_pca_scores_strain_day4_nonzero_loadings_r.sq,type="l", xaxt="n",xlab="PC's",ylab="mulriple r2",main="day4")
+points(lm_pca_scores_runday4_nonzero_loadings_r.sq,type="l",lty=2,col="red")
+axis(1, at = seq(0, 125, by = 5))
+
+plot(lm_pca_scores_strain_day12_nonzero_loadings_r.sq,type="l",xaxt="n",xlab="PC's",ylab="mulriple r2",main="day12")
+points(lm_pca_scores_runday12_nonzero_loadings_r.sq,type="l",lty=2,col="red")
+axis(1, at = seq(0, 125, by = 5))
+
+plot(lm_pca_scores_strain_day4_nonzero_loadings_pval,type="l",xaxt="n",xlab="PC's",ylab="pval",main="day4")
+points(lm_pca_scores_runday4_nonzero_loadings_pval,type="l",lty=2,col="red")
+axis(1, at = seq(0, 125, by = 5))
+
+plot(lm_pca_scores_strain_day12_nonzero_loadings_pval,type="l",xaxt="n",xlab="PC's",ylab="pval",main="day12")
+points(lm_pca_scores_runday12_nonzero_loadings_pval,type="l",lty=2,col="red")
+axis(1, at = seq(0, 125, by = 5))
+
+plot(1, type = "n", axes=FALSE, xlab="", ylab="")
+legend(x = "top",inset = 0,
+       legend = c("Strains", "RunDay"),  col=c("black","red"), lty=c(1,2),horiz = TRUE)
+
+dev.off()
+
+pdf("BatchCorrectedPermuteTest_FeatureVsStrainRunday.pdf",width=12,height=12)
+m<- matrix(c(1,2,3,4,5,5),ncol = 2,byrow = TRUE)
+layout(mat = m)
+
+plot(1:length(day4_sig_features_nc$adjp),day4_sig_features_nc$adjp,main="day4 strains",xlab="features",ylab="adj. pval")
+points(1:length(day4_sig_features$adjp),day4_sig_features$adjp,col="red")
+
+plot(1:length(day4_sig_features_nc_r$adjp),day4_sig_features_nc_r$adjp,main="day4 runday",xlab="features",ylab="adj. pval")
+points(1:length(day4_sig_features_r$adjp),day4_sig_features_r$adjp,col="red")
+
+plot(1:length(day12_sig_features_nc$adjp),day12_sig_features_nc$adjp,main="day12 strains",xlab="features",ylab="adj. pval")
+points(1:length(day12_sig_features$adjp),day12_sig_features$adjp,col="red")
+
+plot(1:length(day12_sig_features_nc_r$adjp),day12_sig_features_nc_r$adjp,main="day12 runday",xlab="features",ylab="adj. pval")
+points(1:length(day12_sig_features_r$adjp),day12_sig_features_r$adjp,col="red")
+
+plot(1, type = "n", axes=FALSE, xlab="", ylab="")
+legend(x = "top",inset = 0,
+       legend = c("Non-corrected", "Runday effect Corrected"),   text.col=c("black","red"), horiz = TRUE)
+dev.off()
 
 
 #################### Correlation with environmental parameters ############
