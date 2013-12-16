@@ -258,13 +258,15 @@ RunDay_day12<-RunDay[grep('D12', names(RunDay_strains),perl=TRUE, value=TRUE)]
 ms_data_day4_zero_nonzero<-ms_data_day4
 ms_data_day4_zero_nonzero[ms_data_day4_zero_nonzero<1e-3]<-NA
 ms_data_day4_nonzero<- ms_data_day4_zero_nonzero[complete.cases(ms_data_day4_zero_nonzero),]
-write.table(ms_data_day4_nonzero,"ms_data_day4_nonzero.txt",quote=FALSE,sep="\t",col.names=NA)
+rm(ms_data_day4_zero_nonzero)
+#write.table(ms_data_day4_nonzero,"ms_data_day4_nonzero.txt",quote=FALSE,sep="\t",col.names=NA)
 #ms_data_day4_nonzero msd4<-read.table("ms_data_day4_nonzero.txt",sep="\t",row.names=1,header=TRUE) #to read in files directly
 
 ms_data_day12_zero_nonzero<-ms_data_day12
 ms_data_day12_zero_nonzero[ms_data_day12_zero_nonzero<1e-3]<-NA
 ms_data_day12_nonzero<- ms_data_day12_zero_nonzero[complete.cases(ms_data_day12_zero_nonzero),]
-write.table(ms_data_day12_nonzero,"ms_data_day12_nonzero.txt",quote=FALSE,sep="\t",col.names=NA)
+rm(ms_data_day12_zero_nonzero)
+#write.table(ms_data_day12_nonzero,"ms_data_day12_nonzero.txt",quote=FALSE,sep="\t",col.names=NA)
 #ms_data_day12_nonzero<-read.table("ms_data_day12_nonzero.txt",sep="\t",row.names=1,header=TRUE) #to read in files directly
   
 ms_data_day12_nonzero_bc<-ms_data_day12_nonzero[, grepl(paste(strains_with_biochem,collapse="|"),names(ms_data_day12_nonzero))] #11 strains with biochemical param
@@ -301,7 +303,7 @@ compute_linearModel<-function(results.from.pca,dependent.factor) { #dependent.fa
   })
 }
 
-#function to extract r2 value from list containg r2 and p.val returned from linear model
+#function to extract r2 value from list containing r2 and p.val returned from linear model
 compute.r2.pval<-function(linearmodel_list,r2.pval) {
   if(r2.pval=="r2") { #WARNING:code implictly assumes r2 is in the first column and p.val in the second
     return (sapply(linearmodel_list, function(x){as.numeric(x[1])}))
@@ -322,27 +324,27 @@ compute_svd<-function(dataset,preprocess_method,start_pc_comp,end_pc_comp,recurs
   
   if(recursive_pcs=="recursive") {
     svd_dataset<-svd(processed_data)
-    if(end_pc_comp){end_pc<-end_pc_comp} else{end_pc<-ncol(svd_dataset)}
-    pc_combi_list<-sapply(start_pc_comp:end_pc,function(x) seq(start_pc_comp:x))
+    if(end_pc_comp){end_pc<-end_pc_comp} else{end_pc<-ncol(svd_dataset)} #the number used for calculating the last pc bombination
+    pc_combi_list<-sapply(start_pc_comp:end_pc,function(x) seq(start_pc_comp:x)) #function used to provide pc combinations.For ex 1,1:2,1:2:3 here if start_pc_comp=1 and end_pc=3
     dataset_rmbatch<-vector("list", length(pc_combi_list)) #list() #
     for(i in 1:length(pc_combi_list))
     {
       svd_dataset$d1<-svd_dataset$d
-      svd_dataset$d1[c(unlist(pc_combi_list[i]))]<-0 #Removing the variation caused by runday(id using pca) where the multiple r2 correlation is above 0.5
-      dataset_rmbatch1<-svd_dataset$u %*% diag(svd_dataset$d1) %*% t(svd_dataset$v)
+      svd_dataset$d1[c(unlist(pc_combi_list[i]))]<-0 #Removing the variation in different combinations of pc's.
+      dataset_rmbatch1<-svd_dataset$u %*% diag(svd_dataset$d1) %*% t(svd_dataset$v) #Recalculating the matrix
       rownames(dataset_rmbatch1)<-rownames(dataset)
-      colnames(dataset_rmbatch1)<-names(dataset)
+      colnames(dataset_rmbatch1)<-colnames(dataset)
       dataset_rmbatch[[i]]<-dataset_rmbatch1
     }       
   } else{
     dataset_rmbatch<-list()
     svd_dataset<-svd(processed_data)
     svd_dataset$d1<-svd_dataset$d
-    svd_dataset$d1[start_pc_comp]<-0 
+    svd_dataset$d1[start_pc_comp]<-0 #specifying the pc component to be made zero
     end_pc_comp#not used
-    dataset_rmbatch1<-svd_dataset$u %*% diag(svd_dataset$d1) %*% t(svd_dataset$v)
+    dataset_rmbatch1<-svd_dataset$u %*% diag(svd_dataset$d1) %*% t(svd_dataset$v) #Removing the variation in start_pc_comp.
     rownames(dataset_rmbatch1)<-rownames(dataset)
-    colnames(dataset_rmbatch1)<-names(dataset)
+    colnames(dataset_rmbatch1)<-colnames(dataset)
     dataset_rmbatch[[1]]<-dataset_rmbatch1
   }
   return(dataset_rmbatch)
@@ -358,7 +360,7 @@ compute_perm_ftest<-function(dataset,classlabel) {
     { data_matrix<-as.matrix(dataset[[i]])
       dataset_sig_features<-mt.maxT(data_matrix,classlabel_factor,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n")
       p.values[[i]]<-dataset_sig_features
-      id.sig_dataset <- sort(dataset_sig_features[dataset_sig_features$adjp < 0.05,c(1)])
+      id.sig_dataset <- sort(dataset_sig_features[dataset_sig_features$adjp < 0.05,c(1)]) #getting the column which provides index of rows satisying the condition
       metab_sig<-cbind(data_matrix[id.sig_dataset,],round(dataset_sig_features$adjp[id.sig_dataset],5))
       sig_metab_dataset[[i]]<-metab_sig
     }
@@ -376,7 +378,7 @@ compute_perm_ftest<-function(dataset,classlabel) {
   return(list(p.values,sig_metab_dataset))
 }
 
-compute_perm_ftest_faster<-cmpfun(compute_perm_ftest)
+compute_perm_ftest_faster<-cmpfun(compute_perm_ftest) # to compile the function-->faster processing
 
 #computer list of p.val
 compute_pval_list<-function(sigfeat_pval) {
@@ -403,6 +405,7 @@ compute_no_features<-function(sig_feat) {
 
 fit_day4_mzbysam_princomp<-compute_pca(ms_data_day4_nonzero,"scale")
 fit_day4_mzbysam_pc_variation<-fit_day4_mzbysam_princomp$sdev^2/sum(fit_day4_mzbysam_princomp$sdev^2)
+write.table(fit_day4_mzbysam_pc_variation,"fit_day4_mzbysam_pc_variation.txt",row.name=FALSE,quote=F)
 lm_pca_scores_strain_day4_nonzero_loadings<-compute_linearModel(fit_day4_mzbysam_princomp,SampleGroup_day4)
 lm_pca_scores_strain_day4_nonzero_loadings_r.sq<-compute.r2.pval(lm_pca_scores_strain_day4_nonzero_loadings,"r2")
 lm_pca_scores_strain_day4_nonzero_loadings_pval<-compute.r2.pval(lm_pca_scores_strain_day4_nonzero_loadings,"pval")
@@ -434,6 +437,7 @@ save(day4_nonzero_sigfeat_s,file='day4_x138_nonzero_sigfeat_s.rda')
 
 fit_day12_mzbysam_princomp<-compute_pca(ms_data_day12_nonzero,"scale")
 fit_day12_mzbysam_pc_variation<-fit_day12_mzbysam_princomp$sdev^2/sum(fit_day12_mzbysam_princomp$sdev^2)
+write.table(fit_day12_mzbysam_pc_variation,"fit_day12_mzbysam_pc_variation.txt",row.name=FALSE,quote=F)
 lm_pca_scores_strain_day12_nonzero_loadings<-compute_linearModel(fit_day12_mzbysam_princomp,SampleGroup_day12)
 lm_pca_scores_strain_day12_nonzero_loadings_r.sq<-compute.r2.pval(lm_pca_scores_strain_day12_nonzero_loadings,"r2")
 lm_pca_scores_strain_day12_nonzero_loadings_pval<-compute.r2.pval(lm_pca_scores_strain_day12_nonzero_loadings,"pval")
@@ -443,7 +447,6 @@ lm_pca_scores_runday12_nonzero_loadings_r.sq<-compute.r2.pval(lm_pca_scores_rund
 lm_pca_scores_runday12_nonzero_loadings_pval<-compute.r2.pval(lm_pca_scores_runday12_nonzero_loadings,"pval")
 
 svd_day12_nonzero <- compute_svd(ms_data_day12_nonzero,"scale",1,ncol(ms_data_day12_nonzero),"recursive")
-#svd_day12_nonzero <- compute_svd(ms_data_day12_nonzero,"scale",0,0,"nonrecursive")
 save(svd_day12_nonzero,file='svd_day12_x138_nonzero.rda')
 #str(svd_day12_nonzero)
 day12_nonzero_sigfeat_r<-compute_perm_ftest_faster(svd_day12_nonzero,RunDay_day12)
@@ -460,6 +463,7 @@ day12_nonzero_sigfeat_s_pvaldf<-compute_pval_list(day12_nonzero_sigfeat_s_pval)
 day12_no_nonzero_sigfeat_s<-compute_no_features(day12_nonzero_sigfeat_s_matrix)
 save(day12_nonzero_sigfeat_s,file='day12_x138_nonzero_sigfeat_s.rda')
 
+### Plots
 
 png("pval_factor.png",height=800,width=800)
 par(mfrow=c(2,2))
@@ -477,5 +481,5 @@ plot(1:124,day4_no_nonzero_sigfeat_s,type='l',col='blue',xlab="day4 Strain")
 plot(1:121,day12_no_nonzero_sigfeat_s,type='l',col='red',xlab="day12 Strain")
 dev.off()
 
-
+######## Shiv finished editing on dec 16 2013
 

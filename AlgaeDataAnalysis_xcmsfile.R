@@ -2,11 +2,11 @@
 # Data Analysis in R-Malaysian algae data #
 ###########################################
 # Author(s): Shiv
-# Version: 01122013 
+# Version: 12122013 
 # Input: ".tsv" file from XCMS 
 # Software: XCMS
 # Modified By :Shivshankar Umashankar
-
+#modified for xcms file "algae_4setblanks_021213.tsv" produced using xcms_1.38
 ##############################################
 # Data,software used for obaining input data #
 ##############################################
@@ -77,6 +77,7 @@ library(reshape2)
 library(affy)
 library(preprocessCore)
 library(multtest)
+library(compiler)
 
 #############
 # User      #
@@ -102,6 +103,9 @@ getwd()
 mzfilename<-"algae_4setblanks_021213.tsv"
 ms_data_total<-read.table(mzfilename,sep="\t",header=T,check.names=FALSE,row.names=1)
 str(ms_data_total)
+
+#to avoid memory issues, the file after removing duplicates and outlier replicates is stored as algae_22strains_243sample_021213.tsv
+#this file contains 243 samples
 
 ################Formatting column names
 ori_names_ms_data_total<-names(ms_data_total)
@@ -157,8 +161,7 @@ SampleGroups<-gsub('b3','',SampleGroups)
 #data_start_index<-no_of_info_cols+1;
 #data_end_index<-dim(ms_data_total)[2];
 
-ms_data<-ms_data_22
-
+ms_data<-round(ms_data_22,0) # removing decimal places from intensities. This helps reducing size dataset using the logic that intensities are not so accurate!
 #ms_data<-ms_data_total[,1:311]
 names(ms_data)
 dim(ms_data)
@@ -234,11 +237,9 @@ strains_with_biochem<-c("D12_253","D12_051","D12_252","D12_187","D12_255","D12_0
 #rem <- c('D4_094_b1_r002','D4_104_b3_r002','D4_245b1_r001','D4_254b1_r001','D4_325_b1_r002')
 
 ms_data<-ms_data[, !names(ms_data) %in% outlier_replicates] #without the outlier replicates
-ms_data<-round(ms_data,0) # removing decimal places from intensities. This helps reducing size dataset using the logic that intensities are not so accurate!
 rownames(ms_data)<-rownames(ms_data_total)
-#write.table(ms_data,"ms_data_wo_outliers.tsv",sep='\t',quote=FALSE,col.names=NA)
-a<-cbind(ms_data_total$mz,ms_data_total$rt,ms_data)
-write.table(a,"algae_22strains_245sample_021213.tsv",quote=FALSE,sep="\t",row.name=FALSE)
+# a<-cbind(ms_data_total$mz,ms_data_total$rt,ms_data)
+# write.table(a,"algae_22strains_243sample_021213.tsv",quote=FALSE,sep="\t",row.name=FALSE)
 
 
 #### ALL FURTHER ANALYSIS TO BE PERFORMED ON STRAINS AFTER REMOIER OUTLIERS ####
@@ -276,8 +277,8 @@ ms_data_day4<-ms_data[, grep('D4', names(ms_data))]
 ms_data_day12<-ms_data[, grep('D12', names(ms_data))] 
 ms_data_day12_bc<-ms_data[, grepl(paste(strains_with_biochem,collapse="|"),names(ms_data))] #11 strains with biochemical param
 
-GrowthStage_day4<-GrowthStage[grep('D4', names(GrowthStage),perl=TRUE, value=TRUE)]
-GrowthStage_day12<-GrowthStage[grep('D12', names(GrowthStage),perl=TRUE, value=TRUE)] 
+GrowthStage_day4<-GrowthStage[grep('D4', names(ms_data),perl=TRUE, value=TRUE)]
+GrowthStage_day12<-GrowthStage[grep('D12', names(ms_data),perl=TRUE, value=TRUE)] 
 
 RunDay_day4<-RunDay[grep('D4',names(RunDay_strains),perl=TRUE, value=TRUE)]
 RunDay_day12<-RunDay[grep('D12', names(RunDay_strains),perl=TRUE, value=TRUE)]
@@ -1425,7 +1426,6 @@ lm_pca_scores_runday4_nonzero_loadings_pval<-sapply(lm_pca_scores_runday4_nonzer
 # > head(sort(lm_pca_scores_runday4_nonzero_loadings_r.sq,decreasing=TRUE))
 # Comp.2    Comp.1    Comp.8    Comp.6   Comp.11    Comp.5 
 # 0.8110657 0.5750203 0.2928821 0.2720464 0.2439658 0.1967930 
-
 #d4.scale
 # > head(sort(lm_pca_scores_runday4_nonzero_loadings_pval))
 # Comp.2       Comp.1       Comp.8       Comp.6      Comp.11       Comp.5 
@@ -1433,6 +1433,13 @@ lm_pca_scores_runday4_nonzero_loadings_pval<-sapply(lm_pca_scores_runday4_nonzer
 # > head(sort(lm_pca_scores_runday4_nonzero_loadings_r.sq,decreasing=TRUE))
 # Comp.2    Comp.1    Comp.8    Comp.6   Comp.11    Comp.5 
 # 0.8116675 0.5560723 0.2959875 0.2784050 0.2375382 0.2004892 
+#d4.scale xcms 1.38
+# > head(sort(lm_pca_scores_runday4_nonzero_loadings_pval))
+# Comp.2       Comp.1       Comp.7       Comp.6       Comp.5      Comp.11 
+# 7.083015e-37 2.460345e-17 3.170828e-09 1.148808e-08 1.317606e-07 4.354234e-05 
+# > head(sort(lm_pca_scores_runday4_nonzero_loadings_r.sq,decreasing=TRUE))
+# Comp.2    Comp.1    Comp.7    Comp.6    Comp.5   Comp.11 
+# 0.7557510 0.4843259 0.2950929 0.2796299 0.2493168 0.1714046 
 
 # Proportion of variation affected and to be removed
 #prop.variation[c(2,1)]
@@ -1457,7 +1464,6 @@ lm_pca_scores_strain_day4_nonzero_loadings_pval<-sapply(lm_pca_scores_strain_day
 # > head(sort(lm_pca_scores_strain_day4_nonzero_loadings_r.sq,decreasing=TRUE))
 # Comp.2    Comp.5    Comp.7    Comp.4    Comp.9    Comp.1 
 # 0.9802100 0.9584097 0.9375464 0.9203670 0.8368493 0.8293305
-
 #d4.scale
 # > head(sort(lm_pca_scores_strain_day4_nonzero_loadings_pval))
 # Comp.2       Comp.5       Comp.7       Comp.4       Comp.9      Comp.14 
@@ -1465,8 +1471,15 @@ lm_pca_scores_strain_day4_nonzero_loadings_pval<-sapply(lm_pca_scores_strain_day
 # > head(sort(lm_pca_scores_strain_day4_nonzero_loadings_r.sq,decreasing=TRUE))
 # Comp.2    Comp.5    Comp.7    Comp.4    Comp.9   Comp.14 
 # 0.9793335 0.9581755 0.9270283 0.9206042 0.8382839 0.8370594 
+#d4.scale xcms 1.38
+# > head(sort(lm_pca_scores_strain_day4_nonzero_loadings_pval))
+# Comp.2       Comp.5       Comp.6       Comp.4      Comp.15       Comp.9 
+# 3.318350e-64 5.745640e-64 1.915740e-59 1.399368e-38 5.048531e-35 5.908404e-29
+# > head(sort(lm_pca_scores_strain_day4_nonzero_loadings_r.sq,decreasing=TRUE))
+# Comp.2    Comp.5    Comp.6    Comp.4   Comp.15    Comp.9 
+# 0.9633193 0.9629234 0.9545419 0.8828195 0.8620268 0.8172753 
 
-png("pc_plot_d4_nonzero_scale.png",height=800,width=800)
+png("pc_plot_d4_x138_nonzero_scale.png",height=800,width=800)
 par(mfrow=c(2,1))
 plot(1:length(lm_pca_scores_runday4_nonzero_loadings_r.sq),lm_pca_scores_runday4_nonzero_loadings_r.sq,col="green",ylab="Multiple R2-Loadings Vs Runday",xlab="PC's",main="Day 4",
      ylim=c(0,max(c(max(lm_pca_scores_runday4_nonzero_loadings_r.sq),max(lm_pca_scores_strain_day4_nonzero_loadings_r.sq)))))
@@ -1479,11 +1492,10 @@ plot(1:length(lm_pca_scores_runday4_nonzero_loadings_pval),lm_pca_scores_runday4
 points(1:length(lm_pca_scores_strain_day4_nonzero_loadings_pval),lm_pca_scores_strain_day4_nonzero_loadings_pval,col="red")
 rug(c(1:length(lm_pca_scores_strain_day4_nonzero_loadings_pval)), side = 1, col="#00000033")
 legend("topright", inset=.05,c("Strain","RunDay"),fill=c("red","green"),cex=1)
-
 dev.off()
 
-write.table(cbind(lm_pca_scores_runday4_nonzero_loadings_r.sq,lm_pca_scores_runday4_nonzero_loadings_pval),"day4_lm_model_loadings-vs-runday_scale.txt",quote=FALSE,sep="\t")
-write.table(cbind(lm_pca_scores_strain_day4_nonzero_loadings_r.sq,lm_pca_scores_strain_day4_nonzero_loadings_pval),"day4_lm_model_loadings-vs-strains_scale.txt",quote=FALSE,sep="\t")
+write.table(cbind(lm_pca_scores_runday4_nonzero_loadings_r.sq,lm_pca_scores_runday4_nonzero_loadings_pval),"day4_x138_lm_model_loadings-vs-runday_scale.txt",quote=FALSE,sep="\t")
+write.table(cbind(lm_pca_scores_strain_day4_nonzero_loadings_r.sq,lm_pca_scores_strain_day4_nonzero_loadings_pval),"day4_x138_lm_model_loadings-vs-strains_scale.txt",quote=FALSE,sep="\t")
 
 ######## SVD
 #for day 4
@@ -1578,7 +1590,7 @@ dev.off()
 #day12 non-zero
 ###############
 
-d12<-as.data.frame(log(ms_data_day12_nonzero))
+d12<-as.data.frame(log1p(ms_data_day12_nonzero))
 #d<-d[,apply(d, 2, var, na.rm=TRUE) != 0] #removing mz features which have constant variance
 #d<-scale(d,T,F)
 
@@ -1643,6 +1655,14 @@ lm_pca_scores_runday12_nonzero_loadings_pval<-sapply(lm_pca_scores_runday12_nonz
 # > head(sort(lm_pca_scores_runday12_nonzero_loadings_r.sq,decreasing=TRUE))
 # Comp.3     Comp.4     Comp.1     Comp.2    Comp.12    Comp.10 
 # 0.68226327 0.50019857 0.49926531 0.42138548 0.08017055 0.05654185 
+#d12.scale xcms 1.38
+# > head(sort(lm_pca_scores_runday12_nonzero_loadings_pval))
+# Comp.2       Comp.4       Comp.3       Comp.1       Comp.5      Comp.10 
+# 1.943322e-20 1.516595e-19 2.426469e-16 2.103207e-15 1.171101e-04 6.406394e-02 
+# > head(sort(lm_pca_scores_runday12_nonzero_loadings_r.sq,decreasing=TRUE))
+# Comp.2     Comp.4     Comp.3     Comp.1     Comp.5    Comp.10 
+# 0.54585757 0.52933622 0.46490075 0.44442106 0.14566593 0.04666518 
+
 
 lm_pca_scores_strain_day12_nonzero_loadings<-apply(fit_day12_mzbysam_princomp$loadings,2, function(x) 
 {
@@ -1662,7 +1682,6 @@ lm_pca_scores_strain_day12_nonzero_loadings_pval<-sapply(lm_pca_scores_strain_da
 # > head(sort(lm_pca_scores_strain_day12_nonzero_loadings_r.sq,decreasing=TRUE))
 # Comp.4    Comp.2    Comp.3   Comp.12    Comp.6    Comp.7 
 # 0.9773030 0.9760830 0.9382406 0.9337606 0.9131266 0.8948542 
-
 #d12.scale
 # > head(sort(lm_pca_scores_strain_day12_nonzero_loadings_pval))
 # Comp.4       Comp.2       Comp.3      Comp.12       Comp.6       Comp.7 
@@ -1670,8 +1689,15 @@ lm_pca_scores_strain_day12_nonzero_loadings_pval<-sapply(lm_pca_scores_strain_da
 # > head(sort(lm_pca_scores_strain_day12_nonzero_loadings_r.sq,decreasing=TRUE))
 # Comp.4    Comp.2    Comp.3   Comp.12    Comp.6    Comp.7 
 # 0.9771250 0.9756762 0.9384714 0.9087122 0.9081748 0.9026850
+#d12.scale xcms 1.38
+# > head(sort(lm_pca_scores_strain_day12_nonzero_loadings_pval))
+# Comp.2       Comp.4      Comp.13       Comp.3      Comp.11       Comp.5 
+# 4.255814e-65 3.494060e-63 4.895545e-46 2.576635e-40 1.433679e-34 2.447089e-31 
+# > head(sort(lm_pca_scores_strain_day12_nonzero_loadings_r.sq,decreasing=TRUE))
+# Comp.2    Comp.4   Comp.13    Comp.3   Comp.11    Comp.5 
+# 0.9720811 0.9693793 0.9297342 0.9071018 0.8768161 0.8554697 
 
-png("pc_plot_d12_nonzero_norm.png",height=800,width=800)
+png("pc_plot_d12_x138_nonzero_norm.png",height=800,width=800)
 par(mfrow=c(2,1))
 plot(1:length(lm_pca_scores_runday12_nonzero_loadings_r.sq),lm_pca_scores_runday12_nonzero_loadings_r.sq,col="green",ylab="Multiple R2-Loadings Vs Runday",xlab="PC's",main="Day 12",
      ylim=c(0,max(c(max(lm_pca_scores_runday12_nonzero_loadings_r.sq),max(lm_pca_scores_strain_day12_nonzero_loadings_r.sq)))))
@@ -1684,12 +1710,11 @@ plot(1:length(lm_pca_scores_runday12_nonzero_loadings_pval),lm_pca_scores_runday
 points(1:length(lm_pca_scores_strain_day12_nonzero_loadings_pval),lm_pca_scores_strain_day12_nonzero_loadings_pval,col="red")
 rug(c(1:length(lm_pca_scores_strain_day12_nonzero_loadings_pval)), side = 1, col="#00000033")
 legend("topright", inset=.05,c("Strain","RunDay"),fill=c("red","green"),cex=1)
-
 dev.off()
 
 
-write.table(cbind(lm_pca_scores_runday12_nonzero_loadings_r.sq,lm_pca_scores_runday12_nonzero_loadings_pval),"day12_lm_model_loadings-vs-runday_norm.txt",quote=FALSE,sep="\t")
-write.table(cbind(lm_pca_scores_strain_day12_nonzero_loadings_r.sq,lm_pca_scores_strain_day12_nonzero_loadings_pval),"day12_lm_model_loadings-vs-strains_norm.txt",quote=FALSE,sep="\t")
+write.table(cbind(lm_pca_scores_runday12_nonzero_loadings_r.sq,lm_pca_scores_runday12_nonzero_loadings_pval),"day12_x138_lm_model_loadings-vs-runday_scale.txt",quote=FALSE,sep="\t")
+write.table(cbind(lm_pca_scores_strain_day12_nonzero_loadings_r.sq,lm_pca_scores_strain_day12_nonzero_loadings_pval),"day12_x138_lm_model_loadings-vs-strains_scale.txt",quote=FALSE,sep="\t")
 
 
 ######## SVD
@@ -1826,6 +1851,213 @@ points(1:length(day12_sig_features_r$adjp),day12_sig_features_r$adjp,col="red")
 plot(1, type = "n", axes=FALSE, xlab="", ylab="")
 legend(x = "top",inset = 0,
        legend = c("Non-corrected", "Runday effect Corrected"),   text.col=c("black","red"), horiz = TRUE)
+dev.off()
+
+
+###############################################
+## R functions- batch effect removal ##########
+###############################################
+###############################################
+## R functions- batch effect removal ##########
+###############################################
+#function to compute PCA and perform linear models against runday and strain
+#PCA using princomp on mz by samp
+
+compute_pca<-function(dataset,preprocess_method) {
+  dataset<-as.matrix(log(dataset)) #log transform the data using natural log
+  if(preprocess_method=="norm") {
+    processed_data<-normalize.quantiles(as.matrix(dataset),copy=TRUE)
+  }   else  {
+    processed_data<-scale(dataset,center=T,scale=T)
+    processed_data<-processed_data-min(processed_data)
+  }
+  pca_results <- princomp(processed_data,cor=F,scores=T) ### IMP: choose quantile normalized or scaled data
+  return(pca_results)
+}
+
+#function to compute linear model 
+compute_linearModel<-function(results.from.pca,dependent.factor) { #dependent.factor is either RunDay_day4 or 12 (or) SampleGroup_day4 or 12 
+  lm_pca_scores<-apply(results.from.pca$loadings,2, function(x) {
+    lm_val<-lm(x~ as.factor(dependent.factor)) 
+    lm_cor<-summary(lm_val)
+    p.val<-anova(lm_val)$'Pr(>F)'[1]
+    return(list(lm_cor$r.squared,p.val))
+  })
+}
+
+#function to extract r2 value from list containg r2 and p.val returned from linear model
+compute.r2.pval<-function(linearmodel_list,r2.pval) {
+  if(r2.pval=="r2") { #WARNING:code implictly assumes r2 is in the first column and p.val in the second
+    return (sapply(linearmodel_list, function(x){as.numeric(x[1])}))
+  } else{
+    return (sapply(linearmodel_list, function(x){as.numeric(x[2])}))
+  }
+}
+
+#function to compute svd
+compute_svd<-function(dataset,preprocess_method,start_pc_comp,end_pc_comp,recursive_pcs) {
+  dataset<-as.matrix(log(dataset)) #log transform the data using natural log
+  if(preprocess_method=="norm") {
+    processed_data<-normalize.quantiles(as.matrix(dataset),copy=TRUE)
+  }   else  {
+    processed_data<-scale(dataset,center=T,scale=T)
+    processed_data<-processed_data-min(processed_data)
+  }
+  
+  if(recursive_pcs=="recursive") {
+    svd_dataset<-svd(processed_data)
+    if(end_pc_comp){end_pc<-end_pc_comp} else{end_pc<-ncol(svd_dataset)}
+    pc_combi_list<-sapply(start_pc_comp:end_pc,function(x) seq(start_pc_comp:x))
+    dataset_rmbatch<-vector("list", length(pc_combi_list)) #list() #
+    for(i in 1:length(pc_combi_list))
+    {
+      svd_dataset$d1<-svd_dataset$d
+      svd_dataset$d1[c(unlist(pc_combi_list[i]))]<-0 #Removing the variation caused by runday(id using pca) where the multiple r2 correlation is above 0.5
+      dataset_rmbatch1<-svd_dataset$u %*% diag(svd_dataset$d1) %*% t(svd_dataset$v)
+      rownames(dataset_rmbatch1)<-rownames(dataset)
+      colnames(dataset_rmbatch1)<-colnames(dataset)
+      dataset_rmbatch[[i]]<-dataset_rmbatch1
+    }       
+  } else{
+    dataset_rmbatch<-list()
+    svd_dataset<-svd(processed_data)
+    svd_dataset$d1<-svd_dataset$d
+    svd_dataset$d1[start_pc_comp]<-0 
+    end_pc_comp#not used
+    dataset_rmbatch1<-svd_dataset$u %*% diag(svd_dataset$d1) %*% t(svd_dataset$v)
+    rownames(dataset_rmbatch1)<-rownames(dataset)
+    colnames(dataset_rmbatch1)<-colnames(dataset)
+    dataset_rmbatch[[1]]<-dataset_rmbatch1
+  }
+  return(dataset_rmbatch)
+}
+
+# compute permutative f test statistics to difentify signigicant features
+compute_perm_ftest<-function(dataset,classlabel) {
+  classlabel_factor<-as.numeric(as.factor(classlabel))-1
+  if(length(dataset)> 1 ) {
+    p.values<-vector("list", length(dataset)) ### Change to p.values<-vector("list", length(dataset)) # make it faster
+    sig_metab_dataset<-vector("list", length(dataset)) 
+    for(i in 1:length(dataset))
+    { data_matrix<-as.matrix(dataset[[i]])
+      dataset_sig_features<-mt.maxT(data_matrix,classlabel_factor,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n")
+      p.values[[i]]<-dataset_sig_features
+      id.sig_dataset <- sort(dataset_sig_features[dataset_sig_features$adjp < 0.05,c(1)])
+      metab_sig<-cbind(data_matrix[id.sig_dataset,],round(dataset_sig_features$adjp[id.sig_dataset],5))
+      sig_metab_dataset[[i]]<-metab_sig
+    }
+  } else { # only a single dataset
+    classlabel_factor<-as.numeric(as.factor(classlabel))-1
+    p.values<-list()
+    sig_metab_dataset<-list()
+    data_matrix<-as.matrix(dataset[[1]])
+    dataset_sig_features<-mt.maxT(data_matrix,classlabel_factor,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n")
+    p.values[[1]]<-dataset_sig_features
+    id.sig_dataset <- sort(dataset_sig_features[dataset_sig_features$adjp < 0.05,c(1)])
+    metab_sig<-cbind(data_matrix[id.sig_dataset,],round(dataset_sig_features$adjp[id.sig_dataset],5))
+    sig_metab_dataset[[1]]<-metab_sig
+  }
+  return(list(p.values,sig_metab_dataset))
+}
+
+compute_perm_ftest_faster<-cmpfun(compute_perm_ftest)
+
+#computer list of p.val
+compute_pval_list<-function(sigfeat_pval) {
+  listofpval<-vector("list", length(sigfeat_pval)) #list()
+  for(i in 1:length(sigfeat_pval))
+  {
+    listofpval[i]<-sigfeat_pval[[i]][4]
+  }
+  sigfeat_pval_pvaldf<-do.call(cbind.data.frame, listofpval)
+}
+
+#compute no of sig features
+compute_no_features<-function(sig_feat) {
+  no_of_sig_features<-rep(NA,length(sig_feat))
+  for(i in 1:length(sig_feat))
+  {
+    no_of_sig_features[i]<-nrow(sig_feat[[i]][1])
+  }
+  return(no_of_sig_features)
+}
+
+###############################################
+#day4
+
+fit_day4_mzbysam_princomp<-compute_pca(ms_data_day4_nonzero,"scale")
+fit_day4_mzbysam_pc_variation<-fit_day4_mzbysam_princomp$sdev^2/sum(fit_day4_mzbysam_princomp$sdev^2)
+lm_pca_scores_strain_day4_nonzero_loadings<-compute_linearModel(fit_day4_mzbysam_princomp,SampleGroup_day4)
+lm_pca_scores_strain_day4_nonzero_loadings_r.sq<-compute.r2.pval(lm_pca_scores_strain_day4_nonzero_loadings,"r2")
+lm_pca_scores_strain_day4_nonzero_loadings_pval<-compute.r2.pval(lm_pca_scores_strain_day4_nonzero_loadings,"pval")
+
+lm_pca_scores_runday4_nonzero_loadings<-compute_linearModel(fit_day4_mzbysam_princomp,RunDay_day4)
+lm_pca_scores_runday4_nonzero_loadings_r.sq<-compute.r2.pval(lm_pca_scores_runday4_nonzero_loadings,"r2")
+lm_pca_scores_runday4_nonzero_loadings_pval<-compute.r2.pval(lm_pca_scores_runday4_nonzero_loadings,"pval")
+
+svd_day4_nonzero <- compute_svd(ms_data_day4_nonzero,"scale",1,ncol(ms_data_day4_nonzero),"recursive")
+save(svd_day4_nonzero,file='svd_day4_x138_nonzero.rda')
+#str(svd_day4_nonzero)
+day4_nonzero_sigfeat_r<-compute_perm_ftest_faster(svd_day4_nonzero,RunDay_day4)
+day4_nonzero_sigfeat_r_pval<-day4_nonzero_sigfeat_r[[1]]
+day4_nonzero_sigfeat_r_matrix<-day4_nonzero_sigfeat_r[[2]]
+day4_nonzero_sigfeat_r_pvaldf<-compute_pval_list(day4_nonzero_sigfeat_r_pval)
+day4_no_nonzero_sigfeat_r<-compute_no_features(day4_nonzero_sigfeat_r_matrix)
+save(day4_nonzero_sigfeat_r,file='day4_x138_nonzero_sigfeat_r.rda')
+
+day4_nonzero_sigfeat_s<-compute_perm_ftest_faster(svd_day4_nonzero,SampleGroup_day4)
+day4_nonzero_sigfeat_s_pval<-day4_nonzero_sigfeat_s[[1]]
+day4_nonzero_sigfeat_s_matrix<-day4_nonzero_sigfeat_s[[2]]
+day4_nonzero_sigfeat_s_pvaldf<-compute_pval_list(day4_nonzero_sigfeat_s_pval)
+day4_no_nonzero_sigfeat_s<-compute_no_features(day4_nonzero_sigfeat_s_matrix)
+save(day4_nonzero_sigfeat_s,file='day4_x138_nonzero_sigfeat_s.rda')
+
+###################
+#### day12
+###################
+
+fit_day12_mzbysam_princomp<-compute_pca(ms_data_day12_nonzero,"scale")
+fit_day12_mzbysam_pc_variation<-fit_day12_mzbysam_princomp$sdev^2/sum(fit_day12_mzbysam_princomp$sdev^2)
+lm_pca_scores_strain_day12_nonzero_loadings<-compute_linearModel(fit_day12_mzbysam_princomp,SampleGroup_day12)
+lm_pca_scores_strain_day12_nonzero_loadings_r.sq<-compute.r2.pval(lm_pca_scores_strain_day12_nonzero_loadings,"r2")
+lm_pca_scores_strain_day12_nonzero_loadings_pval<-compute.r2.pval(lm_pca_scores_strain_day12_nonzero_loadings,"pval")
+
+lm_pca_scores_runday12_nonzero_loadings<-compute_linearModel(fit_day12_mzbysam_princomp,RunDay_day12)
+lm_pca_scores_runday12_nonzero_loadings_r.sq<-compute.r2.pval(lm_pca_scores_runday12_nonzero_loadings,"r2")
+lm_pca_scores_runday12_nonzero_loadings_pval<-compute.r2.pval(lm_pca_scores_runday12_nonzero_loadings,"pval")
+
+svd_day12_nonzero <- compute_svd(ms_data_day12_nonzero,"scale",1,ncol(ms_data_day12_nonzero),"recursive")
+save(svd_day12_nonzero,file='svd_day12_x138_nonzero.rda')
+#str(svd_day12_nonzero)
+day12_nonzero_sigfeat_r<-compute_perm_ftest_faster(svd_day12_nonzero,RunDay_day12)
+day12_nonzero_sigfeat_r_pval<-day12_nonzero_sigfeat_r[[1]]
+day12_nonzero_sigfeat_r_matrix<-day12_nonzero_sigfeat_r[[2]]
+day12_nonzero_sigfeat_r_pvaldf<-compute_pval_list(day12_nonzero_sigfeat_r_pval)
+day12_no_nonzero_sigfeat_r<-compute_no_features(day12_nonzero_sigfeat_r_matrix)
+save(day12_nonzero_sigfeat_r,file='day12_x138_nonzero_sigfeat_r.rda')
+
+day12_nonzero_sigfeat_s<-compute_perm_ftest_faster(svd_day12_nonzero,SampleGroup_day12)
+day12_nonzero_sigfeat_s_pval<-day12_nonzero_sigfeat_s[[1]]
+day12_nonzero_sigfeat_s_matrix<-day12_nonzero_sigfeat_s[[2]]
+day12_nonzero_sigfeat_s_pvaldf<-compute_pval_list(day12_nonzero_sigfeat_s_pval)
+day12_no_nonzero_sigfeat_s<-compute_no_features(day12_nonzero_sigfeat_s_matrix)
+save(day12_nonzero_sigfeat_s,file='day12_x138_nonzero_sigfeat_s.rda')
+
+
+png("pval_factor.png",height=800,width=800)
+par(mfrow=c(2,2))
+matplot(day4_nonzero_sigfeat_r_pvaldf,type='l',ylab="pval",xlab="day4 Runday")
+matplot(day12_nonzero_sigfeat_r_pvaldf,type='l',ylab="pval",xlab="day12 Runday")
+matplot(day4_nonzero_sigfeat_s_pvaldf,type='l',ylab="pval",xlab="day4 Strain")
+matplot(day12_nonzero_sigfeat_s_pvaldf,type='l',ylab="pval",xlab="day12 Strain")
+dev.off()
+
+png("pval_sigfeat.png",height=800,width=800)
+par(mfrow=c(2,2))
+plot(1:124,day4_no_nonzero_sigfeat_r,type='l',col='blue',xlab="day4 Runday")
+plot(1:121,day12_no_nonzero_sigfeat_r,type='l',col='red',xlab="day12 Runday")
+plot(1:124,day4_no_nonzero_sigfeat_s,type='l',col='blue',xlab="day4 Strain")
+plot(1:121,day12_no_nonzero_sigfeat_s,type='l',col='red',xlab="day12 Strain")
 dev.off()
 
 

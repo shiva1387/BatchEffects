@@ -40,7 +40,18 @@
 # set5 <- fillPeaks(set4) 
 # peaklist<-peakTable(set5,filebase="algae_4setblanks_060913")
 ##############################
-
+############################## Rerunning analysis on the same set. this time storing intermediate steps for CAMERA
+#file generated as algae_4setblanks_021213
+# library(xcms)
+# set1<-xcmsSet(nSlaves=44,method='centWave',ppm=30,peakwidth=c(5,60), prefilter=c(0,0),snthresh=6)
+# save(set1,file="set1_algae_4setblanks_021213.rda")
+# set2 <- group(set1,bw=5,mzwid=0.015,minsamp=1,minfrac=0) 
+# set3 <- retcor(set2,method="obiwarp",plottype="none")
+# set4 <- group(set3,bw=5,mzwid=0.015,minsamp=1,minfrac=0)
+# save(set4,file="set4_algae_4setblanks_021213.rda")
+# set5 <- fillPeaks(set4) 
+# save(set5,file="set5_algae_4setblanks_021213.rda")
+# peaklist<-peakTable(set5,filebase="algae_4setblanks_021213")
 
 #############
 # Clear all #
@@ -1475,12 +1486,12 @@ day4_sig_features_nc<-mt.maxT(d4.scale,classlabel_samplegrp_d4,test="f",side="ab
 #day4_sig_features_nc<-apply(d4.scale,1,function(x){kruskal(y=x,trt=as.factor(SampleGroup_day4),group=TRUE,p.adj="BH")$statistics$p.chisq})
 #day4_sig_features_nc<-apply(d4.scale,1,function(x){kruskal.test(x ~ as.factor(SampleGroup_day4))$p.value})
 #day4_sig_features_nc_cor<-p.adjust(day4_sig_features_nc,method="BH")
-id.sig_day4_nc <- which(day4_sig_features_nc$adjp < 0.05 );
+id.sig_day4_nc <- sort(day4_sig_features_nc[day4_sig_features_nc$adjp < 0.05,c(1)]) #which(day4_sig_features_nc$adjp < 0.05 );
 metab.sig_day4_nc<-cbind(d4.scale[id.sig_day4_nc,],round(day4_sig_features_nc$adjp[id.sig_day4_nc],5))
 
 ##corrected
 day4_sig_features<-mt.maxT(d4_scale_rmbatch,classlabel_samplegrp_d4,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
-id.sig_day4 <- which(day4_sig_features$adjp < 0.05 );
+id.sig_day4 <- sort(day4_sig_features[day4_sig_features$adjp < 0.05,c(1)]) #which(day4_sig_features$adjp < 0.05 );
 metab.sig_day4<-cbind(d4.scale[id.sig_day4,],round(day4_sig_features$adjp[id.sig_day4],5))
 
 ###################
@@ -1489,12 +1500,12 @@ metab.sig_day4<-cbind(d4.scale[id.sig_day4,],round(day4_sig_features$adjp[id.sig
 
 classlabel_runday_d4<-as.numeric(as.factor(RunDay_day4))-1
 day4_sig_features_nc_r<-mt.maxT(d4.scale,classlabel_runday_d4,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
-id.sig_day4_nc_r <- which(day4_sig_features_nc_r$adjp < 0.05 );
+id.sig_day4_nc_r <- sort(day4_sig_features_r[day4_sig_features_r$adjp < 0.05,c(1)]) #which(day4_sig_features_nc_r$adjp < 0.05 );
 metab.sig_day4_nc_r<-cbind(d4.scale[id.sig_day4_nc_r,],round(day4_sig_features_nc_r$adjp[id.sig_day4_nc_r],5))
 
 ##corrected
 day4_sig_features_r<-mt.maxT(d4_scale_rmbatch,classlabel_runday_d4,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
-id.sig_day4_r <- which(day4_sig_features_r$adjp < 0.05 );
+id.sig_day4_r <- sort(day4_sig_features_r[day4_sig_features_r$adjp < 0.05,c(1)]) #which(day4_sig_features_r$adjp < 0.05 );
 metab.sig_day4_r<-cbind(d4.scale[id.sig_day4_r,],round(day4_sig_features_r$adjp[id.sig_day4_r],5))
 
 #plotting results
@@ -1680,32 +1691,25 @@ classlabel_samplegrp_d12<-as.numeric(as.factor(SampleGroup_day12))-1
 day12_sig_features_nc<-mt.maxT(d12.scale,classlabel_samplegrp_d12,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
 #day12_sig_features_nc<-apply(d12.scale,1,function(x){kruskal.test(x ~ as.factor(SampleGroup_day12))$p.value})
 #day12_sig_features_nc_cor<-p.adjust(day12_sig_features_nc,method="BH")
-id.sig_day12_nc <- which(day12_sig_features_nc$adjp < 0.05 );
+id.sig_day12_nc <- sort(day12_sig_features_nc[day12_sig_features_nc$adjp < 0.05,c(1)]) #which(day12_sig_features_nc$adjp < 0.05 );
 metab.sig_day12_nc<-cbind(d12.scale[id.sig_day12_nc,],round(day12_sig_features_nc$adjp[id.sig_day12_nc],5))
 
 ##corrected
 day12_sig_features<-mt.maxT(d12_scale_rmbatch,classlabel_samplegrp_d12,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
-id.sig_day12 <- which(day12_sig_features$adjp < 0.05 );
+id.sig_day12 <- sort(day12_sig_features[day12_sig_features$adjp < 0.05,c(1)]) #which(day12_sig_features$adjp < 0.05 );
 metab.sig_day12<-cbind(d12.scale[id.sig_day12,],round(day12_sig_features$adjp[id.sig_day12],5))
-
-##corrected
-day12_sig_features_nc<-mt.maxT(d12_scale_rmbatch,classlabel_samplegrp_d12,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
-#day12_sig_features_cor<-p.adjust(day12_sig_features,method="BH")
-id.sig_day12 <- which(day12_sig_features$adjp < 0.05 );
-metab.sig_day12<-cbind(d12.scale[id.sig_day12,],round(day12_sig_features$adjp[id.sig_day12],5))
-
 
 ###################
 #### Against runday
 ###################
 classlabel_runday_d12<-as.numeric(as.factor(RunDay_day12))-1
 day12_sig_features_nc_r<-mt.maxT(d12.scale,classlabel_runday_d12,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
-id.sig_day12_nc_r <- which(day12_sig_features_nc_r$adjp < 0.05 );
+id.sig_day12_nc_r <- sort(day12_sig_features_nc_r[day12_sig_features_nc_r$adjp < 0.05,c(1)])#which(day12_sig_features_nc_r$adjp < 0.05 );
 metab.sig_day12_nc_r<-cbind(d12.scale[id.sig_day12_nc_r,],round(day12_sig_features_nc_r$adjp[id.sig_day12_nc_r],5))
 
 ##corrected
 day12_sig_features_r<-mt.maxT(d12_scale_rmbatch,classlabel_runday_d12,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
-id.sig_day12_r <- which(day12_sig_features_r$adjp < 0.05 );
+id.sig_day12_r <- sort(day12_sig_features_r[day12_sig_features_r$adjp < 0.05,c(1)]) #which(day12_sig_features_r$adjp < 0.05 );
 metab.sig_day12_r<-cbind(d12.scale[id.sig_day12_r,],round(day12_sig_features_r$adjp[id.sig_day12_r],5))
 
 #plotting results

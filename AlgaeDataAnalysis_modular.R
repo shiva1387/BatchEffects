@@ -6,7 +6,7 @@
 # Input: ".tsv" file from XCMS 
 # Software: XCMS
 # Modified By :Shivshankar Umashankar 
-
+# Modular version of AlgaeDataAnalysis.R
 ##############################################
 # Data,software used for obaining input data #
 ##############################################
@@ -1363,8 +1363,8 @@ compute.r2.pval<-function(linearmodel_list,r2.pval) {
 }
 
 #function to compute svd
-compute_svd<-function(dataset,preprocess_method,start_pc_comp,end_pc_comp,recursive_pcs=FALSE) {
-  dataset<-as.data.frame(log(dataset)) #log transform the data using natural log
+compute_svd<-function(dataset,preprocess_method,start_pc_comp,end_pc_comp,recursive_pcs) {
+  dataset<-as.matrix(log(dataset)) #log transform the data using natural log
   if(preprocess_method=="norm") {
     processed_data<-normalize.quantiles(as.matrix(dataset),copy=TRUE)
   }   else  {
@@ -1372,28 +1372,30 @@ compute_svd<-function(dataset,preprocess_method,start_pc_comp,end_pc_comp,recurs
     processed_data<-processed_data-min(processed_data)
   }
   
-  if(recursive_pcs) {
+  if(recursive_pcs=="recursive") {
     svd_dataset<-svd(processed_data)
     if(end_pc_comp){end_pc<-end_pc_comp} else{end_pc<-ncol(svd_dataset)}
     pc_combi_list<-sapply(start_pc_comp:end_pc,function(x) seq(start_pc_comp:x))
-    dataset_rmbatch<-list()
+    dataset_rmbatch<-vector("list", length(pc_combi_list)) #list() #
     for(i in 1:length(pc_combi_list))
     {
       svd_dataset$d1<-svd_dataset$d
       svd_dataset$d1[c(unlist(pc_combi_list[i]))]<-0 #Removing the variation caused by runday(id using pca) where the multiple r2 correlation is above 0.5
       dataset_rmbatch1<-svd_dataset$u %*% diag(svd_dataset$d1) %*% t(svd_dataset$v)
       rownames(dataset_rmbatch1)<-rownames(dataset)
-      colnames(dataset_rmbatch1)<-names(dataset)
+      colnames(dataset_rmbatch1)<-colnames(dataset)
       dataset_rmbatch[[i]]<-dataset_rmbatch1
     }       
   } else{
     dataset_rmbatch<-list()
     svd_dataset<-svd(processed_data)
     svd_dataset$d1<-svd_dataset$d
-    svd_dataset$d1[start_pc_comp]<-0 #Removing the variation caused by runday(id using pca) where the multiple r2 correlation is above 0.5
-    dataset_rmbatch<-svd_dataset$u %*% diag(svd_dataset$d1) %*% t(svd_dataset$v)
+    svd_dataset$d1[start_pc_comp]<-0 
+    end_pc_comp#not used
+    dataset_rmbatch1<-svd_dataset$u %*% diag(svd_dataset$d1) %*% t(svd_dataset$v)
     rownames(dataset_rmbatch)<-rownames(dataset)
-    colnames(dataset_rmbatch)<-names(dataset)
+    colnames(dataset_rmbatch)<-colnames(dataset)
+    dataset_rmbatch[[1]]<-dataset_rmbatch1
   }
   return(dataset_rmbatch)
 }
@@ -1401,9 +1403,9 @@ compute_svd<-function(dataset,preprocess_method,start_pc_comp,end_pc_comp,recurs
 # compute permutative f test statistics to difentify signigicant features
 compute_perm_ftest<-function(dataset,classlabel) {
   classlabel_factor<-as.numeric(as.factor(classlabel))-1
-  if(class(svd_day4_nonzero) == "list") {
-    p.values<-list()
-    sig_metab_dataset<-list()
+  if(class(dataset) == "list") {
+    p.values<-vector("list", length(dataset)) ### Change to p.values<-vector("list", length(dataset)) # make it faster
+    sig_metab_dataset<-vector("list", length(dataset)) 
     for(i in 1:length(dataset))
     { data_matrix<-as.data.frame(dataset[i])
       dataset_sig_features<-mt.maxT(data_matrix,classlabel_factor,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n")
@@ -1418,9 +1420,11 @@ compute_perm_ftest<-function(dataset,classlabel) {
   return(list(p.values,sig_metab_dataset))
 }
 
+compute_perm_ftest_faster<-cmpfun(compute_perm_ftest)
+
 #computer list of p.val
 compute_pval_list<-function(sigfeat_pval) {
-  listofpval<-list()
+  listofpval<-vector("list", length(sigfeat_pval)) #list()
   for(i in 1:length(sigfeat_pval))
   {
     listofpval[i]<-sigfeat_pval[[i]][4]
@@ -1498,11 +1502,33 @@ day12_nonzero_sigfeat_s_pvaldf<-compute_pval_list(day12_nonzero_sigfeat_s_pval)
 day12_no_nonzero_sigfeat_s<-compute_no_features(day12_nonzero_sigfeat_s_matrix)
 save(day12_nonzero_sigfeat_s,file='day12_nonzero_sigfeat_s.rda')
 
-matplot(day4_nonzero_sigfeat_r_pvaldf,type='l')
-matplot(day12_nonzero_sigfeat_r_pvaldf,type='l')
-plot(1:121,day12_nonzero_sigfeat,type='l',col='blue')
-plot(1:121,day4_nonzero_sigfeat,type='l',col='red')
+png("pval_factor.png",height=800,width=800)
+par(mfrow=c(2,2))
+matplot(day4_nonzero_sigfeat_r_pvaldf,type='l',ylab="pval",xlab="day4 Runday")
+matplot(day12_nonzero_sigfeat_r_pvaldf,type='l',ylab="pval",xlab="day12 Runday")
+matplot(day4_nonzero_sigfeat_s_pvaldf,type='l',ylab="pval",xlab="day4 Strain")
+matplot(day12_nonzero_sigfeat_s_pvaldf,type='l',ylab="pval",xlab="day12 Strain")
+dev.off()
 
+png("pval_sigfeat.png",height=800,width=800)
+par(mfrow=c(2,2))
+plot(1:124,day4_no_nonzero_sigfeat_r,type='l',col='blue',xlab="day4 Runday")
+plot(1:121,day12_no_nonzero_sigfeat_r,type='l',col='red',xlab="day12 Runday")
+plot(1:124,day4_no_nonzero_sigfeat_s,type='l',col='blue',xlab="day4 Strain")
+plot(1:121,day12_no_nonzero_sigfeat_s,type='l',col='red',xlab="day12 Strain")
+dev.off()
+
+
+day12_nonzero_sigfeat_r_pval<-day12_nonzero_sigfeat_r[[1]]
+day12_nonzero_sigfeat_r_matrix<-day12_nonzero_sigfeat_r[[2]]
+day12_nonzero_sigfeat_r_pvaldf<-compute_pval_list(day12_nonzero_sigfeat_r_pval)
+day12_no_nonzero_sigfeat_r<-compute_no_features(day12_nonzero_sigfeat_r_matrix)
+
+png("pval_factor_new.png",height=800,width=800)
+par(mfrow=c(2,1))
+matplot(day4_x138_nonzero_sigfeat_r_pvaldf,type='l',ylab="pval",xlab="day4 Runday")
+matplot(day4_x138_nonzero_sigfeat_s_pvaldf,type='l',ylab="pval",xlab="day4 Strain")
+dev.off()
 
 #matplot(cbind(fit_day12_mzbysam_princomp$sdev,svd_day12_nonzero$d))
 
