@@ -2,7 +2,7 @@
 # Data Analysis in R-Malaysian algae data #
 ###########################################
 # Author(s): Shiv
-# Version: 14032014
+# Version: 08042014
 # Input: ".tsv" file from XCMS 
 # Software: XCMS
 # Modified By :Shivshankar Umashankar 
@@ -11,6 +11,10 @@
 # Modified server version for xcms file "algae_4setblanks_021213.tsv" produced using xcms_1.38
 # Here the results run from xcms_1.38 version have '_x138' added to the file name. 
 # Example: day4_x138_nonzero_sigfeat_r.rda or svd_day12_x138_nonzero.rda
+
+# The same extraction and XCMS run was repeated again on 090414 will all the packages updated.
+# This run also provided the same number of features as algae_4setblanks_021213 (67467 features in total)
+
 ##############################################
 # Data,software used for obaining input data #
 ##############################################
@@ -35,6 +39,11 @@
 # #The version used was R version 3.0.1 (2013-05-16) -- "Good Sport" and xcms_1.36.0
 # # Interestingly, the no of features chnaged only for the big matrix of 417 reps. There is no difference between the features detected 
 # # between xcms_1.36 and xcms_1.38 for the blank or tt8 matrix 
+
+# NOTE: Ignore the pvalue column in results.from.scelse.cluster.211213\day4/12_x138_nonzero_sigfeat_r/s.rda file. Please see note below.
+# The p.values in the column are not sorted according to the row index and hence column is not correct. 
+# However the row selected are correct and hence used for further analysis.
+
 #### R code for XCMS ##########
 # library(xcms)
 # 
@@ -1420,7 +1429,13 @@ compute_perm_ftest<-function(dataset,classlabel) {
       dataset_sig_features<-mt.maxT(data_matrix,classlabel_factor,test="f",side="abs",fixed.seed.sampling="y",B=1000,nonpara="n")
       p.values[[i]]<-dataset_sig_features
       id.sig_dataset <- sort(dataset_sig_features[dataset_sig_features$adjp < 0.05,c(1)]) #getting the column which provides index of rows satisying the condition
-      metab_sig<-cbind(data_matrix[id.sig_dataset,],round(dataset_sig_features$adjp[id.sig_dataset],5))
+      metab_sig<-cbind(data_matrix[id.sig_dataset,],round(dataset_sig_features$adjp[dataset_sig_features$index %in% id.sig_dataset],5)) 
+      # ignore p-value added here, see the note below
+      # changed from round(dataset_sig_features$adjp[id.sig_dataset],5)) 
+      # Modify round(dataset_sig_features$adjp[id.sig_dataset] as the value is picked based on the dataset_sig_Features.
+      #hence it will not give the same pvalue for the row from data_matrix
+      #rather it will give the pvalue from the dataset_sig_features(which had already been sorted), hence an erronous value
+      #note made by shiv on 140314
       sig_metab_dataset[[i]]<-metab_sig
     }
   } else { # only a single dataset
@@ -1431,7 +1446,7 @@ compute_perm_ftest<-function(dataset,classlabel) {
     dataset_sig_features<-mt.maxT(data_matrix,classlabel_factor,test="f",side="abs",fixed.seed.sampling="y",B=1000,nonpara="n")
     p.values[[1]]<-dataset_sig_features
     id.sig_dataset <- sort(dataset_sig_features[dataset_sig_features$adjp < 0.05,c(1)])
-    metab_sig<-cbind(data_matrix[id.sig_dataset,],round(dataset_sig_features$adjp[dataset_sig_features$index==id.sig_dataset],5))
+    metab_sig<-cbind(data_matrix[id.sig_dataset,],round(dataset_sig_features$adjp[dataset_sig_features$index %in% id.sig_dataset],5))
     # changed from round(dataset_sig_features$adjp[id.sig_dataset],5)) 
     # Modify round(dataset_sig_features$adjp[id.sig_dataset] as the value is picked based on the dataset_sig_Features.
     #hence it will not give the same pvalue for the row from data_matrix
@@ -1912,7 +1927,7 @@ dev.off()
 
 permutedData<-ms_data_day12_nonzero_bc[,sample(ncol(ms_data_day12_nonzero_bc))]
 
-a<-adonis(t(log(permutedData))~ biochem_para$Protein.percen+biochem_para$Carb.percent+
+a<-adonis(t(log(ms_data_day12_nonzero_bc))~ biochem_para$Protein.percen+biochem_para$Carb.percent+
             biochem_para$lipid.produc+biochem_para$max.biomass.density+biochem_para$avg.OD+biochem_para$RunDay+ biochem_para$Strain, 
           method = "bray", perm=999)
 
@@ -1960,13 +1975,12 @@ a<-adonis(t(log(permutedData))~ biochem_para$Protein.percen+biochem_para$Carb.pe
 ###batch corrected
 
 batch_corrected_mat<-day12_nonzero_sigfeat_s_matrix[[4]]
-
 batch_corrected<-batch_corrected_mat[, grepl(paste(strains_with_biochem,collapse="|"),colnames(batch_corrected_mat))] #11 strains with biochemical param
 batch_corrected<-batch_corrected[,order(colnames(batch_corrected))]
 
-# b<-adonis(t((batch_corrected))~ biochem_para$Protein.percen+biochem_para$Carb.percent+
-#             biochem_para$lipid.produc+biochem_para$max.biomass.density+biochem_para$avg.OD+biochem_para$RunDay+ biochem_para$Strain, 
-#           method = "bray", perm=999)
+b<-adonis(t((batch_corrected))~ biochem_para$Protein.percen+biochem_para$Carb.percent+
+            biochem_para$lipid.produc+biochem_para$max.biomass.density+biochem_para$avg.OD+biochem_para$RunDay+ biochem_para$Strain, 
+          method = "euclidean", perm=999)
 # 
 # Call:
 #   adonis(formula = t((batch_corrected)) ~ biochem_para$Protein.percen +      biochem_para$Carb.percent + biochem_para$lipid.produc + biochem_para$max.biomass.density +      biochem_para$avg.OD + biochem_para$RunDay + biochem_para$Strain,      permutations = 999, method = "bray") 

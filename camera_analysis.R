@@ -36,7 +36,6 @@ sigfeat_day4_bc<-data.frame(sigfeat_day4_bc_mzrt_s,sigfeat_day4_bc_mz_s,sigfeat_
 # significant_nonSingleton_day4<-significant_nonSingleton_day4[!is.na(significant_nonSingleton_day4)]
 # #20
 
-
 ################ MZ bins
 
 #functions to get matching mz and rt
