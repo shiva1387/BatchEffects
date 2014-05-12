@@ -25,46 +25,58 @@ library(plyr)
 library(gridExtra)
 library(gsubfn)
 library(vegan)
+library(Biostrings)
+library(psych)
 
 ### Reading Data
 
 biochemData0<-read.table("biochemicalData.txt",header=TRUE,sep='\t')
 biochemData<-as.data.frame(biochemData0[,3:8])
 rownames(biochemData)<-biochemData0[,2]
-biochemData<-scale(biochemData,center=TRUE,scale=TRUE) # shiv edited on May 7 2014. Added centering and scaling at the start
+#biochemData<-as.data.frame(scale(biochemData,center=TRUE,scale=TRUE)) # shiv edited on May 7 2014. Added centering and scaling at the start
 biochemData_d4<-biochemData[grep('D4', rownames(biochemData)),] 
+biochemData_d4<-as.data.frame(scale(biochemData_d4,center=TRUE, scale=TRUE))
 biochemData_d12<-biochemData[grep('D12', rownames(biochemData)),] 
+biochemData_d12<-as.data.frame(scale(biochemData_d12,center=TRUE, scale=TRUE))
+
+biochemData1<-as.data.frame(scale(biochemData,center=TRUE,scale=TRUE)) #scaling and centering the complete matrix
+biochemData1<-biochemData-min(biochemData)
 
 # Analysis
-d<-biochemData_d4[,apply(biochemData_d4, 2, var, na.rm=TRUE) != 0] #removing mz features which have constant variance
+d<-biochemData1[,apply(biochemData1, 2, var, na.rm=TRUE) != 0] #removing mz features which have constant variance
 fit_d <- prcomp(d) #uses SVD # #shiv edited on May 7 2014. Removed scaling as data has been scaled at the start
 scores_pca_d<-as.data.frame(fit_d$x)
 
 # plot(fit_d$x[,1],fit_d$x[,2])
 # text(fit_d$x[,1],fit_d$x[,2],rownames(d),pos=3)
   
-pcaPlotOutput<-pcaPlot(fit_d,rownames(d),gsub ("a|b|c","",rownames(biochemData_d4)))#biochemData0[,1])
-print(pcaPlotOutput)
-ggsave("bioChem_pcaPlotOutput_D4.pdf",pcaPlotOutput)
+pcaPlotOutput<-pcaPlot(fit_d,rownames(d),biochemData0[,1])#gsub ("a|b|c","",rownames(biochemData_d12)))#biochemData1[,1])
+#print(pcaPlotOutput)
+ggsave("bioChem_pcaPlotOutput.pdf",pcaPlotOutput)
 dev.off()
 
 #correlation analysis and plot
 
-correlationPlotOutput<-correlationPlot(biochemData)
+correlationPlotOutput<-correlationPlot(biochemData1)
 print(correlationPlotOutput)
-ggsave("bioChem_correlationPlotOutput.pdf",correlationPlotOutput)
+ggsave("bioChem_correlationPlotOutput.pdf",p1)
 dev.off()
 
+#Pairs plot
 
+png("biochem_day4_pairs.png")
+pairs(biochemData_d4,main="DAY 4")
+dev.off()
 
 # Enlarging dataset for metabolomics data comparison
 
-biochemDataForMetab<-biochemData[rep(1:nrow(biochemData),each=2),] # duplicating each row to avvount for technical replicates
+biochemDataForMetab<-biochemData[rep(1:nrow(biochemData1),each=2),] # duplicating each row to avvount for technical replicates
 rownames(biochemDataForMetab)<-gsubfn(".", list("a"="b1_r001", "a.1"="b1_r002", "b"="b2_r001","b.1"="b2_r002","c"="b3_r001","c.1"="b3_r002"),rownames(biochemDataForMetab))
 rownames(biochemDataForMetab)<-gsub("r001.1","r002",rownames(biochemDataForMetab))
 
 # Day12 
 batch_corrected_mat_d12<-svd_day12_nonzero[[4]]
+batch_corrected_mat_d12<-batch_corrected_mat_d12-min(batch_corrected_mat_d12)
 colnames(batch_corrected_mat_d12)<-gsub('D12_14','D12_014',colnames(batch_corrected_mat_d12))
 colnames(batch_corrected_mat_d12)<-gsub('D12_84','D12_084',colnames(batch_corrected_mat_d12))
 colnames(batch_corrected_mat_d12)<-gsub('D12_87','D12_087',colnames(batch_corrected_mat_d12))
@@ -77,71 +89,67 @@ biochemDataForMetab_d12<-biochemDataForMetab[colnames(batch_corrected_mat_d12),]
 biochemDataForMetab_d12<-biochemDataForMetab_d12[complete.cases(biochemDataForMetab_d12),]
 biochemDataForMetab_d12$Strain<-gsub("b1_r001|b1_r002|b2_r001|b2_r002|b3_r001|b3_r002","",rownames(biochemDataForMetab_d12))
 
-png("biochem_day12_pairs.png")
-pairs(biochemDataForMetab_d12[,1:6],main="DAY 12")
-dev.off()
-
 a<-adonis(t(batch_corrected_mat_d12)~ biochemDataForMetab_d12$biomass+biochemDataForMetab_d12$biomassProduc+biochemDataForMetab_d12$lipidProduc+
             biochemDataForMetab_d12$totalLipidCon+biochemDataForMetab_d12$totalProtein+biochemDataForMetab_d12$totalCarbCon+biochemDataForMetab_d12$Strain, 
           method = "euclidean", perm=999)
 
 # Call:
-#   adonis(formula = t(batch_corrected_mat_d12) ~ biochemDataForMetab_d12$biomass +      biochemDataForMetab_d12$biomassProduc + biochemDataForMetab_d12$lipidProduc +      biochemDataForMetab_d12$totalLipidCon + biochemDataForMetab_d12$totalProtein +      biochemDataForMetab_d12$totalCarbCon + biochemDataForMetab_d12$Strain,      permutations = 999, method = "euclidean") 
+#   adonis(formula = t(batch_corrected_mat_d12) ~ biochemDataForMetab_d12$biomass +      biochemDataForMetab_d12$biomassProduc + biochemDataForMetab_d12$lipidProduc +      biochemDataForMetab_d12$totalLipidCon + biochemDataForMetab_d12$totalProtein +      biochemDataForMetab_d12$totalCarbCon + biochemDataForMetab_d12$Strain,      permutations = 999, method = "bray") 
 # 
 # Terms added sequentially (first to last)
 # 
-# Df SumsOfSqs MeanSqs F.Model      R2 Pr(>F)    
-# biochemDataForMetab_d12$biomass         1      9906  9905.9  8.1659 0.04124  0.001 ***
-#   biochemDataForMetab_d12$biomassProduc   1      5444  5443.8  4.4876 0.02266  0.001 ***
-#   biochemDataForMetab_d12$lipidProduc     1      4965  4965.4  4.0932 0.02067  0.001 ***
-#   biochemDataForMetab_d12$totalLipidCon   1      7444  7444.0  6.1364 0.03099  0.001 ***
-#   biochemDataForMetab_d12$totalProtein    1      4914  4914.5  4.0512 0.02046  0.001 ***
-#   biochemDataForMetab_d12$totalCarbCon    1      4150  4150.3  3.4213 0.01728  0.001 ***
-#   biochemDataForMetab_d12$Strain         21     94223  4486.8  3.6987 0.39223  0.001 ***
-#   Residuals                              90    109178  1213.1         0.45448           
-# Total                                 117    240225                 1.00000           
+# Df SumsOfSqs   MeanSqs F.Model      R2 Pr(>F)    
+# biochemDataForMetab_d12$biomass         1  0.005050 0.0050503 10.9537 0.04364  0.001 ***
+#   biochemDataForMetab_d12$biomassProduc   1  0.002892 0.0028916  6.2717 0.02499  0.001 ***
+#   biochemDataForMetab_d12$lipidProduc     1  0.002903 0.0029026  6.2956 0.02508  0.001 ***
+#   biochemDataForMetab_d12$totalLipidCon   1  0.004190 0.0041902  9.0881 0.03621  0.001 ***
+#   biochemDataForMetab_d12$totalProtein    1  0.003249 0.0032493  7.0475 0.02808  0.001 ***
+#   biochemDataForMetab_d12$totalCarbCon    1  0.002412 0.0024119  5.2312 0.02084  0.001 ***
+#   biochemDataForMetab_d12$Strain         21  0.053525 0.0025488  5.5281 0.46255  0.001 ***
+#   Residuals                              90  0.041495 0.0004611         0.35860           
+# Total                                 117  0.115716                   1.00000           
 # ---
 #   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 a<-adonis(t(batch_corrected_mat_d12)~ biochemDataForMetab_d12$biomass+biochemDataForMetab_d12$lipidProduc+
             biochemDataForMetab_d12$totalLipidCon+biochemDataForMetab_d12$totalProtein+biochemDataForMetab_d12$totalCarbCon+biochemDataForMetab_d12$Strain, 
-          method = "euclidean", perm=999)
+          method = "bray", perm=999)
 
 # Call:
-#   adonis(formula = t(batch_corrected_mat_d12) ~ biochemDataForMetab_d12$biomass +      biochemDataForMetab_d12$lipidProduc + biochemDataForMetab_d12$totalLipidCon +      biochemDataForMetab_d12$totalProtein + biochemDataForMetab_d12$totalCarbCon +      biochemDataForMetab_d12$Strain, permutations = 999, method = "euclidean") 
+#   adonis(formula = t(batch_corrected_mat_d12) ~ biochemDataForMetab_d12$biomass +      biochemDataForMetab_d12$lipidProduc + biochemDataForMetab_d12$totalLipidCon +      biochemDataForMetab_d12$totalProtein + biochemDataForMetab_d12$totalCarbCon +      biochemDataForMetab_d12$Strain, permutations = 999, method = "bray") 
 # 
 # Terms added sequentially (first to last)
 # 
-# Df SumsOfSqs MeanSqs F.Model      R2 Pr(>F)    
-# biochemDataForMetab_d12$biomass         1      9906  9905.9  8.1567 0.04124  0.001 ***
-#   biochemDataForMetab_d12$lipidProduc     1      5552  5551.6  4.5713 0.02311  0.001 ***
-#   biochemDataForMetab_d12$totalLipidCon   1      7185  7184.9  5.9161 0.02991  0.001 ***
-#   biochemDataForMetab_d12$totalProtein    1      5514  5514.3  4.5405 0.02295  0.001 ***
-#   biochemDataForMetab_d12$totalCarbCon    1      4090  4090.2  3.3680 0.01703  0.001 ***
-#   biochemDataForMetab_d12$Strain         21     97463  4641.1  3.8216 0.40572  0.001 ***
-#   Residuals                              91    110515  1214.5         0.46005           
-# Total                                 117    240225                 1.00000           
+# Df SumsOfSqs   MeanSqs F.Model      R2 Pr(>F)    
+# biochemDataForMetab_d12$biomass         1  0.005050 0.0050503 10.9302 0.04364  0.001 ***
+#   biochemDataForMetab_d12$lipidProduc     1  0.003198 0.0031982  6.9218 0.02764  0.001 ***
+#   biochemDataForMetab_d12$totalLipidCon   1  0.003937 0.0039371  8.5209 0.03402  0.001 ***
+#   biochemDataForMetab_d12$totalProtein    1  0.003569 0.0035693  7.7250 0.03085  0.001 ***
+#   biochemDataForMetab_d12$totalCarbCon    1  0.002367 0.0023668  5.1224 0.02045  0.001 ***
+#   biochemDataForMetab_d12$Strain         21  0.055548 0.0026451  5.7248 0.48004  0.001 ***
+#   Residuals                              91  0.042047 0.0004621         0.36336           
+# Total                                 117  0.115716                   1.00000           
 # ---
 #   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 permutedData<-batch_corrected_mat_d12[,sample(ncol(batch_corrected_mat_d12))]
 a<-adonis(t(permutedData)~ biochemDataForMetab_d12$biomass+biochemDataForMetab_d12$lipidProduc+
             biochemDataForMetab_d12$totalLipidCon+biochemDataForMetab_d12$totalProtein+biochemDataForMetab_d12$totalCarbCon+biochemDataForMetab_d12$Strain, 
-          method = "euclidean", perm=999)
+          method = "bray", perm=999)
 # Call:
-#   adonis(formula = t(permutedData) ~ biochemDataForMetab_d12$biomass +      biochemDataForMetab_d12$lipidProduc + biochemDataForMetab_d12$totalLipidCon +      biochemDataForMetab_d12$totalProtein + biochemDataForMetab_d12$totalCarbCon +      biochemDataForMetab_d12$Strain, permutations = 999, method = "euclidean") 
+#   adonis(formula = t(permutedData) ~ biochemDataForMetab_d12$biomass +      biochemDataForMetab_d12$lipidProduc + biochemDataForMetab_d12$totalLipidCon +      biochemDataForMetab_d12$totalProtein + biochemDataForMetab_d12$totalCarbCon +      biochemDataForMetab_d12$Strain, permutations = 999, method = "bray") 
 # 
 # Terms added sequentially (first to last)
 # 
-# Df SumsOfSqs MeanSqs F.Model      R2 Pr(>F)
-# biochemDataForMetab_d12$biomass         1      2433  2432.6 1.18240 0.01013  0.195
-# biochemDataForMetab_d12$lipidProduc     1      1711  1710.9 0.83161 0.00712  0.792
-# biochemDataForMetab_d12$totalLipidCon   1      2507  2506.7 1.21845 0.01043  0.163
-# biochemDataForMetab_d12$totalProtein    1      1918  1918.4 0.93248 0.00799  0.565
-# biochemDataForMetab_d12$totalCarbCon    1      2369  2369.3 1.15167 0.00986  0.221
-# biochemDataForMetab_d12$Strain         21     42072  2003.4 0.97381 0.17514  0.681
-# Residuals                              91    187215  2057.3         0.77933       
-# Total                                 117    240225                 1.00000   
+# Df SumsOfSqs    MeanSqs F.Model      R2 Pr(>F)
+# biochemDataForMetab_d12$biomass         1  0.001204 0.00120376 1.21556 0.01040  0.197
+# biochemDataForMetab_d12$lipidProduc     1  0.001167 0.00116682 1.17825 0.01008  0.240
+# biochemDataForMetab_d12$totalLipidCon   1  0.000628 0.00062755 0.63370 0.00542  0.973
+# biochemDataForMetab_d12$totalProtein    1  0.000767 0.00076654 0.77405 0.00662  0.805
+# biochemDataForMetab_d12$totalCarbCon    1  0.000789 0.00078910 0.79683 0.00682  0.786
+# biochemDataForMetab_d12$Strain         21  0.021046 0.00100217 1.01199 0.18187  0.398
+# Residuals                              91  0.090117 0.00099029         0.77877       
+# Total                                 117  0.115716                    1.00000  
 
 # non-batch effect removed data
 
@@ -152,8 +160,6 @@ colnames(non_batch_corrrected_mat_d12)<-gsub("_b","b",colnames(non_batch_corrrec
 biochemDataForMetab_d12_nb<-biochemDataForMetab[colnames(non_batch_corrrected_mat_d12),]
 biochemDataForMetab_d12_nb<-biochemDataForMetab_d12_nb[complete.cases(biochemDataForMetab_d12_nb),]
 biochemDataForMetab_d12_nb$Strain<-gsub("b1_r001|b1_r002|b2_r001|b2_r002|b3_r001|b3_r002","",rownames(biochemDataForMetab_d12_nb))
-
-pairs(biochemDataForMetab_d12_nb[,1:6],main="DAY 12 NB")
 
 #sum(is.na(biochemDataForMetab_d12_nb))
 
@@ -181,6 +187,7 @@ a<-adonis(t(non_batch_corrrected_mat_d12)~ biochemDataForMetab_d12_nb$biomass+bi
 
 # Day4 
 batch_corrected_mat_d4<-svd_day4_nonzero[[7]]#day4_nonzero_sigfeat_s[[2]]
+batch_corrected_mat_d4<-batch_corrected_mat_d4-min(batch_corrected_mat_d4)
 #batch_corrected_mat_d4<-batch_corrected_mat_d4[[7]] #removing last column which has wrong pvalues
 #batch_corrected_mat_d4<-batch_corrected_mat_d4[,1:125] #removing last column which has pvalues
 colnames(batch_corrected_mat_d4)<-gsub("_b","b",colnames(batch_corrected_mat_d4))
@@ -190,53 +197,48 @@ biochemDataForMetab_d4<-biochemDataForMetab[colnames(batch_corrected_mat_d4),]
 biochemDataForMetab_d4<-biochemDataForMetab_d4[complete.cases(biochemDataForMetab_d4),]
 biochemDataForMetab_d4$Strain<-gsub("b1_r001|b1_r002|b2_r001|b2_r002|b3_r001|b3_r002","",rownames(biochemDataForMetab_d4))
 
-png("biochem_day4_pairs.png")
-pairs(biochemDataForMetab_d4[,1:6],main="DAY 4")
-dev.off()
-
-
 #sum(is.na(biochemDataForMetab_d4))
 
 a<-adonis(t(batch_corrected_mat_d4)~ biochemDataForMetab_d4$biomass+biochemDataForMetab_d4$biomassProduc+biochemDataForMetab_d4$lipidProduc+
             biochemDataForMetab_d4$totalLipidCon+biochemDataForMetab_d4$totalProtein+biochemDataForMetab_d4$totalCarbCon+biochemDataForMetab_d4$Strain, 
-          method = "euclidean", perm=999)
+          method = "bray", perm=999)
 
 # Call:
-#   adonis(formula = t(batch_corrected_mat_d4) ~ biochemDataForMetab_d4$biomass +      biochemDataForMetab_d4$biomassProduc + biochemDataForMetab_d4$lipidProduc +      biochemDataForMetab_d4$totalLipidCon + biochemDataForMetab_d4$totalProtein +      biochemDataForMetab_d4$totalCarbCon + biochemDataForMetab_d4$Strain,      permutations = 999, method = "euclidean") 
+#   adonis(formula = t(batch_corrected_mat_d4) ~ biochemDataForMetab_d4$biomass +      biochemDataForMetab_d4$biomassProduc + biochemDataForMetab_d4$lipidProduc +      biochemDataForMetab_d4$totalLipidCon + biochemDataForMetab_d4$totalProtein +      biochemDataForMetab_d4$totalCarbCon + biochemDataForMetab_d4$Strain,      permutations = 999, method = "bray") 
 # 
 # Terms added sequentially (first to last)
 # 
-# Df SumsOfSqs MeanSqs F.Model      R2 Pr(>F)    
-# biochemDataForMetab_d4$biomass         1      4771  4771.0  3.6367 0.02124  0.001 ***
-#   biochemDataForMetab_d4$biomassProduc   1      3792  3792.1  2.8905 0.01688  0.001 ***
-#   biochemDataForMetab_d4$lipidProduc     1      3709  3709.4  2.8275 0.01652  0.001 ***
-#   biochemDataForMetab_d4$totalLipidCon   1      4962  4962.2  3.7825 0.02209  0.001 ***
-#   biochemDataForMetab_d4$totalProtein    1      2520  2520.2  1.9210 0.01122  0.001 ***
-#   biochemDataForMetab_d4$totalCarbCon    1      2827  2827.2  2.1550 0.01259  0.001 ***
-#   biochemDataForMetab_d4$Strain         21     74771  3560.5  2.7140 0.33290  0.001 ***
-#   Residuals                             97    127254  1311.9         0.56656           
-# Total                                124    224608                 1.00000           
+# Df SumsOfSqs    MeanSqs F.Model      R2 Pr(>F)    
+# biochemDataForMetab_d4$biomass         1  0.002207 0.00220749  4.8525 0.02440  0.001 ***
+#   biochemDataForMetab_d4$biomassProduc   1  0.001792 0.00179246  3.9402 0.01981  0.001 ***
+#   biochemDataForMetab_d4$lipidProduc     1  0.001703 0.00170255  3.7425 0.01882  0.001 ***
+#   biochemDataForMetab_d4$totalLipidCon   1  0.002365 0.00236546  5.1997 0.02614  0.001 ***
+#   biochemDataForMetab_d4$totalProtein    1  0.001229 0.00122885  2.7012 0.01358  0.001 ***
+#   biochemDataForMetab_d4$totalCarbCon    1  0.001276 0.00127556  2.8039 0.01410  0.001 ***
+#   biochemDataForMetab_d4$Strain         21  0.035782 0.00170388  3.7455 0.39546  0.001 ***
+#   Residuals                             97  0.044127 0.00045492         0.48770           
+# Total                                124  0.090481                    1.00000           
 # ---
 #   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 a<-adonis(t(batch_corrected_mat_d4)~ biochemDataForMetab_d4$biomass+biochemDataForMetab_d4$lipidProduc+
             biochemDataForMetab_d4$totalLipidCon+biochemDataForMetab_d4$totalProtein+biochemDataForMetab_d4$totalCarbCon+biochemDataForMetab_d4$Strain, 
-          method = "euclidean", perm=999)
+          method = "bray", perm=999)
 
 # Call:
-#   adonis(formula = t(batch_corrected_mat_d4) ~ biochemDataForMetab_d4$biomass +      biochemDataForMetab_d4$lipidProduc + biochemDataForMetab_d4$totalLipidCon +      biochemDataForMetab_d4$totalProtein + biochemDataForMetab_d4$totalCarbCon +      biochemDataForMetab_d4$Strain, permutations = 999, method = "euclidean") 
+#   adonis(formula = t(batch_corrected_mat_d4) ~ biochemDataForMetab_d4$biomass +      biochemDataForMetab_d4$lipidProduc + biochemDataForMetab_d4$totalLipidCon +      biochemDataForMetab_d4$totalProtein + biochemDataForMetab_d4$totalCarbCon +      biochemDataForMetab_d4$Strain, permutations = 999, method = "bray") 
 # 
 # Terms added sequentially (first to last)
 # 
-# Df SumsOfSqs MeanSqs F.Model      R2 Pr(>F)    
-# biochemDataForMetab_d4$biomass         1      4771  4771.0  3.6187 0.02124  0.001 ***
-#   biochemDataForMetab_d4$lipidProduc     1      3993  3992.6  3.0283 0.01778  0.001 ***
-#   biochemDataForMetab_d4$totalLipidCon   1      3165  3164.7  2.4004 0.01409  0.001 ***
-#   biochemDataForMetab_d4$totalProtein    1      2331  2331.3  1.7682 0.01038  0.001 ***
-#   biochemDataForMetab_d4$totalCarbCon    1      3492  3491.8  2.6484 0.01555  0.001 ***
-#   biochemDataForMetab_d4$Strain         21     77651  3697.6  2.8046 0.34572  0.001 ***
-#   Residuals                             98    129206  1318.4         0.57525           
-# Total                                124    224608                 1.00000           
+# Df SumsOfSqs   MeanSqs F.Model      R2 Pr(>F)    
+# biochemDataForMetab_d4$biomass         1  0.002207 0.0022075  4.8209 0.02440  0.001 ***
+#   biochemDataForMetab_d4$lipidProduc     1  0.001787 0.0017867  3.9020 0.01975  0.001 ***
+#   biochemDataForMetab_d4$totalLipidCon   1  0.001682 0.0016820  3.6733 0.01859  0.001 ***
+#   biochemDataForMetab_d4$totalProtein    1  0.001161 0.0011610  2.5356 0.01283  0.001 ***
+#   biochemDataForMetab_d4$totalCarbCon    1  0.001543 0.0015427  3.3690 0.01705  0.001 ***
+#   biochemDataForMetab_d4$Strain         21  0.037228 0.0017727  3.8715 0.41144  0.001 ***
+#   Residuals                             98  0.044874 0.0004579         0.49595           
+# Total                                124  0.090481                   1.00000           
 # ---
 #   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
@@ -249,9 +251,9 @@ cca.1 <- cca(t(batch_corrected_mat_d4)~ biochemDataForMetab_d4$biomass+biochemDa
 
 ### Comparisons
 
-Chlorella<-c("D4_001","D4_006","D4_051","D4_104","D4_14","D4_177","D4_187","D4_207","D4_268","D4_283","D4_322","D4_325","D4_84","D4_87","D4_94")
-Parachlorella<-c("D4_245","D4_252","D4_253","D4_254","D4_255","D4_258")
-UnIdchlorella<-"D4_184"
+Chlorella<-c("D12_001","D12_006","D12_051","D12_104","D12_14","D12_177","D12_187","D12_207","D12_268","D12_283","D12_322","D12_325","D12_84","D12_87","D12_94")
+Parachlorella<-c("D12_245","D12_252","D12_253","D12_254","D12_255","D12_258")
+UnIdchlorella<-"D12_184"
 
 AerobicPond<-"D12_051"
 SeaBassPond<-c("D12_252","D12_253","D12_2512","D12_255","D12_258")
@@ -295,7 +297,7 @@ SampleGroup<-as.vector(SampleGroup)
 SampleGroup<-gsub('b1','',SampleGroup)
 SampleGroup<-gsub('b2','',SampleGroup)
 SampleGroup<-gsub('b3','',SampleGroup)
-SampleGroup#Sample group without the outlier replicates
+SampleGroup
 
 ######## Permutation based test statistic
 
@@ -340,57 +342,6 @@ metab_sig<-cbind(data_matrix[id.sig_dataset,],round(dataset_sig_features$adjp[da
 # plot(mz,rt,col="#00000033")
 # points(mz1,rt1,col="green")
 
-
-###############################################################################
-################ Significant metabolites ## from metab_sig ####################
-###############################################################################
-
-##### CAMERA Analysis
-
-isotopeData<-read.table('algae_4setblanks_021213_mzrt_camera.txt',header=TRUE,sep='\t')
-#isotopeData$mzrt<-paste0(round(as.numeric(isotopeData$mz),5),'@',isotopeData$rt)
-isotopeData$mz<-round(as.numeric(isotopeData$mz),5)
-isotopeData$rt<-round(as.numeric(isotopeData$mz),0)
-isotopeData$mzrt<-paste0(isotopeData$mz,'@',isotopeData$rt)
-nonSingleton<-duplicated(isotopeData$pcgroup) | duplicated(isotopeData$pcgroup, fromLast = TRUE)
-mzrt_nonSingleton<-isotopeData[which(nonSingleton==TRUE),]
-#23775
-
-sigfeat_day12_mzAndrt<-strsplit(rownames(metab_sig), "\\@")
-sigfeat_day12_mz<-sapply(sigfeat_day12_mzAndrt , function (x) if(length(x) == 2) x[1] else as.character(NA))
-sigfeat_day12_rt<-sapply(sigfeat_day12_mzAndrt , function (x) if(length(x) == 2) x[2] else as.character(NA))
-sigfeat_day12_mz<-round(as.numeric(sigfeat_day12_mz),5)
-sigfeat_day12_rt<-round(as.numeric(sigfeat_day12_rt),0)
-sigfeat_day12_mzrt<-paste0(sigfeat_day12_mz,'@',sigfeat_day12_rt)
-sigfeat_day12<-data.frame(sigfeat_day12_mzrt,sigfeat_day12_mz,sigfeat_day12_rt)
-
-#functions to get matching mz and rt
-cmpMZ <- function(mz, mzlist, mz_cutoff){abs(mz-mzlist) <= mz_cutoff}
-#if there is more than one match, change function to pick the closest!
-cmpRT <- function(ret, retlist,ret_cutoff){abs(ret-retlist) <= ret_cutoff}
-
-###day12
-mz_tolerance=10 #ppm
-rt_tolerance=5 #secs
-for(i in 1:length(sigfeat_day12))
-{
-  
-  ppm_tolerance<-(trunc(sigfeat_day12_mz[i])*mz_tolerance)/10^6 
-  match_mz<-cmpMZ(sigfeat_day12_mz[i],mzrt_nonSingleton$mz,ppm_tolerance)
-  match_mz_ind<-which(match_mz) #obtaining indices only for the significant features
-  match_ret<-cmpRT(sigfeat_day12_rt[i],mzrt_nonSingleton$rt[match_mz_ind],rt_tolerance)
-  mz_rt_match<-match_mz_ind[which(match_ret)]
-  matched_value<-mzrt_nonSingleton[mz_rt_match,"mzrt"];
-  matched_value=ifelse(exists("matched_value"),matched_value)
-  #print(c(i,sigfeat_day12_bc_mz_s[i],sigfeat_day12_bc_rt_s[i],mz_rt_match,matched_value))
-  sigfeat_day12[i,4]<-matched_value
-}
-# write.table(sigfeat_day12,"HighpalmVsotherDay12.txt",quote=FALSE,sep='\t')
-# sigfeat_day12_nonsingletons<-sigfeat_day12[!is.na(sigfeat_day12$V4),]
-# sigfeat_day12_nonsingletonList_mz<-strsplit(sigfeat_day12_bc_nonsingletons$V4, "\\@")
-#writing mz rt to a file
-
-
 #########################################################
 ####################### Functions #######################
 #########################################################
@@ -406,63 +357,63 @@ pcaPlot<-function(pca_summary,dataLabel,dataGroups){
 }
 
 #function to compute correlation plot
+#updated on 12-May-2014 by shiv to include p.adjust method. Thus, using 'corr.test' from psych package.
 
 correlationPlot<-function(env_parameters){
-combos <- combn(ncol(env_parameters),2) # combinations without repetitions
-
-#combos <- expand.grid(rep(list(1:ncol(env_parameters)), 2 )) # combinations with repetitions
-#combos <- as.matrix(combos)
-#combos <- t(combos) # transpose matrix
-
-mat1 <- adply(combos, 2, function(x) {
-  #test <- chisq.test(env_parameters[, x[1]], env_parameters[, x[2]])
-  test<-cor.test(env_parameters[, x[1]], env_parameters[, x[2]], use="all.obs", method="kendall", exact=FALSE) 
+  env_parameters<-biochemData1
+  combos <- combn(ncol(env_parameters),2) # combinations without repetitions
   
-  out <- data.frame("Row" = colnames(env_parameters)[x[1]]
-                    , "Column" = colnames(env_parameters[x[2]])
-                    , "p.value" = round(test$p.value, 3)
-                    ,  "statistic"= test$statistic
-                    ,  "tau.value" = round(test$estimate,3)
-  )
-  return(out)
-})
-
-tau.valu.mat<-mat1
-# mat 2 is the same table but formated to show pvalue of corrrelations
-mat2 <- adply(combos, 2, function(x) {
-  #test <- chisq.test(env_parameters[, x[1]], env_parameters[, x[2]])
-  test<-cor.test(env_parameters[, x[1]], env_parameters[, x[2]], use="all.obs", method="kendall", exact=FALSE) 
+  #combos <- expand.grid(rep(list(1:ncol(env_parameters)), 2 )) # combinations with repetitions
+  #combos <- as.matrix(combos)
+  #combos <- t(combos) # transpose matrix
   
-  out <- data.frame("Row" = colnames(env_parameters)[x[1]]
-                    , "Column" = colnames(env_parameters[x[2]])
-                    , "tau.value" = round(test$estimate,3)
-                    , "statistic"= test$statistic
-                    , "p.value" = round(test$p.value, 3)
-  )
-  return(out)
-})
-
-p.valu.mat<-mat2
-
-### ploting using ggplot2
-
-mat1$stars <- cut(mat1$p.value, breaks=c(-Inf, 0.01, 0.05, 0.1, Inf), label=c("***", "**", "*", ""))  # Create column of significance labels
-mat1$tauval.scal<-cut(mat1$tau.value,breaks=c(-1,-0.75,-0.5,-0.25,0,0.25,0.5,0.75,1),include.lowest=TRUE, label=c("(-0.75,-1)","(-0.5,-0.75)","(-0.25,-0.5)","(0,-0.25)","(0,0.25)","(0.25,0.5)","(0.5,0.75)","(0.75,1)")) # the label for the legend
-
-meas <- as.character(unique(mat1$Column))
-#pdf('env_parameters_sediment.pdf',height=16,width=16)
-
-p<-ggplot(mat1, aes(Row, Column)) +coord_flip()+
-  geom_tile(aes(fill=mat1$tauval.scal),colour="white") +  
-  scale_fill_brewer(palette = "RdYlGn",name="Correlation") + geom_text(aes(label=mat1$stars), color="black", size=5.5) + 
-  labs(y=NULL, x=NULL, fill="p.value") +  scale_y_discrete(limits=meas[length(meas):1]) + #flip the x axis 
-  theme_bw() + theme(axis.text.x=element_text(angle = 45, hjust = 1,size=18),axis.text.y=element_text(size=18),
-                     panel.grid.major.x = element_blank(), # to x remove gridlines
-                     panel.grid.major.y = element_blank(), # to y remove gridlines
-                     panel.border = element_blank(),  # remove top and right border
-                     panel.background = element_blank(),
-                     axis.line = element_line(color = 'black')) #draws x and y axis line
-
-p1<-p+theme(legend.text = element_text(size = 15),legend.title = element_text(size = 20)) #change the font size for legend
-return(p1)
+  mat1 <- adply(combos, 2, function(x) {
+    #test <- chisq.test(env_parameters[, x[1]], env_parameters[, x[2]])
+    test<-corr.test(as.data.frame(env_parameters[, x[1]]), as.data.frame(env_parameters[, x[2]]), use="all.obs", method="kendall", adjust="bonferroni") 
+    
+    out <- data.frame("Row" = colnames(env_parameters)[x[1]]
+                      , "Column" = colnames(env_parameters[x[2]])
+                      , "p.value" = as.numeric(round(test$p, 3))
+                      ,  "tau.value" = as.numeric(round(test$r,3))
+    )
+    return(out)
+  })
+  
+  tau.valu.mat<-mat1
+  # mat 2 is the same table but formated to show pvalue of corrrelations
+  mat2 <- adply(combos, 2, function(x) {
+    #test <- chisq.test(env_parameters[, x[1]], env_parameters[, x[2]])
+    test<-corr.test(as.data.frame(env_parameters[, x[1]]), as.data.frame(env_parameters[, x[2]]), use="all.obs", method="kendall", adjust="bonferroni") 
+    
+    out <- data.frame("Row" = colnames(env_parameters)[x[1]]
+                      , "Column" = colnames(env_parameters[x[2]])
+                      , "tau.value" = as.numeric(round(test$r,3))
+                      , "p.value" = as.numeric(round(test$p, 3))
+    )
+    return(out)
+  })
+  
+  p.valu.mat<-mat2
+  
+  ### ploting using ggplot2
+  
+  mat1$stars <- cut(mat1$p.value, breaks=c(-Inf, 0.01, 0.05, 0.1, Inf), label=c("***", "**", "*", ""))  # Create column of significance labels
+  mat1$tauval.scal<-cut(mat1$tau.value,breaks=c(-1,-0.75,-0.5,-0.25,0,0.25,0.5,0.75,1),include.lowest=TRUE, label=c("(-0.75,-1)","(-0.5,-0.75)","(-0.25,-0.5)","(0,-0.25)","(0,0.25)","(0.25,0.5)","(0.5,0.75)","(0.75,1)")) # the label for the legend
+  
+  meas <- as.character(unique(mat1$Column))
+  #pdf('env_parameters_sediment.pdf',height=16,width=16)
+  
+  p<-ggplot(mat1, aes(Row, Column)) +coord_flip()+
+    geom_tile(aes(fill=mat1$tauval.scal),colour="white") +  
+    scale_fill_brewer(palette = "RdYlGn",name="Correlation") + geom_text(aes(label=mat1$stars), color="black", size=5.5) + 
+    labs(y=NULL, x=NULL, fill="p.value") +  scale_y_discrete(limits=meas[length(meas):1]) + #flip the x axis 
+    theme_bw() + theme(axis.text.x=element_text(angle = 45, hjust = 1,size=18),axis.text.y=element_text(size=18),
+                       panel.grid.major.x = element_blank(), # to x remove gridlines
+                       panel.grid.major.y = element_blank(), # to y remove gridlines
+                       panel.border = element_blank(),  # remove top and right border
+                       panel.background = element_blank(),
+                       axis.line = element_line(color = 'black')) #draws x and y axis line
+  
+  p1<-p+theme(legend.text = element_text(size = 15),legend.title = element_text(size = 20)) #change the font size for legend
+  return(p1)
 }

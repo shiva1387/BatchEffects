@@ -18,6 +18,8 @@ graphics.off() # Close all windows
 library(ade4)
 library(data.table)
 library(vegan)
+library(Biostrings)
+library(vegan)
 
 ##### Reading in the data
 
@@ -37,6 +39,10 @@ Chlorella18s<-readDNAStringSet('Chlorella18s.txt',format="fasta")
 
 distanceMatrix_18s<-stringDist(Chlorella18s, method = "levenshtein", ignoreCase = TRUE, diag = FALSE,
                                upper = FALSE, type = "global")
+fit <- hclust(distanceMatrix_18s, method="average") 
+pdf('LevenshteinDistance_22strains.pdf')
+plot (fit)
+dev.off()
 
 ##### Biochemical data
 
@@ -56,21 +62,24 @@ biochemData_d4$samplegroup<-as.factor(gsub ("a|b|c","",rownames(biochemData_d4))
 biochemData_d4 <- data.table(biochemData_d4)
 biochemData_d4<-biochemData_d4[,lapply(.SD, mean),by=samplegroup]
 biochemData_d4<-as.data.frame(biochemData_d4)
+rownames(biochemData_d4)<-biochemData_d4[,1]
 biochemData_d4<-biochemData_d4[,2:7]
-
+biochemData_d4<-as.data.frame(scale(biochemData_d4,center=TRUE, scale=TRUE))
 
 biochemData_d12$samplegroup<-as.factor(gsub ("a|b|c","",rownames(biochemData_d12)))
 biochemData_d12 <- data.table(biochemData_d12)
 biochemData_d12<-biochemData_d12[,lapply(.SD, mean),by=samplegroup]
 biochemData_d12<-as.data.frame(biochemData_d12)
+rownames(biochemData_d12)<-biochemData_d12[,1]
 biochemData_d12<-biochemData_d12[,2:7]
+biochemData_d12<-as.data.frame(scale(biochemData_d12,center=TRUE, scale=TRUE))
 
 ##### Obtaining sample groups 
 
 #d12_test<-as.data.frame(t(batch_corrected_mat_d12-min(batch_corrected_mat_d12)))
 #d4_test<-as.data.frame(t(batch_corrected_mat_d4-min(batch_corrected_mat_d4)))
 
-SampleGroups<-sapply(rownames(d12_test), function(x) paste(strsplit(x,"_")[[1]][1:2],collapse = "_"))
+SampleGroups<-sapply(rownames(d4_test), function(x) paste(strsplit(x,"_")[[1]][1:2],collapse = "_")) #change d12_test or d4_test accordingly
 SampleGroups<-as.vector(SampleGroups)
  
 SampleGroups<-gsub('b1','',SampleGroups)
@@ -85,7 +94,7 @@ d4_test$samplegroup<-as.factor(SampleGroups)
 d4_test$samplegroup<-as.factor(gsub('D4_14','D4_014',d4_test$samplegroup))
 d4_test<-d4_test[order(d4_test$samplegroup),]
 d4_test_21strains<-d4_test[which(d4_test$samplegroup!="D4_184"),]
-dt <- data.table(d4_test)
+dt <- data.table(d4_test_21strains) # change between d4_test_21strains and d4_test to obtain d4_mean_21strains and d4_mean1, respectively.
 d4_mean<-dt[,lapply(.SD, mean),by=samplegroup]
 #d4_mean1<-as.data.frame(d4_mean) #22 strains
 d4_mean_21strains<-as.data.frame(d4_mean)
@@ -99,7 +108,7 @@ d12_test$samplegroup<-as.factor(gsub('D12_87','D12_087',d12_test$samplegroup))
 d12_test$samplegroup<-as.factor(gsub('D12_94','D12_094',d12_test$samplegroup))
 d12_test<-d12_test[order(d12_test$samplegroup),]
 d12_test_21strains<-d12_test[which(d12_test$samplegroup!="D12_184"),]
-dt <- data.table(d12_test)
+dt <- data.table(d12_test_21strains) # change between d12_test_21strains and d12_test to obtain d12_mean_21strains and d12_mean1, respectively.
 d12_mean<-dt[,lapply(.SD, mean),by=samplegroup]
 #d12_mean1<-as.data.frame(d12_mean) # 22 strains
 d12_mean_21strains<-as.data.frame(d12_mean)
@@ -107,8 +116,8 @@ d12_mean_21strains<-as.data.frame(d12_mean)
 ### mantel test 
 
 #using vegan
-veg.dist.d4 <- vegdist(as.matrix(d4_mean_21strains[,2:13444])) # Bray-Curtis
-veg.dist.d12 <- vegdist(as.matrix(d12_mean_21strains[,2:10688]))
+veg.dist.d4 <- vegdist(as.matrix(d4_mean_21strains[,2:13444]),method="euclidean") # Bray-Curtis
+veg.dist.d12 <- vegdist(as.matrix(d12_mean_21strains[,2:10688]),method="euclidean")
 mantel(veg.dist.d4, veg.dist.d12)
 mantel(veg.dist.d4, veg.dist.d12, method="spear")
 
@@ -120,8 +129,8 @@ mantel.rtest(veg.dist.d4, veg.dist.d12,nrepet=999)
 
 ###############################
 # Biochemical data
-veg.dist.d12 <- vegdist(as.matrix(d12_mean[,2:10688]))
-veg.dist.d12.biochem <- vegdist(as.matrix(biochemData_d12))
+veg.dist.d12 <- vegdist(as.matrix(mappedMetabolites_mean_d12),method="euclidean") #d12_mean1[,2:10688]
+veg.dist.d12.biochem <- vegdist(as.matrix(biochemData_d12),method="euclidean")
 mantel(veg.dist.d12, veg.dist.d12.biochem)
 mantel(veg.dist.d12, veg.dist.d12.biochem, method="spear")
 mantel.rtest(veg.dist.d12, veg.dist.d12.biochem,nrepet=999)
@@ -131,17 +140,18 @@ mantel.rtest(veg.dist.d12, veg.dist.d12.biochem,nrepet=999)
 # Call:
 # mantel(xdis = veg.dist.d12, ydis = veg.dist.d12.biochem, method = "spear") 
 # 
-# Mantel statistic r: 0.2083 
-#       Significance: 0.048 
+# Mantel statistic r: 0.258 
+#       Significance: 0.016 
 # 
 # Upper quantiles of permutations (null model):
 #   90%   95% 97.5%   99% 
-# 0.163 0.205 0.239 0.284 
+# 0.152 0.197 0.230 0.271 
 # 
 # Based on 999 permutations
 
-veg.dist.d4 <- vegdist(as.matrix(d4_mean1[,2:10688]))
-veg.dist.d4.biochem <- vegdist(as.matrix(biochemData_d4))
+
+veg.dist.d4 <- vegdist(as.matrix(mappedMetabolites_mean_d4),method="euclidean")#d4_mean1[,2:10688]
+veg.dist.d4.biochem <- vegdist(as.matrix(biochemData_d4),method="euclidean")
 mantel(veg.dist.d4, veg.dist.d4.biochem)
 mantel(veg.dist.d4, veg.dist.d4.biochem, method="spear")
 mantel.rtest(veg.dist.d4, veg.dist.d4.biochem,nrepet=999)
@@ -151,12 +161,12 @@ mantel.rtest(veg.dist.d4, veg.dist.d4.biochem,nrepet=999)
 # Call:
 # mantel(xdis = veg.dist.d4, ydis = veg.dist.d4.biochem, method = "spear") 
 # 
-# Mantel statistic r: -0.1544 
-#       Significance: 0.881 
+# Mantel statistic r: 0.01616 
+#       Significance: 0.45 
 # 
 # Upper quantiles of permutations (null model):
 #   90%   95% 97.5%   99% 
-# 0.156 0.196 0.235 0.268 
+# 0.150 0.204 0.240 0.282 
 # 
 # Based on 999 permutations
 
@@ -169,21 +179,21 @@ mantel(veg.dist.d12, distanceMatrix_18s, method="spear")
 # Call:
 # mantel(xdis = veg.dist.d12, ydis = distanceMatrix_18s, method = "spear") 
 # 
-# Mantel statistic r: -0.07667 
-#       Significance: 0.701 
+# Mantel statistic r: -0.1005 
+#       Significance: 0.767 
 # 
 # Upper quantiles of permutations (null model):
 #   90%   95% 97.5%   99% 
-# 0.164 0.212 0.258 0.316 
+# 0.176 0.220 0.258 0.304 
 # 
 # Based on 999 permutations
 
 mantel.rtest(veg.dist.d12, distanceMatrix_18s,nrepet=999)
 # Monte-Carlo test
-# Observation: -0.05847429 
+# Observation: -0.08679852 
 # Call: mantelnoneuclid(m1 = m1, m2 = m2, nrepet = nrepet)
 # Based on 999 replicates
-# Simulated p-value: 0.663 
+# Simulated p-value: 0.722 
 
 mantel(veg.dist.d4, distanceMatrix_18s, method="spear")
 # Mantel statistic based on Spearman's rank correlation rho 
@@ -191,18 +201,18 @@ mantel(veg.dist.d4, distanceMatrix_18s, method="spear")
 # Call:
 # mantel(xdis = veg.dist.d4, ydis = distanceMatrix_18s, method = "spear") 
 # 
-# Mantel statistic r: 0.07444 
-#       Significance: 0.295 
+# Mantel statistic r: 0.1316 
+#       Significance: 0.193 
 # 
 # Upper quantiles of permutations (null model):
 #   90%   95% 97.5%   99% 
-# 0.184 0.233 0.279 0.327 
+# 0.187 0.235 0.281 0.322 
 # 
 # Based on 999 permutations
 
 mantel.rtest(veg.dist.d4, distanceMatrix_18s,nrepet=999)
 # Monte-Carlo test
-# Observation: 0.08361873 
+# Observation: 0.1491506 
 # Call: mantelnoneuclid(m1 = m1, m2 = m2, nrepet = nrepet)
 # Based on 999 replicates
-# Simulated p-value: 0.277 
+# Simulated p-value: 0.158 

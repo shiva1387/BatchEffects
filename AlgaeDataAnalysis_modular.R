@@ -2,7 +2,7 @@
 # Data Analysis in R-Malaysian algae data #
 ###########################################
 # Author(s): Shiv
-# Version: 08042014
+# Version: 12052014
 # Input: ".tsv" file from XCMS 
 # Software: XCMS
 # Modified By :Shivshankar Umashankar 
@@ -14,6 +14,7 @@
 
 # The same extraction and XCMS run was repeated again on 090414 will all the packages updated.
 # This run also provided the same number of features as algae_4setblanks_021213 (67467 features in total)
+# Added option to save as tables, the r2 and f values  from compute_r2_from_fvalue function
 
 ##############################################
 # Data,software used for obaining input data #
@@ -1587,6 +1588,9 @@ day4_nonzero_denum_values_r<-day4_nonzero_numdenum_r[[2]]
 day4_nonzero_fval_r2_r<-compute_r2_from_fvalue(svd_day4_nonzero,RunDay_day4)
 day4_nonzero_fvalues_r<-day4_nonzero_fval_r2_r[[1]]
 day4_nonzero_r2F_r<-day4_nonzero_fval_r2_r[[2]]
+# write.table(as.data.frame(day4_nonzero_r2F_r),"day4_nonzero_r2_RunDay.txt",quote=FALSE)
+# write.table(as.data.frame(day4_nonzero_fvalues_r),"day4_nonzero_fvalues_RunDay.txt",quote=FALSE)
+
 save(day4_nonzero_sigfeat_r,file='day4_nonzero_sigfeat_r.rda')
 
 day4_nonzero_sigfeat_s<-compute_perm_ftest(svd_day4_nonzero,SampleGroup_day4)
@@ -1601,6 +1605,10 @@ day4_nonzero_denum_values_s<-day4_nonzero_numdenum_s[[2]]
 day4_nonzero_fval_r2_s<-compute_r2_from_fvalue(svd_day4_nonzero,SampleGroup_day4)
 day4_nonzero_fvalues_s<-day4_nonzero_fval_r2_s[[1]]
 day4_nonzero_r2F_s<-day4_nonzero_fval_r2_s[[2]]
+
+# write.table(as.data.frame(day4_nonzero_r2F_s),"day4_nonzero_r2_Strain.txt",quote=FALSE)
+# write.table(as.data.frame(day4_nonzero_fvalues_s),"day4_nonzero_fvalues_Strain.txt",quote=FALSE)
+
 save(day4_nonzero_sigfeat_s,file='day4_nonzero_sigfeat_s.rda')
 
 ###################
@@ -1634,8 +1642,12 @@ day12_nonzero_num_values_r<-day12_nonzero_numdenum_r[[1]]
 day12_nonzero_denum_values_r<-day12_nonzero_numdenum_r[[2]]
 
 day12_nonzero_fval_r2_r<-compute_r2_from_fvalue(svd_day12_nonzero,RunDay_day12)
-day12_nonzero_fvalues_r<-day12_nonzero_fval_r2_s[[1]]
-day12_nonzero_r2F_r<-day12_nonzero_fval_r2_s[[2]]
+day12_nonzero_fvalues_r<-day12_nonzero_fval_r2_r[[1]]
+day12_nonzero_r2F_r<-day12_nonzero_fval_r2_r[[2]]
+
+# write.table(as.data.frame(day12_nonzero_r2F_r),"day12_nonzero_r2_RunDay.txt",quote=FALSE)
+# write.table(as.data.frame(day12_nonzero_fvalues_r),"day12_nonzero_fvalues_RunDay.txt",quote=FALSE)
+
 
 #save(day12_nonzero_sigfeat_r,file='day12_nonzero_sigfeat_r.rda')
 
@@ -1651,6 +1663,9 @@ day12_nonzero_denum_values_s<-day12_nonzero_numdenum_s[[2]]
 day12_nonzero_fval_r2_s<-compute_r2_from_fvalue(svd_day12_nonzero,SampleGroup_day12)
 day12_nonzero_fvalues_s<-day12_nonzero_fval_r2_s[[1]]
 day12_nonzero_r2F_s<-day12_nonzero_fval_r2_s[[2]]
+
+# write.table(as.data.frame(day12_nonzero_r2F_s),"day12_nonzero_r2_Strain.txt",quote=FALSE)
+# write.table(as.data.frame(day12_nonzero_fvalues_s),"day12_nonzero_fvalues_Strain.txt",quote=FALSE)
 
 save(day12_nonzero_sigfeat_s,file='day12_nonzero_sigfeat_s.rda')
 
