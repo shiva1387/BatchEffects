@@ -44,6 +44,44 @@ isotopeData$mzrt<-paste0(isotopeData$mz,'@',isotopeData$rt)
 nonSingleton<-duplicated(isotopeData$pcgroup) | duplicated(isotopeData$pcgroup, fromLast = TRUE)
 mzrt_nonSingleton<-isotopeData[which(nonSingleton==TRUE),]
 
+##### 18s rRNA data
+
+Chlorella18s<-readDNAStringSet('Chlorella18s.txt',format="fasta")
+distanceMatrix_18s<-stringDist(Chlorella18s, method = "levenshtein", ignoreCase = TRUE, diag = FALSE,
+                               upper = FALSE, type = "global")
+# fit <- hclust(distanceMatrix_18s, method="average") 
+# plot (fit)
+# dev.off()
+
+##### Biochemical data
+setwd('Biochemical_042014/')
+biochemData0<-read.table("biochemicalData.txt",header=TRUE,sep='\t')
+biochemData<-as.data.frame(biochemData0[,3:8])
+rownames(biochemData)<-biochemData0[,2]
+biochemData_d4<-biochemData[grep('D4', rownames(biochemData)),]
+biochemData_d4<-biochemData_d4[order(rownames(biochemData_d4)),]
+biochemData_d12<-biochemData[grep('D12', rownames(biochemData)),] 
+biochemData_d12<-biochemData_d12[order(rownames(biochemData_d12)),]
+
+#gsub ("a|b|c","",rownames(biochemData_d4))
+
+biochemData_d4$samplegroup<-as.factor(gsub ("a|b|c","",rownames(biochemData_d4)))
+biochemData_d4 <- data.table(biochemData_d4)
+biochemData_d4<-biochemData_d4[,lapply(.SD, mean),by=samplegroup]
+biochemData_d4<-as.data.frame(biochemData_d4)
+rownames(biochemData_d4)<-biochemData_d4[,1]
+biochemData_d4<-biochemData_d4[,2:7]
+biochemData_d4<-as.data.frame(scale(biochemData_d4,center=TRUE, scale=TRUE))
+
+biochemData_d12$samplegroup<-as.factor(gsub ("a|b|c","",rownames(biochemData_d12)))
+biochemData_d12 <- data.table(biochemData_d12)
+biochemData_d12<-biochemData_d12[,lapply(.SD, mean),by=samplegroup]
+biochemData_d12<-as.data.frame(biochemData_d12)
+rownames(biochemData_d12)<-biochemData_d12[,1]
+biochemData_d12<-biochemData_d12[,2:7]
+biochemData_d12<-as.data.frame(scale(biochemData_d12,center=TRUE, scale=TRUE))
+
+
 #######################################################
 ################ Functions ############################
 #######################################################
