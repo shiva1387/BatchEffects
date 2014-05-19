@@ -2,7 +2,7 @@
 # Data Analysis in R-Malaysian algae data #
 ###########################################
 # Author(s): Shiv
-# Version: 07052014
+# Version: 18052014
 # Input: ".txt" file 
 # Modified By :Shivshankar Umashankar 
 # Functions written here are used for analyzing singletons and non-singletons
@@ -32,6 +32,22 @@ batch_corrected_mat_d12<-svd_day12_nonzero[[4]]
 load("day12_x138_nonzero_sigfeat_s.rda") #loading strain data
 day12_nonzero_sigfeat_s_matrix<-day12_nonzero_sigfeat_s[[2]]
 batch_corrected_sig_mat_d12<-day12_nonzero_sigfeat_s_matrix[[4]] #as removing after 4 rounds of pc removal, runday effect is removed
+
+#Ensure all strain ids are in the same format
+colnames(batch_corrected_sig_mat_d12)<-as.character(gsub('D12_14','D12_014',colnames(batch_corrected_sig_mat_d12)))
+colnames(batch_corrected_sig_mat_d12)<-as.character(gsub('D12_84','D12_084',colnames(batch_corrected_sig_mat_d12)))
+colnames(batch_corrected_sig_mat_d12)<-as.character(gsub('D12_87','D12_087',colnames(batch_corrected_sig_mat_d12)))
+colnames(batch_corrected_sig_mat_d12)<-as.character(gsub('D12_94','D12_094',colnames(batch_corrected_sig_mat_d12)))
+colnames(batch_corrected_sig_mat_d12)<-as.character(gsub('D12_94','D12_094',colnames(batch_corrected_sig_mat_d12)))
+colnames(batch_corrected_sig_mat_d4)<-as.character(gsub('D4_14','D4_014',colnames(batch_corrected_sig_mat_d4)))
+
+colnames(batch_corrected_mat_d12)<-as.character(gsub('D12_14','D12_014',colnames(batch_corrected_mat_d12)))
+colnames(batch_corrected_mat_d12)<-as.character(gsub('D12_84','D12_084',colnames(batch_corrected_mat_d12)))
+colnames(batch_corrected_mat_d12)<-as.character(gsub('D12_87','D12_087',colnames(batch_corrected_mat_d12)))
+colnames(batch_corrected_mat_d12)<-as.character(gsub('D12_94','D12_094',colnames(batch_corrected_mat_d12)))
+colnames(batch_corrected_mat_d12)<-as.character(gsub('D12_94','D12_094',colnames(batch_corrected_mat_d12)))
+colnames(batch_corrected_mat_d4)<-as.character(gsub('D4_14','D4_014',colnames(batch_corrected_mat_d4)))
+
 
 # Reading singleton data
 
@@ -218,15 +234,21 @@ day4_bc_s<-combineRoundMzMatrix(batch_corrected_mat_d4)
 nonSingleton_day4<-matchAndExtract(day4_bc_s)
 write.table(nonSingleton_day4,"day4_nonsingletonList.txt",quote=FALSE,row.names=FALSE,sep="\t")
 
+##### Biochemical data comparisons
+## significant features
+significant_features<-combineRoundMzMatrix(metab_sig)
+significant_features_nonSingleton<-matchAndExtract(significant_features)
+write.table(significant_features_nonSingleton,"day4_differential_highTotCarbonVsOthers.txt",quote=FALSE,row.names=FALSE,sep="\t")
+
 ################################
 # Metabolite pathway analysis  #
 ################################
 
-metaboliteDataset<-read.table("day4_differential_metabolitesId.txt",header=TRUE,sep='\t')
+metaboliteDataset<-read.table("day12_differential_metabolitesId.txt",header=TRUE,sep='\t')
 metaboliteDataset<-as.data.frame(metaboliteDataset)
 metaboliteDataset<-formatMetaboliteData(metaboliteDataset)
 
-mappedMetaboliteData<-mappingMetabolites(batch_corrected_sig_mat_d4,metaboliteDataset)
+mappedMetaboliteData<-mappingMetabolites(batch_corrected_sig_mat_d12,metaboliteDataset)
 
 ### Averaging values of multiple hits
 
@@ -258,7 +280,7 @@ mappedMetabolites$samplegroup<-as.factor(gsub('D4_14','D4_014',mappedMetabolites
 mappedMetabolites<-mappedMetabolites[order(mappedMetabolites$samplegroup),]
 mappedMetabolites_21strains<-mappedMetabolites[which(mappedMetabolites$samplegroup!="D12_184"),]
 mappedMetabolites_21strains<-mappedMetabolites_21strains[which(mappedMetabolites_21strains$samplegroup!="D4_184"),]
-dt <- data.table(mappedMetabolites_21strains) # change between mappedMetabolites_21strains and mappedMetabolites to obtain d12_mean_21strains and d12_mean1, respectively.
+dt <- data.table(mappedMetabolites) # change between mappedMetabolites_21strains and mappedMetabolites to obtain d12_mean_21strains and d12_mean1, respectively.
 mappedMetabolites_mean<-dt[,lapply(.SD, mean),by=samplegroup]
 mappedMetabolites_mean<-as.data.frame(mappedMetabolites_mean) # 21 or 22 strains
 rownames(mappedMetabolites_mean)<-mappedMetabolites_mean[,1]
@@ -268,6 +290,15 @@ mappedMetabolites_mean<-mappedMetabolites_mean[,2:ncol(mappedMetabolites_mean)]
 #write.table(round(mappedMetabolites_mean_d12,4),"metabolitesIdentified_day12.txt",quote=FALSE,sep='\t',col.names=NA)
 #mappedMetabolites_mean_d4<-mappedMetabolites_mean
 #write.table(round(mappedMetabolites_mean_d4,4),"metabolitesIdentified_day4.txt",quote=FALSE,sep='\t',col.names=NA)
+
+### Plotting distance matrix
+
+d <- dist(mappedMetabolites_mean, method = "euclidean") # distance matrix
+fit <- hclust(d, method="average") 
+png("d12_differentialMetabolites.png")
+plot (fit,main="d12_differentialMetabolites")
+dev.off()
+
 
 ##### Analysis of meta data
 

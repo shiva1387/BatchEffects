@@ -249,48 +249,106 @@ cca.1 <- cca(t(batch_corrected_mat_d4)~ biochemDataForMetab_d4$biomass+biochemDa
 
 ########## Differential feature identification
 
-### Comparisons
+### Comparisons 
+### For comparisons based on biochemical traits, strains with the top 25% value is compared with others
 
-Chlorella<-c("D12_001","D12_006","D12_051","D12_104","D12_14","D12_177","D12_187","D12_207","D12_268","D12_283","D12_322","D12_325","D12_84","D12_87","D12_94")
+#Phylogeny
+Chlorella<-c("D12_001","D12_006","D12_014","D12_051","D12_084","D12_087","D12_094","D12_104",
+             "D12_177","D12_187","D12_207","D12_268","D12_283","D12_322","D12_325")
 Parachlorella<-c("D12_245","D12_252","D12_253","D12_254","D12_255","D12_258")
 UnIdchlorella<-"D12_184"
 
-AerobicPond<-"D12_051"
-SeaBassPond<-c("D12_252","D12_253","D12_2512","D12_255","D12_258")
+#Fatty acid
+highPalmitic<-c("D12_187","D12_084","D12_283","D12_001")
+otherPalmitic<-c("D12_006","D12_014","D12_051","D12_087","D12_094","D12_104","D12_177","D12_207",
+                 "D12_245","D12_252","D12_253","D12_254","D12_255","D12_258","D12_268","D12_322","D12_325") #strain 184 not included-no info on palmitic acid
 
-HighPalmitic<-c("D12_187","D12_84","D12_283","D12_001")
-OtherPalmitic<-c("D12_006","D12_14","D12_051","D12_87","D12_94","D12_104","D12_177","D12_184","D12_207",
-                 "D12_245","D12_252","D12_253","D12_254","D12_255","D12_258","D12_268","D12_322","D12_325")
+#Media
+provSeawater<-c("D12_245","D12_252","D12_253","D12_254","D12_255","D12_258")
+otherMedia<-c("D12_001","D12_006","D12_014","D12_051","D12_084","D12_087","D12_094","D12_104",
+              "D12_177","D12_187","D12_207","D12_268","D12_283","D12_322","D12_325") #strain 184 not included-no info on media
 
+#Biomass
+highBiomass<-rownames(biochemData_d12[biochemData_d12$biomass >= quantile(biochemData_d12$biomass,0.75),])
+otherBiomass<-setdiff(rownames(biochemData_d12),highBiomass)
+
+#Biomass productivity
+highBiomassProd<-rownames(biochemData_d12[biochemData_d12$biomassProduc >= quantile(biochemData_d12$biomassProduc,0.75),])
+otherBiomassProd<-setdiff(rownames(biochemData_d12),highBiomassProd)
+
+#Lipid productivity
+highLipidProd<-rownames(biochemData_d12[biochemData_d12$lipidProduc >= quantile(biochemData_d12$lipidProduc,0.75),])
+otherLipidProd<-setdiff(rownames(biochemData_d12),highLipidProd)
+  
+#Total lipid content
+highTotLipid<-rownames(biochemData_d12[biochemData_d12$totalLipidCon >= quantile(biochemData_d12$totalLipidCon,0.75),])
+otherTotLipid<-setdiff(rownames(biochemData_d12),highTotLipid)
+
+#Total protein content
+highTotProtein<-rownames(biochemData_d12[biochemData_d12$totalProtein >= quantile(biochemData_d12$totalProtein,0.75),])
+otherTotProtein<-setdiff(rownames(biochemData_d12),highTotProtein)
+
+#Total carbon content
+highTotCarbon<-rownames(biochemData_d12[biochemData_d12$totalCarbCon >= quantile(biochemData_d12$totalCarbCon,0.75),])
+otherTotCarbon<-setdiff(rownames(biochemData_d12),highTotCarbon)
+
+#################
 ms_data_day12_chlo<-batch_corrected_mat_d12[, grepl(paste(Chlorella,collapse="|"),colnames(batch_corrected_mat_d12))]
 ms_data_day12_parchlo<-batch_corrected_mat_d12[, grepl(paste(Parachlorella,collapse="|"),colnames(batch_corrected_mat_d12))]
 ms_data_day12_unidchlo<-batch_corrected_mat_d12[, grepl(paste(UnIdchlorella,collapse="|"),colnames(batch_corrected_mat_d12))]
 
-ms_data_day12_aerobic<-batch_corrected_mat_d12[, grepl(paste(AerobicPond,collapse="|"),colnames(batch_corrected_mat_d12))]
-ms_data_day12_seabass<-batch_corrected_mat_d12[, grepl(paste(SeaBassPond,collapse="|"),colnames(batch_corrected_mat_d12))]
+ms_data_day12_provSeawater<-batch_corrected_mat_d12[, grepl(paste(provSeawater,collapse="|"),colnames(batch_corrected_mat_d12))]
+ms_data_day12_otherMedia<-batch_corrected_mat_d12[, grepl(paste(otherMedia,collapse="|"),colnames(batch_corrected_mat_d12))]
 
-ms_data_day12_highPalm<-batch_corrected_mat_d12[, grepl(paste(HighPalmitic,collapse="|"),colnames(batch_corrected_mat_d12))]
-ms_data_day12_otherPalm<-batch_corrected_mat_d12[, grepl(paste(OtherPalmitic,collapse="|"),colnames(batch_corrected_mat_d12))]
+ms_data_day12_highPalm<-batch_corrected_mat_d12[, grepl(paste(highPalmitic,collapse="|"),colnames(batch_corrected_mat_d12))]
+ms_data_day12_otherPalm<-batch_corrected_mat_d12[, grepl(paste(otherPalmitic,collapse="|"),colnames(batch_corrected_mat_d12))]
 
+ms_data_day12_highBiomass<-batch_corrected_mat_d12[, grepl(paste(highBiomass,collapse="|"),colnames(batch_corrected_mat_d12))]
+ms_data_day12_otherBiomass<-batch_corrected_mat_d12[, grepl(paste(otherBiomass,collapse="|"),colnames(batch_corrected_mat_d12))]
 
-ms_data_day4_chlo<-batch_corrected_mat_d4[, grepl(paste(Chlorella,collapse="|"),colnames(batch_corrected_mat_d4))]
-ms_data_day4_parchlo<-batch_corrected_mat_d4[, grepl(paste(Parachlorella,collapse="|"),colnames(batch_corrected_mat_d4))]
-ms_data_day4_unidchlo<-batch_corrected_mat_d4[, grepl(paste(UnIdchlorella,collapse="|"),colnames(batch_corrected_mat_d4))]
+ms_data_day12_highBiomassProd<-batch_corrected_mat_d12[, grepl(paste(highBiomassProd,collapse="|"),colnames(batch_corrected_mat_d12))]
+ms_data_day12_otherBiomassProd<-batch_corrected_mat_d12[, grepl(paste(otherBiomassProd,collapse="|"),colnames(batch_corrected_mat_d12))]
 
-ms_data_day4_aerobic<-batch_corrected_mat_d4[, grepl(paste(AerobicPond,collapse="|"),colnames(batch_corrected_mat_d4))]
-ms_data_day4_seabass<-batch_corrected_mat_d4[, grepl(paste(SeaBassPond,collapse="|"),colnames(batch_corrected_mat_d4))]
+ms_data_day12_highLipidProd<-batch_corrected_mat_d12[, grepl(paste(highLipidProd,collapse="|"),colnames(batch_corrected_mat_d12))]
+ms_data_day12_otherLipidProd<-batch_corrected_mat_d12[, grepl(paste(otherLipidProd,collapse="|"),colnames(batch_corrected_mat_d12))]
+
+ms_data_day12_highTotLipid<-batch_corrected_mat_d12[, grepl(paste(highTotLipid,collapse="|"),colnames(batch_corrected_mat_d12))]
+ms_data_day12_otherTotLipid<-batch_corrected_mat_d12[, grepl(paste(otherTotLipid,collapse="|"),colnames(batch_corrected_mat_d12))]
+
+ms_data_day12_highTotProtein<-batch_corrected_mat_d12[, grepl(paste(highTotProtein,collapse="|"),colnames(batch_corrected_mat_d12))]
+ms_data_day12_otherTotProtein<-batch_corrected_mat_d12[, grepl(paste(otherTotProtein,collapse="|"),colnames(batch_corrected_mat_d12))]
+
+ms_data_day12_highTotCarbon<-batch_corrected_mat_d12[, grepl(paste(highTotCarbon,collapse="|"),colnames(batch_corrected_mat_d12))]
+ms_data_day12_otherTotCarbon<-batch_corrected_mat_d12[, grepl(paste(otherTotCarbon,collapse="|"),colnames(batch_corrected_mat_d12))]
 
 ### Sample groups
 
-ms_data_day4_chloParchlo<-cbind(ms_data_day4_chlo,ms_data_day4_parchlo)
-SampleGroup_chloParchlo<-c(rep("chlorella",ncol(ms_data_day4_chlo)),rep("Parchlorella",ncol(ms_data_day4_parchlo)))
+ms_data_day12_chloParchlo<-cbind(ms_data_day12_chlo,ms_data_day12_parchlo)
+SampleGroup_chloParchlo<-c(rep("chlorella",ncol(ms_data_day12_chlo)),rep("Parchlorella",ncol(ms_data_day12_parchlo)))
 
-ms_data_day12_aeroSea<-cbind(ms_data_day12_aerobic,ms_data_day12_seabass)
-SampleGroup_aeroSea<-c(rep("Aerobic",ncol(ms_data_day12_aerobic)),rep("SeaBass",ncol(ms_data_day12_seabass)))
+ms_data_day12_SeawaterVsOther<-cbind(ms_data_day12_provSeawater,ms_data_day12_otherMedia)
+SampleGroup_SeawaterVsOther<-c(rep("Seawater",ncol(ms_data_day12_provSeawater)),rep("Other",ncol(ms_data_day12_otherMedia)))
 
 ms_data_day12_highVsotherPalm<-cbind(ms_data_day12_highPalm,ms_data_day12_otherPalm)
 SampleGroup_highVsotherPalm<-c(rep("highPalm",ncol(ms_data_day12_highPalm)),rep("otherPalm",ncol(ms_data_day12_otherPalm)))
 
+ms_data_day12_highVsotherBiomass<-cbind(ms_data_day12_highBiomass,ms_data_day12_otherBiomass)
+SampleGroup_highVsotherBiomass<-c(rep("highBiomass",ncol(ms_data_day12_highBiomass)),rep("otherBiomass",ncol(ms_data_day12_otherBiomass)))
+
+ms_data_day12_highVsotherBiomassProd<-cbind(ms_data_day12_highBiomassProd,ms_data_day12_otherBiomassProd)
+SampleGroup_highVsotherBiomassProd<-c(rep("highBiomassProd",ncol(ms_data_day12_highBiomassProd)),rep("otherBiomassProd",ncol(ms_data_day12_otherBiomassProd)))
+
+ms_data_day12_highVsotherLipidProd<-cbind(ms_data_day12_highLipidProd,ms_data_day12_otherLipidProd)
+SampleGroup_highVsotherLipidProd<-c(rep("highLipid",ncol(ms_data_day12_highLipidProd)),rep("otherLipid",ncol(ms_data_day12_otherLipidProd)))
+
+ms_data_day12_highVsotherTotLipid<-cbind(ms_data_day12_highTotLipid,ms_data_day12_otherTotLipid)
+SampleGroup_highVsotherTotLipid<-c(rep("highTotLipid",ncol(ms_data_day12_highTotLipid)),rep("otherTotLipid",ncol(ms_data_day12_otherTotLipid)))
+
+ms_data_day12_highVsotherTotProtein<-cbind(ms_data_day12_highTotProtein,ms_data_day12_otherTotProtein)
+SampleGroup_highVsotherTotProtein<-c(rep("highTotProtein",ncol(ms_data_day12_highTotProtein)),rep("otherTotProtein",ncol(ms_data_day12_otherTotProtein)))
+
+ms_data_day12_highVsotherTotCarbon<-cbind(ms_data_day12_highTotCarbon,ms_data_day12_otherTotCarbon)
+SampleGroup_highVsotherTotCarbon<-c(rep("highTotCarbon",ncol(ms_data_day12_highTotCarbon)),rep("otherTotCarbon",ncol(ms_data_day12_otherTotCarbon)))
 
 SampleGroup<-sapply(colnames(batch_corrected_mat_d12), function(x) paste(strsplit(x,"_")[[1]][1:2],collapse = "_"))
 SampleGroup<-as.vector(SampleGroup)
@@ -301,8 +359,8 @@ SampleGroup
 
 ######## Permutation based test statistic
 
-classlabel_factor<-as.numeric(as.factor(SampleGroup))-1
-data_matrix<-as.matrix(batch_corrected_mat_d12)
+classlabel_factor<-as.numeric(as.factor(SampleGroup_highVsotherTotCarbon))-1
+data_matrix<-as.matrix(ms_data_day12_highVsotherTotCarbon)
 dataset_sig_features<-mt.maxT(data_matrix,classlabel_factor,test="f",side="abs",fixed.seed.sampling="y",B=1000,nonpara="n")
 # dataset_sig_featureold<-dataset_sig_features
 # dataset_sig_features<-as.matrix(dataset_sig_features)
@@ -310,10 +368,16 @@ p_values_sig<-sort(dataset_sig_features$rawp)
 id.sig_dataset <- sort(dataset_sig_features[dataset_sig_features$adjp < 0.05,c(1)]) #getting the column which provides index of rows satisying the condition
 metab_sig<-cbind(data_matrix[id.sig_dataset,],round(dataset_sig_features$adjp[dataset_sig_features$index %in% id.sig_dataset],5))
 # 
-# No significant features which were different between chlorella and parachlorella at day12 (f test,FDR) or day 4
+# Zero features different between chlorella and parachlorella at day12 (f test,FDR) or day 4
+# Zero features different between Prov-Seawater media and other media at day12 (f test,FDR) or day 4
 # Features are significantly different between aerobic pond Vs SeaBass pond at day 12 -131 features and day4-98 features
-# Features are significantly different between high palmitic strains Vs others at day12-109 features and day4-  features 
-
+# Features are significantly different between high palmitic strains Vs others at day12-110 features and day4-18  features 
+# Features are significantly different between high Biomass Vs others at day12-26 features and day4-55  features 
+# Features are significantly different between high BiomassProduc Vs others at day12-26 features and day4-95  features 
+# Features are significantly different between high lipid produc strains Vs others at day12-206 features and day4-28  features 
+# Features are significantly different between high TotalLipid strains Vs others at day12-272 features and day4-7  features 
+# Features are significantly different between high TotalProtein strains Vs others at day12-272 features and day4-174  features 
+# Features are significantly different between high TotalCarbon strains Vs others at day12-134 features and day4-  features 
 
 # #########################################
 # # now let's use multtest to get adjusted p-values
