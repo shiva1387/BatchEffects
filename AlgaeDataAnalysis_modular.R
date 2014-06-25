@@ -2,7 +2,7 @@
 # Data Analysis in R-Malaysian algae data #
 ###########################################
 # Author(s): Shiv
-# Version: 12052014
+# Version: 18062014
 # Input: ".tsv" file from XCMS 
 # Software: XCMS
 # Modified By :Shivshankar Umashankar 
@@ -1466,7 +1466,9 @@ compute_pval_list<-function(sigfeat_pval) {
   listofpval<-vector("list", length(sigfeat_pval)) #list()
   for(i in 1:length(sigfeat_pval))
   {
-    listofpval[i]<-sigfeat_pval[[i]][4]
+    #index teststat  rawp  adjp
+    #listofpval[i]<-sigfeat_pval[[i]][4]#col 4 gives adj.pvalues
+    listofpval[i]<-sigfeat_pval[[i]][3]#col 4 gives raw.pvalues #modified by shiv on June 18 2014
   }
   sigfeat_pval_pvaldf<-do.call(cbind.data.frame, listofpval)
 }
@@ -1580,6 +1582,8 @@ day4_nonzero_sigfeat_r<-compute_perm_ftest(svd_day4_nonzero,RunDay_day4)
 day4_nonzero_sigfeat_r_pval<-day4_nonzero_sigfeat_r[[1]]
 day4_nonzero_sigfeat_r_matrix<-day4_nonzero_sigfeat_r[[2]]
 day4_nonzero_sigfeat_r_pvaldf<-compute_pval_list(day4_nonzero_sigfeat_r_pval)
+# colnames(day4_nonzero_sigfeat_r_pvaldf)<-paste0("pc.",1:ncol(day4_nonzero_sigfeat_r_pvaldf))
+# write.table(as.data.frame(day4_nonzero_sigfeat_r_pvaldf),"day4_nonzero_pvalues_RunDay.txt",quote=FALSE)
 day4_no_nonzero_sigfeat_r<-compute_no_features(day4_nonzero_sigfeat_r_matrix)
 day4_nonzero_numdenum_r<-compute_numdenum_ftest(svd_day4_nonzero,RunDay_day4)
 day4_nonzero_num_values_r<-day4_nonzero_numdenum_r[[1]]
@@ -1597,6 +1601,8 @@ day4_nonzero_sigfeat_s<-compute_perm_ftest(svd_day4_nonzero,SampleGroup_day4)
 day4_nonzero_sigfeat_s_pval<-day4_nonzero_sigfeat_s[[1]]
 day4_nonzero_sigfeat_s_matrix<-day4_nonzero_sigfeat_s[[2]]
 day4_nonzero_sigfeat_s_pvaldf<-compute_pval_list(day4_nonzero_sigfeat_s_pval)
+# colnames(day4_nonzero_sigfeat_s_pvaldf)<-paste0("pc.",1:ncol(day4_nonzero_sigfeat_s_pvaldf))
+# write.table(as.data.frame(day4_nonzero_sigfeat_s_pvaldf),"day4_nonzero_pvalues_Strain.txt",quote=FALSE)
 day4_no_nonzero_sigfeat_s<-compute_no_features(day4_nonzero_sigfeat_s_matrix)
 day4_nonzero_numdenum_s<-compute_numdenum_ftest(svd_day4_nonzero,SampleGroup_day4)
 day4_nonzero_num_values_s<-day4_nonzero_numdenum_s[[1]]
@@ -1636,6 +1642,9 @@ day12_nonzero_sigfeat_r<-compute_perm_ftest(svd_day12_nonzero,RunDay_day12)
 day12_nonzero_sigfeat_r_pval<-day12_nonzero_sigfeat_r[[1]]
 day12_nonzero_sigfeat_r_matrix<-day12_nonzero_sigfeat_r[[2]]
 day12_nonzero_sigfeat_r_pvaldf<-compute_pval_list(day12_nonzero_sigfeat_r_pval)
+# colnames(day12_nonzero_sigfeat_r_pvaldf)<-paste0("pc.",1:ncol(day12_nonzero_sigfeat_r_pvaldf))
+# write.table(as.data.frame(day12_nonzero_sigfeat_r_pvaldf),"day12_nonzero_pvalues_Runday.txt",quote=FALSE)
+
 day12_no_nonzero_sigfeat_r<-compute_no_features(day12_nonzero_sigfeat_r_matrix)
 day12_nonzero_numdenum_r<-compute_numdenum_ftest(svd_day12_nonzero,RunDay_day12)
 day12_nonzero_num_values_r<-day12_nonzero_numdenum_r[[1]]
@@ -1655,6 +1664,9 @@ day12_nonzero_sigfeat_s<-compute_perm_ftest(svd_day12_nonzero,SampleGroup_day12)
 day12_nonzero_sigfeat_s_pval<-day12_nonzero_sigfeat_s[[1]]
 day12_nonzero_sigfeat_s_matrix<-day12_nonzero_sigfeat_s[[2]]
 day12_nonzero_sigfeat_s_pvaldf<-compute_pval_list(day12_nonzero_sigfeat_s_pval)
+# colnames(day12_nonzero_sigfeat_s_pvaldf)<-paste0("pc.",1:ncol(day12_nonzero_sigfeat_s_pvaldf))
+# write.table(as.data.frame(day12_nonzero_sigfeat_s_pvaldf),"day12_nonzero_pvalues_Strain.txt",quote=FALSE)
+
 day12_no_nonzero_sigfeat_s<-compute_no_features(day12_nonzero_sigfeat_s_matrix)
 day12_nonzero_numdenum_s<-compute_numdenum_ftest(svd_day12_nonzero,SampleGroup_day12)
 day12_nonzero_num_values_s<-day12_nonzero_numdenum_s[[1]]

@@ -16,6 +16,12 @@
 rm(list = ls()) # Clears the workspace
 graphics.off() # Close all windows
 
+##### Loading required packages 
+
+library(data.table)
+library(multtest)
+library(ggplot2)
+
 ### Reading Data-svd and differential metabolites
 
 setwd('../../AlgaeData/results.from.scelse.cluster.211213/')
@@ -60,19 +66,10 @@ isotopeData$mzrt<-paste0(isotopeData$mz,'@',isotopeData$rt)
 nonSingleton<-duplicated(isotopeData$pcgroup) | duplicated(isotopeData$pcgroup, fromLast = TRUE)
 mzrt_nonSingleton<-isotopeData[which(nonSingleton==TRUE),]
 
-##### 18s rRNA data
-
-Chlorella18s<-readDNAStringSet('Chlorella18s.txt',format="fasta")
-distanceMatrix_18s<-stringDist(Chlorella18s, method = "levenshtein", ignoreCase = TRUE, diag = FALSE,
-                               upper = FALSE, type = "global")
-# fit <- hclust(distanceMatrix_18s, method="average") 
-# plot (fit)
-# dev.off()
-
 ##### Biochemical data
 setwd('Biochemical_042014/')
 biochemData0<-read.table("biochemicalData.txt",header=TRUE,sep='\t')
-biochemData<-as.data.frame(biochemData0[,3:8])
+biochemData<-as.data.frame(biochemData0[,3:9])
 rownames(biochemData)<-biochemData0[,2]
 biochemData_d4<-biochemData[grep('D4', rownames(biochemData)),]
 biochemData_d4<-biochemData_d4[order(rownames(biochemData_d4)),]
@@ -86,7 +83,7 @@ biochemData_d4 <- data.table(biochemData_d4)
 biochemData_d4<-biochemData_d4[,lapply(.SD, mean),by=samplegroup]
 biochemData_d4<-as.data.frame(biochemData_d4)
 rownames(biochemData_d4)<-biochemData_d4[,1]
-biochemData_d4<-biochemData_d4[,2:7]
+biochemData_d4<-biochemData_d4[,2:8]
 biochemData_d4<-as.data.frame(scale(biochemData_d4,center=TRUE, scale=TRUE))
 
 biochemData_d12$samplegroup<-as.factor(gsub ("a|b|c","",rownames(biochemData_d12)))
@@ -94,9 +91,23 @@ biochemData_d12 <- data.table(biochemData_d12)
 biochemData_d12<-biochemData_d12[,lapply(.SD, mean),by=samplegroup]
 biochemData_d12<-as.data.frame(biochemData_d12)
 rownames(biochemData_d12)<-biochemData_d12[,1]
-biochemData_d12<-biochemData_d12[,2:7]
+biochemData_d12<-biochemData_d12[,2:7] #There is no growth rate associated with day 12
 biochemData_d12<-as.data.frame(scale(biochemData_d12,center=TRUE, scale=TRUE))
 
+### Plotting distance matrix
+d <- dist(biochemData_d4, method = "euclidean") # distance matrix
+fit <- hclust(d, method="average") 
+png("d4_biochemData_d4.png")
+plot (fit,main="d14_biochemData_d4")
+dev.off()
+
+##### 18s rRNA data
+Chlorella18s<-readDNAStringSet('Chlorella18s.txt',format="fasta")
+distanceMatrix_18s<-stringDist(Chlorella18s, method = "levenshtein", ignoreCase = TRUE, diag = FALSE,
+                               upper = FALSE, type = "global")
+# fit <- hclust(distanceMatrix_18s, method="average") 
+# plot (fit)
+# dev.off()
 
 #######################################################
 ################ Functions ############################
@@ -238,7 +249,7 @@ write.table(nonSingleton_day4,"day4_nonsingletonList.txt",quote=FALSE,row.names=
 ## significant features
 significant_features<-combineRoundMzMatrix(metab_sig)
 significant_features_nonSingleton<-matchAndExtract(significant_features)
-write.table(significant_features_nonSingleton,"day4_differential_highTotCarbonVsOthers.txt",quote=FALSE,row.names=FALSE,sep="\t")
+write.table(significant_features_nonSingleton,"day12_differential_bestVsWorst.txt",quote=FALSE,row.names=FALSE,sep="\t")
 
 ################################
 # Metabolite pathway analysis  #
@@ -253,7 +264,8 @@ mappedMetaboliteData<-mappingMetabolites(batch_corrected_sig_mat_d12,metaboliteD
 ### Averaging values of multiple hits
 
 #Averaging by compound ids
-penul_col<-ncol(mappedMetaboliteData)-1 #as the last column contains p values
+penul_col<-ncol(mappedMetaboliteData)-1 # -1 to be used only for differential metabolites
+#as the last column contains p values
 
 mappedMetabolites <- data.table(mappedMetaboliteData[,c(2,5:penul_col)]) #columns 1,3,4 are meta data
 colnames(mappedMetabolites)[1]<-"CompoundName"
@@ -278,8 +290,8 @@ mappedMetabolites$samplegroup<-as.factor(gsub('D12_94','D12_094',mappedMetabolit
 mappedMetabolites$samplegroup<-as.factor(gsub('D12_94','D12_094',mappedMetabolites$samplegroup))
 mappedMetabolites$samplegroup<-as.factor(gsub('D4_14','D4_014',mappedMetabolites$samplegroup))
 mappedMetabolites<-mappedMetabolites[order(mappedMetabolites$samplegroup),]
-mappedMetabolites_21strains<-mappedMetabolites[which(mappedMetabolites$samplegroup!="D12_184"),]
-mappedMetabolites_21strains<-mappedMetabolites_21strains[which(mappedMetabolites_21strains$samplegroup!="D4_184"),]
+#mappedMetabolites_21strains<-mappedMetabolites[which(mappedMetabolites$samplegroup!="D12_184"),]
+#mappedMetabolites_21strains<-mappedMetabolites_21strains[which(mappedMetabolites_21strains$samplegroup!="D4_184"),]
 dt <- data.table(mappedMetabolites) # change between mappedMetabolites_21strains and mappedMetabolites to obtain d12_mean_21strains and d12_mean1, respectively.
 mappedMetabolites_mean<-dt[,lapply(.SD, mean),by=samplegroup]
 mappedMetabolites_mean<-as.data.frame(mappedMetabolites_mean) # 21 or 22 strains
@@ -287,9 +299,9 @@ rownames(mappedMetabolites_mean)<-mappedMetabolites_mean[,1]
 mappedMetabolites_mean<-mappedMetabolites_mean[,2:ncol(mappedMetabolites_mean)]
 # mappedMetabolites_mean_d12_21strains<-mappedMetabolites_mean
 #mappedMetabolites_mean_d12<-mappedMetabolites_mean
-#write.table(round(mappedMetabolites_mean_d12,4),"metabolitesIdentified_day12.txt",quote=FALSE,sep='\t',col.names=NA)
+#write.table(round(mappedMetabolites_mean,4),"metabolitesIdentified_day12.txt",quote=FALSE,sep='\t',col.names=NA)
 #mappedMetabolites_mean_d4<-mappedMetabolites_mean
-#write.table(round(mappedMetabolites_mean_d4,4),"metabolitesIdentified_day4.txt",quote=FALSE,sep='\t',col.names=NA)
+#write.table(round(mappedMetabolites_mean,4),"metabolitesIdentified_day4.txt",quote=FALSE,sep='\t',col.names=NA)
 
 ### Plotting distance matrix
 
@@ -320,14 +332,14 @@ adonis(mappedMetabolites_mean_d12~ biochemData_d12$biomass+biochemData_d12$lipid
 # biochemData_d12$lipidProduc    1     85.53  85.532 1.16979 0.05268  0.257  
 # biochemData_d12$totalLipidCon  1     86.68  86.681 1.18550 0.05339  0.260  
 # biochemData_d12$totalProtein   1     80.98  80.984 1.10758 0.04988  0.322  
-# biochemData_d12$totalCarbCon   1     71.40  71.395 0.97644 0.04398  0.497  
+# biochemData_d12$totalCarbCon   1     71.40  71.39Bio5 0.97644 0.04398  0.497  
 # Residuals                     16   1169.88  73.118         0.72060         
 # Total                         21   1623.50                 1.00000         
 # ---
 #   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 ### Mantel test
-veg.dist.d12 <- vegdist(as.matrix(mappedMetabolites_mean_d12_21strains),method="euclidean") #d12_mean1[,2:10688]
+veg.dist.d12 <- vegdist(as.matrix(mappedMetabolites_mean_d12),method="euclidean") #d12_mean1[,2:10688]
 veg.dist.d12.biochem <- vegdist(as.matrix(biochemData_d12),method="euclidean")
 mantel(veg.dist.d12, veg.dist.d12.biochem, method="spear")
 
@@ -420,22 +432,21 @@ mantel(veg.dist.d12, distanceMatrix_18s, method="spear")
 
 ### Permanova
 adonis(mappedMetabolites_mean_d4~ biochemData_d4$biomass+biochemData_d4$lipidProduc+biochemData_d4$totalLipidCon
-       +biochemData_d4$totalProtein+biochemData_d4$totalCarbCon, method = "euclidean", perm=999)
+       +biochemData_d4$totalProtein+biochemData_d4$totalCarbCon +biochemData_d4$growthRate, method = "euclidean", perm=999)
 # Call:
-#   adonis(formula = mappedMetabolites_mean_d4 ~ biochemData_d4$biomass +      biochemData_d4$lipidProduc + biochemData_d4$totalLipidCon +      biochemData_d4$totalProtein + biochemData_d4$totalCarbCon,      permutations = 999, method = "euclidean") 
+#   adonis(formula = mappedMetabolites_mean_d4 ~ biochemData_d4$biomass +      biochemData_d4$lipidProduc + biochemData_d4$totalLipidCon +      biochemData_d4$totalProtein + biochemData_d4$totalCarbCon +      biochemData_d4$growthRate, permutations = 999, method = "euclidean") 
 # 
 # Terms added sequentially (first to last)
 # 
-# Df SumsOfSqs MeanSqs F.Model      R2 Pr(>F)  
-# biochemData_d4$biomass        1     90.55  90.554 1.08956 0.05011  0.358  
-# biochemData_d4$lipidProduc    1     82.77  82.769 0.99589 0.04580  0.424  
-# biochemData_d4$totalLipidCon  1    123.05 123.052 1.48058 0.06810  0.070 .
-# biochemData_d4$totalProtein   1     81.48  81.480 0.98039 0.04509  0.482  
-# biochemData_d4$totalCarbCon   1     99.39  99.388 1.19585 0.05500  0.241  
-# Residuals                    16   1329.76  83.110         0.73589         
-# Total                        21   1807.00                 1.00000         
-# ---
-#   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# Df SumsOfSqs MeanSqs F.Model      R2 Pr(>F)
+# biochemData_d4$biomass        1     65.97  65.968 1.33942 0.06524  0.135
+# biochemData_d4$lipidProduc    1     49.12  49.122 0.99738 0.04858  0.481
+# biochemData_d4$totalLipidCon  1     31.44  31.441 0.63838 0.03109  0.945
+# biochemData_d4$totalProtein   1     33.04  33.038 0.67081 0.03267  0.900
+# biochemData_d4$totalCarbCon   1     55.61  55.606 1.12905 0.05499  0.301
+# biochemData_d4$growthRate     1     37.28  37.285 0.75703 0.03687  0.795
+# Residuals                    15    738.76  49.251         0.73056       
+# Total                        21   1011.22                 1.00000  
 
 ### Mantel test
 veg.dist.d4 <- vegdist(as.matrix(mappedMetabolites_mean_d4),method="euclidean") #d12_mean1[,2:10688]
@@ -446,28 +457,28 @@ mantel(veg.dist.d4, veg.dist.d4.biochem, method="spear")
 # Call:
 # mantel(xdis = veg.dist.d4, ydis = veg.dist.d4.biochem, method = "spear") 
 # 
-# Mantel statistic r: 0.2208 
-#       Significance: 0.032 
+# Mantel statistic r: -0.01178 
+#       Significance: 0.559 
 # 
 # Upper quantiles of permutations (null model):
 #   90%   95% 97.5%   99% 
-# 0.150 0.195 0.234 0.270 
+# 0.148 0.183 0.233 0.262 
 # 
 # Based on 999 permutations
 
-veg.dist.d4 <- vegdist(as.matrix(mappedMetabolites_mean_d4),method="euclidean") #d12_mean1[,2:10688]
+veg.dist.d4 <- vegdist(as.matrix(mappedMetabolites_mean_d4_21strains),method="euclidean") #d12_mean1[,2:10688]
 mantel(veg.dist.d4, distanceMatrix_18s, method="spear")
 # Mantel statistic based on Spearman's rank correlation rho 
 # 
 # Call:
 # mantel(xdis = veg.dist.d4, ydis = distanceMatrix_18s, method = "spear") 
 # 
-# Mantel statistic r: -0.07577 
-# Significance: 0.697 
+# Mantel statistic r: 0.1081 
+#       Significance: 0.225 
 # 
 # Upper quantiles of permutations (null model):
-# 90%   95% 97.5%   99% 
-# 0.171 0.217 0.246 0.286 
+#   90%   95% 97.5%   99% 
+# 0.174 0.233 0.276 0.324 
 # 
 # Based on 999 permutations
 
@@ -476,19 +487,20 @@ mantel(veg.dist.d4, distanceMatrix_18s, method="spear")
 
 ### Permanova
 adonis(mappedMetabolites_mean_d4~ biochemData_d4$biomass+biochemData_d4$lipidProduc+biochemData_d4$totalLipidCon
-          +biochemData_d4$totalProtein+biochemData_d4$totalCarbCon, method = "euclidean", perm=999)
+          +biochemData_d4$totalProtein+biochemData_d4$totalCarbCon+biochemData_d4$growthRate, method = "euclidean", perm=999)
 # Call:
-#   adonis(formula = mappedMetabolites_mean_d4 ~ biochemData_d4$biomass +      biochemData_d4$lipidProduc + biochemData_d4$totalLipidCon +      biochemData_d4$totalProtein + biochemData_d4$totalCarbCon,      permutations = 999, method = "euclidean") 
+#   adonis(formula = mappedMetabolites_mean_d4 ~ biochemData_d4$biomass +      biochemData_d4$lipidProduc + biochemData_d4$totalLipidCon +      biochemData_d4$totalProtein + biochemData_d4$totalCarbCon +      biochemData_d4$growthRate, permutations = 999, method = "euclidean") 
 # 
 # Terms added sequentially (first to last)
 # 
 # Df SumsOfSqs MeanSqs F.Model      R2 Pr(>F)
-# biochemData_d4$biomass        1     48.08  48.085 1.33128 0.06412  0.183
-# biochemData_d4$lipidProduc    1     34.04  34.043 0.94253 0.04540  0.518
-# biochemData_d4$totalLipidCon  1     23.31  23.312 0.64543 0.03109  0.856
-# biochemData_d4$totalProtein   1     23.06  23.059 0.63841 0.03075  0.876
-# biochemData_d4$totalCarbCon   1     43.48  43.476 1.20370 0.05798  0.237
-# Residuals                    16    577.90  36.119         0.77066       
+# biochemData_d4$biomass        1     48.08  48.085 1.31000 0.06412  0.174
+# biochemData_d4$lipidProduc    1     34.04  34.043 0.92746 0.04540  0.515
+# biochemData_d4$totalLipidCon  1     23.31  23.312 0.63511 0.03109  0.883
+# biochemData_d4$totalProtein   1     23.06  23.059 0.62821 0.03075  0.900
+# biochemData_d4$totalCarbCon   1     43.48  43.476 1.18446 0.05798  0.262
+# biochemData_d4$growthRate     1     27.32  27.319 0.74428 0.03643  0.751
+# Residuals                    15    550.59  36.706         0.73423       
 # Total                        21    749.88                 1.00000 
 
 ### Mantel test
@@ -500,16 +512,16 @@ mantel(veg.dist.d4, veg.dist.d4.biochem, method="spear")
 # Call:
 # mantel(xdis = veg.dist.d4, ydis = veg.dist.d4.biochem, method = "spear") 
 # 
-# Mantel statistic r: 0.03536 
-#       Significance: 0.361 
+# Mantel statistic r: 0.02485 
+#       Significance: 0.398 
 # 
 # Upper quantiles of permutations (null model):
 #   90%   95% 97.5%   99% 
-# 0.142 0.196 0.231 0.261 
+# 0.154 0.195 0.233 0.259 
 # 
 # Based on 999 permutations
 
-veg.dist.d4 <- vegdist(as.matrix(mappedMetabolites_mean_d4),method="euclidean") #d12_mean1[,2:10688]
+veg.dist.d4 <- vegdist(as.matrix(mappedMetabolites_mean),method="euclidean") #d12_mean1[,2:10688]
 mantel(veg.dist.d4, distanceMatrix_18s, method="spear")
 # Mantel statistic based on Spearman's rank correlation rho 
 # 
@@ -517,11 +529,11 @@ mantel(veg.dist.d4, distanceMatrix_18s, method="spear")
 # mantel(xdis = veg.dist.d4, ydis = distanceMatrix_18s, method = "spear") 
 # 
 # Mantel statistic r: 0.1805 
-#       Significance: 0.103 
+#       Significance: 0.102 
 # 
 # Upper quantiles of permutations (null model):
 #   90%   95% 97.5%   99% 
-# 0.182 0.230 0.274 0.318 
+# 0.177 0.237 0.277 0.322 
 # 
 # Based on 999 permutations
 

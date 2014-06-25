@@ -27,6 +27,8 @@ library(gsubfn)
 library(vegan)
 library(Biostrings)
 library(psych)
+library(data.table)
+library(multtest)
 
 ### Reading Data
 
@@ -40,33 +42,67 @@ biochemData_d12<-biochemData[grep('D12', rownames(biochemData)),]
 biochemData_d12<-as.data.frame(scale(biochemData_d12,center=TRUE, scale=TRUE))
 
 biochemData1<-as.data.frame(scale(biochemData,center=TRUE,scale=TRUE)) #scaling and centering the complete matrix
-biochemData1<-biochemData-min(biochemData)
 
 # Analysis
-d<-biochemData1[,apply(biochemData1, 2, var, na.rm=TRUE) != 0] #removing mz features which have constant variance
-fit_d <- prcomp(d) #uses SVD # #shiv edited on May 7 2014. Removed scaling as data has been scaled at the start
+fit_d <- prcomp(biochemData1) #uses SVD # #shiv edited on May 7 2014. Removed scaling as data has been scaled at the start
 scores_pca_d<-as.data.frame(fit_d$x)
 
 # plot(fit_d$x[,1],fit_d$x[,2])
 # text(fit_d$x[,1],fit_d$x[,2],rownames(d),pos=3)
   
-pcaPlotOutput<-pcaPlot(fit_d,rownames(d),biochemData0[,1])#gsub ("a|b|c","",rownames(biochemData_d12)))#biochemData1[,1])
-#print(pcaPlotOutput)
-ggsave("bioChem_pcaPlotOutput.pdf",pcaPlotOutput)
+pcaPlotOutput<-pcaPlot(fit_d,rownames(biochemData1),biochemData0[,1])#gsub ("a|b|c","",rownames(biochemData_d12)))#biochemData1[,1])
+pdf("bioChem_pcaPloTotal.pdf",height=12,width=12)
+print(pcaPlotOutput)
 dev.off()
 
 #correlation analysis and plot
 
-correlationPlotOutput<-correlationPlot(biochemData1)
+correlationPlotOutput<-correlationPlot(biochemData_d4)
 print(correlationPlotOutput)
 ggsave("bioChem_correlationPlotOutput.pdf",p1)
 dev.off()
 
 #Pairs plot
 
-png("biochem_day4_pairs.png")
-pairs(biochemData_d4,main="DAY 4")
+#pairs(biochemData_d4,main="DAY 4")
+g1<-ggpairs(biochemData_d4,axisLabels='none', lower=list(continuous="smooth"),diag=list(continuous='density'),title="DAY 4")
+ggsave("biochem_day4.pdf",g1)
+dev.off
+
+###################################################
+########## Exploratory data analysis ##############
+###################################################
+
+## PCA plot
+
+paraChlorella<-c("D12_245","D12_252","D12_253","D12_254","D12_255","D12_258")
+Chlorella<-c("D12_001","D12_006","D12_014","D12_051","D12_08124","D12_087","D12_094","D12_104",
+             "D12_177","D12_187","D12_207","D12_268","D12_283","D12_322","D12_325") #strain 1812 not included-no info on media
+biochemData_d12$genus<-rep('NA',nrow(biochemData_d12))
+biochemData_d12 <- transform(biochemData_d12, genus = ifelse(rownames(biochemData_d12) %in% Chlorella, "Chlorella", "paraChlorella"))
+biochemData_d12$genus[rownames(biochemData_d12)=="D12_184"]<-"Unidentified"
+fit_d <- prcomp(biochemData_d12[,c(1,4,5)]) #uses SVD # #shiv edited on May 7 20112. Removed scaling as data has been scaled at the start
+scores_pca_d<-as.data.frame(fit_d$x)
+pcaPlotOutput<-pcaPlot(fit_d,rownames(biochemData_d12),biochemData_d12$genus)#biochemData1[,1]))
+
+ggsave("day12_LipidProteinBiomass_pca.pdf",pcaPlotOutput)
 dev.off()
+
+### Boxplot
+
+biochemData_d4$samplegroups<-rownames(biochemData_d4)
+test1<-melt(biochemData_d4)
+p<-ggplot(test1,aes(variable,value))+stat_boxplot(geom ='errorbar')+geom_boxplot()+geom_point(color="blue", aplha=0.05)+
+  ggtitle("Day4")+ theme_bw() + theme(axis.text.x=element_text(angle = 45, hjust = 1,size=18),axis.text.y=element_text(size=18),
+                     panel.grid.major.x = element_blank(), # to x remove gridlines
+                     panel.grid.major.y = element_blank(), # to y remove gridlines
+                     panel.border = element_blank(),  # remove top and right border
+                     panel.background = element_blank(),
+                     axis.line = element_line(color = 'black'))
+
+ggsave("day4_Boxplot.pdf",p)
+
+###################################################
 
 # Enlarging dataset for metabolomics data comparison
 
@@ -252,6 +288,17 @@ cca.1 <- cca(t(batch_corrected_mat_d4)~ biochemDataForMetab_d4$biomass+biochemDa
 ### Comparisons 
 ### For comparisons based on biochemical traits, strains with the top 25% value is compared with others
 
+#DAY4
+#best  :D4_252,D4_254,D4_322
+#worst :D4_001,D4_051,D4_253
+
+#DAY12
+#best  : D12_187
+#worst : D12_001,D12_253
+
+best<-c("D12_187")
+worst<-c("D12_001","D12_253")
+
 #Phylogeny
 Chlorella<-c("D12_001","D12_006","D12_014","D12_051","D12_084","D12_087","D12_094","D12_104",
              "D12_177","D12_187","D12_207","D12_268","D12_283","D12_322","D12_325")
@@ -268,31 +315,45 @@ provSeawater<-c("D12_245","D12_252","D12_253","D12_254","D12_255","D12_258")
 otherMedia<-c("D12_001","D12_006","D12_014","D12_051","D12_084","D12_087","D12_094","D12_104",
               "D12_177","D12_187","D12_207","D12_268","D12_283","D12_322","D12_325") #strain 184 not included-no info on media
 
+#Growth #only day12
+highGrowth<-rownames(biochemData_d12[biochemData_d12$growthRate >= quantile(biochemData_d12$growthRate,0.90),])
+#otherGrowth<-setdiff(rownames(biochemData_d12),highGrowth)
+lowGrowth<-rownames(biochemData_d12[biochemData_d12$growthRate <= quantile(biochemData_d12$growthRate,0.10),])
+
 #Biomass
-highBiomass<-rownames(biochemData_d12[biochemData_d12$biomass >= quantile(biochemData_d12$biomass,0.75),])
-otherBiomass<-setdiff(rownames(biochemData_d12),highBiomass)
+highBiomass<-rownames(biochemData_d12[biochemData_d12$biomass >= quantile(biochemData_d12$biomass,0.90),])
+#otherBiomass<-setdiff(rownames(biochemData_d12),highBiomass)
+lowBiomass<-rownames(biochemData_d12[biochemData_d12$biomass <= quantile(biochemData_d12$biomass,0.10),])
 
 #Biomass productivity
-highBiomassProd<-rownames(biochemData_d12[biochemData_d12$biomassProduc >= quantile(biochemData_d12$biomassProduc,0.75),])
-otherBiomassProd<-setdiff(rownames(biochemData_d12),highBiomassProd)
+highBiomassProd<-rownames(biochemData_d12[biochemData_d12$biomassProduc >= quantile(biochemData_d12$biomassProduc,0.90),])
+#otherBiomassProd<-setdiff(rownames(biochemData_d12),highBiomassProd)
+lowBiomassProd<-rownames(biochemData_d12[biochemData_d12$biomassProduc <= quantile(biochemData_d12$biomassProduc,0.10),])
 
 #Lipid productivity
-highLipidProd<-rownames(biochemData_d12[biochemData_d12$lipidProduc >= quantile(biochemData_d12$lipidProduc,0.75),])
-otherLipidProd<-setdiff(rownames(biochemData_d12),highLipidProd)
-  
+highLipidProd<-rownames(biochemData_d12[biochemData_d12$lipidProduc >= quantile(biochemData_d12$lipidProduc,0.90),])
+#otherLipidProd<-setdiff(rownames(biochemData_d12),highLipidProd)
+lowLipidProd<-rownames(biochemData_d12[biochemData_d12$lipidProduc <= quantile(biochemData_d12$lipidProduc,0.10),])  
+
 #Total lipid content
-highTotLipid<-rownames(biochemData_d12[biochemData_d12$totalLipidCon >= quantile(biochemData_d12$totalLipidCon,0.75),])
-otherTotLipid<-setdiff(rownames(biochemData_d12),highTotLipid)
+highTotLipid<-rownames(biochemData_d12[biochemData_d12$totalLipidCon >= quantile(biochemData_d12$totalLipidCon,0.90),])
+#otherTotLipid<-setdiff(rownames(biochemData_d12),highTotLipid)
+lowTotLipid<-rownames(biochemData_d12[biochemData_d12$totalLipidCon <= quantile(biochemData_d12$totalLipidCon,0.10),])
 
 #Total protein content
-highTotProtein<-rownames(biochemData_d12[biochemData_d12$totalProtein >= quantile(biochemData_d12$totalProtein,0.75),])
-otherTotProtein<-setdiff(rownames(biochemData_d12),highTotProtein)
+highTotProtein<-rownames(biochemData_d12[biochemData_d12$totalProtein >= quantile(biochemData_d12$totalProtein,0.90),])
+#otherTotProtein<-setdiff(rownames(biochemData_d12),highTotProtein)
+lowTotProtein<-rownames(biochemData_d12[biochemData_d12$totalProtein <= quantile(biochemData_d12$totalProtein,0.10),])
 
 #Total carbon content
-highTotCarbon<-rownames(biochemData_d12[biochemData_d12$totalCarbCon >= quantile(biochemData_d12$totalCarbCon,0.75),])
-otherTotCarbon<-setdiff(rownames(biochemData_d12),highTotCarbon)
+highTotCarbon<-rownames(biochemData_d12[biochemData_d12$totalCarbCon >= quantile(biochemData_d12$totalCarbCon,0.90),])
+#otherTotCarbon<-setdiff(rownames(biochemData_d12),highTotCarbon)
+lowTotCarbon<-rownames(biochemData_d12[biochemData_d12$totalCarbCon <= quantile(biochemData_d12$totalCarbCon,0.10),])
 
 #################
+ms_data_day12_best<-batch_corrected_mat_d12[, grepl(paste(best,collapse="|"),colnames(batch_corrected_mat_d12))]
+ms_data_day12_worst<-batch_corrected_mat_d12[, grepl(paste(worst,collapse="|"),colnames(batch_corrected_mat_d12))]
+
 ms_data_day12_chlo<-batch_corrected_mat_d12[, grepl(paste(Chlorella,collapse="|"),colnames(batch_corrected_mat_d12))]
 ms_data_day12_parchlo<-batch_corrected_mat_d12[, grepl(paste(Parachlorella,collapse="|"),colnames(batch_corrected_mat_d12))]
 ms_data_day12_unidchlo<-batch_corrected_mat_d12[, grepl(paste(UnIdchlorella,collapse="|"),colnames(batch_corrected_mat_d12))]
@@ -303,25 +364,30 @@ ms_data_day12_otherMedia<-batch_corrected_mat_d12[, grepl(paste(otherMedia,colla
 ms_data_day12_highPalm<-batch_corrected_mat_d12[, grepl(paste(highPalmitic,collapse="|"),colnames(batch_corrected_mat_d12))]
 ms_data_day12_otherPalm<-batch_corrected_mat_d12[, grepl(paste(otherPalmitic,collapse="|"),colnames(batch_corrected_mat_d12))]
 
+ms_data_day12_highGrowth<-batch_corrected_mat_d12[, grepl(paste(highGrowth,collapse="|"),colnames(batch_corrected_mat_d12))]
+ms_data_day12_lowGrowth<-batch_corrected_mat_d12[, grepl(paste(lowGrowth,collapse="|"),colnames(batch_corrected_mat_d12))]
+
 ms_data_day12_highBiomass<-batch_corrected_mat_d12[, grepl(paste(highBiomass,collapse="|"),colnames(batch_corrected_mat_d12))]
-ms_data_day12_otherBiomass<-batch_corrected_mat_d12[, grepl(paste(otherBiomass,collapse="|"),colnames(batch_corrected_mat_d12))]
+ms_data_day12_lowBiomass<-batch_corrected_mat_d12[, grepl(paste(lowBiomass,collapse="|"),colnames(batch_corrected_mat_d12))]
 
 ms_data_day12_highBiomassProd<-batch_corrected_mat_d12[, grepl(paste(highBiomassProd,collapse="|"),colnames(batch_corrected_mat_d12))]
-ms_data_day12_otherBiomassProd<-batch_corrected_mat_d12[, grepl(paste(otherBiomassProd,collapse="|"),colnames(batch_corrected_mat_d12))]
+ms_data_day12_lowBiomassProd<-batch_corrected_mat_d12[, grepl(paste(lowBiomassProd,collapse="|"),colnames(batch_corrected_mat_d12))]
 
 ms_data_day12_highLipidProd<-batch_corrected_mat_d12[, grepl(paste(highLipidProd,collapse="|"),colnames(batch_corrected_mat_d12))]
-ms_data_day12_otherLipidProd<-batch_corrected_mat_d12[, grepl(paste(otherLipidProd,collapse="|"),colnames(batch_corrected_mat_d12))]
+ms_data_day12_lowLipidProd<-batch_corrected_mat_d12[, grepl(paste(lowLipidProd,collapse="|"),colnames(batch_corrected_mat_d12))]
 
 ms_data_day12_highTotLipid<-batch_corrected_mat_d12[, grepl(paste(highTotLipid,collapse="|"),colnames(batch_corrected_mat_d12))]
-ms_data_day12_otherTotLipid<-batch_corrected_mat_d12[, grepl(paste(otherTotLipid,collapse="|"),colnames(batch_corrected_mat_d12))]
+ms_data_day12_lowTotLipid<-batch_corrected_mat_d12[, grepl(paste(lowTotLipid,collapse="|"),colnames(batch_corrected_mat_d12))]
 
 ms_data_day12_highTotProtein<-batch_corrected_mat_d12[, grepl(paste(highTotProtein,collapse="|"),colnames(batch_corrected_mat_d12))]
-ms_data_day12_otherTotProtein<-batch_corrected_mat_d12[, grepl(paste(otherTotProtein,collapse="|"),colnames(batch_corrected_mat_d12))]
+ms_data_day12_lowTotProtein<-batch_corrected_mat_d12[, grepl(paste(lowTotProtein,collapse="|"),colnames(batch_corrected_mat_d12))]
 
 ms_data_day12_highTotCarbon<-batch_corrected_mat_d12[, grepl(paste(highTotCarbon,collapse="|"),colnames(batch_corrected_mat_d12))]
-ms_data_day12_otherTotCarbon<-batch_corrected_mat_d12[, grepl(paste(otherTotCarbon,collapse="|"),colnames(batch_corrected_mat_d12))]
+ms_data_day12_lowTotCarbon<-batch_corrected_mat_d12[, grepl(paste(lowTotCarbon,collapse="|"),colnames(batch_corrected_mat_d12))]
 
 ### Sample groups
+ms_data_day12_bestWorst<-cbind(ms_data_day12_best,ms_data_day12_worst)
+SampleGroup_bestWorst<-c(rep("best",ncol(ms_data_day12_best)),rep("worst",ncol(ms_data_day12_worst)))
 
 ms_data_day12_chloParchlo<-cbind(ms_data_day12_chlo,ms_data_day12_parchlo)
 SampleGroup_chloParchlo<-c(rep("chlorella",ncol(ms_data_day12_chlo)),rep("Parchlorella",ncol(ms_data_day12_parchlo)))
@@ -332,23 +398,26 @@ SampleGroup_SeawaterVsOther<-c(rep("Seawater",ncol(ms_data_day12_provSeawater)),
 ms_data_day12_highVsotherPalm<-cbind(ms_data_day12_highPalm,ms_data_day12_otherPalm)
 SampleGroup_highVsotherPalm<-c(rep("highPalm",ncol(ms_data_day12_highPalm)),rep("otherPalm",ncol(ms_data_day12_otherPalm)))
 
-ms_data_day12_highVsotherBiomass<-cbind(ms_data_day12_highBiomass,ms_data_day12_otherBiomass)
-SampleGroup_highVsotherBiomass<-c(rep("highBiomass",ncol(ms_data_day12_highBiomass)),rep("otherBiomass",ncol(ms_data_day12_otherBiomass)))
+ms_data_day12_highVslowGrowth<-cbind(ms_data_day12_highGrowth,ms_data_day12_lowGrowth)
+SampleGroup_highVslowGrowth<-c(rep("highGrowth",ncol(ms_data_day12_highGrowth)),rep("lowGrowth",ncol(ms_data_day12_lowGrowth)))
 
-ms_data_day12_highVsotherBiomassProd<-cbind(ms_data_day12_highBiomassProd,ms_data_day12_otherBiomassProd)
-SampleGroup_highVsotherBiomassProd<-c(rep("highBiomassProd",ncol(ms_data_day12_highBiomassProd)),rep("otherBiomassProd",ncol(ms_data_day12_otherBiomassProd)))
+ms_data_day12_highVslowBiomass<-cbind(ms_data_day12_highBiomass,ms_data_day12_lowBiomass)
+SampleGroup_highVslowBiomass<-c(rep("highBiomass",ncol(ms_data_day12_highBiomass)),rep("lowBiomass",ncol(ms_data_day12_lowBiomass)))
 
-ms_data_day12_highVsotherLipidProd<-cbind(ms_data_day12_highLipidProd,ms_data_day12_otherLipidProd)
-SampleGroup_highVsotherLipidProd<-c(rep("highLipid",ncol(ms_data_day12_highLipidProd)),rep("otherLipid",ncol(ms_data_day12_otherLipidProd)))
+ms_data_day12_highVslowBiomassProd<-cbind(ms_data_day12_highBiomassProd,ms_data_day12_lowBiomassProd)
+SampleGroup_highVslowBiomassProd<-c(rep("highBiomassProd",ncol(ms_data_day12_highBiomassProd)),rep("lowBiomassProd",ncol(ms_data_day12_lowBiomassProd)))
 
-ms_data_day12_highVsotherTotLipid<-cbind(ms_data_day12_highTotLipid,ms_data_day12_otherTotLipid)
-SampleGroup_highVsotherTotLipid<-c(rep("highTotLipid",ncol(ms_data_day12_highTotLipid)),rep("otherTotLipid",ncol(ms_data_day12_otherTotLipid)))
+ms_data_day12_highVsotherLipidProd<-cbind(ms_data_day12_highLipidProd,ms_data_day12_lowLipidProd)
+SampleGroup_highVslowLipidProd<-c(rep("highLipid",ncol(ms_data_day12_highLipidProd)),rep("lowLipid",ncol(ms_data_day12_lowLipidProd)))
 
-ms_data_day12_highVsotherTotProtein<-cbind(ms_data_day12_highTotProtein,ms_data_day12_otherTotProtein)
-SampleGroup_highVsotherTotProtein<-c(rep("highTotProtein",ncol(ms_data_day12_highTotProtein)),rep("otherTotProtein",ncol(ms_data_day12_otherTotProtein)))
+ms_data_day12_highVslowTotLipid<-cbind(ms_data_day12_highTotLipid,ms_data_day12_lowTotLipid)
+SampleGroup_highVslowTotLipid<-c(rep("highTotLipid",ncol(ms_data_day12_highTotLipid)),rep("lowTotLipid",ncol(ms_data_day12_lowTotLipid)))
 
-ms_data_day12_highVsotherTotCarbon<-cbind(ms_data_day12_highTotCarbon,ms_data_day12_otherTotCarbon)
-SampleGroup_highVsotherTotCarbon<-c(rep("highTotCarbon",ncol(ms_data_day12_highTotCarbon)),rep("otherTotCarbon",ncol(ms_data_day12_otherTotCarbon)))
+ms_data_day12_highVslowTotProtein<-cbind(ms_data_day12_highTotProtein,ms_data_day12_lowTotProtein)
+SampleGroup_highVslowTotProtein<-c(rep("highTotProtein",ncol(ms_data_day12_highTotProtein)),rep("lowTotProtein",ncol(ms_data_day12_lowTotProtein)))
+
+ms_data_day12_highVslowTotCarbon<-cbind(ms_data_day12_highTotCarbon,ms_data_day12_lowTotCarbon)
+SampleGroup_highVslowTotCarbon<-c(rep("highTotCarbon",ncol(ms_data_day12_highTotCarbon)),rep("lowTotCarbon",ncol(ms_data_day12_lowTotCarbon)))
 
 SampleGroup<-sapply(colnames(batch_corrected_mat_d12), function(x) paste(strsplit(x,"_")[[1]][1:2],collapse = "_"))
 SampleGroup<-as.vector(SampleGroup)
@@ -359,8 +428,8 @@ SampleGroup
 
 ######## Permutation based test statistic
 
-classlabel_factor<-as.numeric(as.factor(SampleGroup_highVsotherTotCarbon))-1
-data_matrix<-as.matrix(ms_data_day12_highVsotherTotCarbon)
+classlabel_factor<-as.numeric(as.factor(SampleGroup_bestWorst))-1
+data_matrix<-as.matrix(ms_data_day12_bestWorst)
 dataset_sig_features<-mt.maxT(data_matrix,classlabel_factor,test="f",side="abs",fixed.seed.sampling="y",B=1000,nonpara="n")
 # dataset_sig_featureold<-dataset_sig_features
 # dataset_sig_features<-as.matrix(dataset_sig_features)
@@ -417,14 +486,16 @@ pcaPlot<-function(pca_summary,dataLabel,dataGroups){
   g <- g + scale_color_discrete(name = '')
   g <- g + theme(legend.direction = 'horizontal', 
                  legend.position = 'top')
+  g<-g+ theme_bw() + theme(panel.border = element_blank(),  # remove top and right border
+                           panel.background = element_blank())
   return(g)
 }
 
 #function to compute correlation plot
 #updated on 12-May-2014 by shiv to include p.adjust method. Thus, using 'corr.test' from psych package.
-
+env_parameters<-biochemData_d12
 correlationPlot<-function(env_parameters){
-  env_parameters<-biochemData1
+  env_parameters<-env_parameters
   combos <- combn(ncol(env_parameters),2) # combinations without repetitions
   
   #combos <- expand.grid(rep(list(1:ncol(env_parameters)), 2 )) # combinations with repetitions
