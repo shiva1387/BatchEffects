@@ -21,6 +21,8 @@ graphics.off() # Close all windows
 library(data.table)
 library(multtest)
 library(ggplot2)
+library(Biostrings)
+library(vegan)
 
 ### Reading Data-svd and differential metabolites
 
@@ -28,16 +30,29 @@ setwd('../../AlgaeData/results.from.scelse.cluster.211213/')
 
 load("svd_day4_x138_nonzero.rda")
 batch_corrected_mat_d4<-svd_day4_nonzero[[7]]
+#write.table(batch_corrected_mat_d4,"batch_corrected_mat_d4.txt",quote=FALSE,sep="\t",col.names=NA)
 load("day4_x138_nonzero_sigfeat_s.rda") #loading strain data
 day4_nonzero_sigfeat_s_matrix<-day4_nonzero_sigfeat_s[[2]]
 batch_corrected_sig_mat_d4<-day4_nonzero_sigfeat_s_matrix[[7]] #as removing after 7 rounds of pc removal, runday effect is removed
 
+## Loading significant features due to RunDay
+# load("day4_x138_nonzero_sigfeat_r.rda") #loading runday data
+# day4_nonzero_sigfeat_r_matrix<-day4_nonzero_sigfeat_r[[2]]
+# batch_corrected_sig_mat_d4_run<-day4_nonzero_sigfeat_r_matrix[[7]] #as removing after 7 rounds of pc removal, runday effect is removed
+
 
 load("svd_day12_x138_nonzero.rda")
 batch_corrected_mat_d12<-svd_day12_nonzero[[4]]
+#write.table(batch_corrected_mat_d12,"batch_corrected_mat_d12.txt",quote=FALSE,sep="\t",col.names=NA)
 load("day12_x138_nonzero_sigfeat_s.rda") #loading strain data
 day12_nonzero_sigfeat_s_matrix<-day12_nonzero_sigfeat_s[[2]]
 batch_corrected_sig_mat_d12<-day12_nonzero_sigfeat_s_matrix[[4]] #as removing after 4 rounds of pc removal, runday effect is removed
+
+## Loading significant features due to RunDay
+# load("day12_x138_nonzero_sigfeat_r.rda") #loading runday data
+# day12_nonzero_sigfeat_r_matrix<-day12_nonzero_sigfeat_r[[2]]
+# batch_corrected_sig_mat_d12_run<-day12_nonzero_sigfeat_r_matrix[[4]] #as removing after 4 rounds of pc removal, runday effect is removed
+
 
 #Ensure all strain ids are in the same format
 colnames(batch_corrected_sig_mat_d12)<-as.character(gsub('D12_14','D12_014',colnames(batch_corrected_sig_mat_d12)))
@@ -255,11 +270,13 @@ write.table(significant_features_nonSingleton,"day12_differential_bestVsWorst.tx
 # Metabolite pathway analysis  #
 ################################
 
-metaboliteDataset<-read.table("day12_differential_metabolitesId.txt",header=TRUE,sep='\t')
+metaboliteDataset<-read.table("day12_metabolitesId.txt",header=TRUE,sep='\t')
 metaboliteDataset<-as.data.frame(metaboliteDataset)
 metaboliteDataset<-formatMetaboliteData(metaboliteDataset)
 
-mappedMetaboliteData<-mappingMetabolites(batch_corrected_sig_mat_d12,metaboliteDataset)
+mappedMetaboliteData<-mappingMetabolites(batch_corrected_mat_d12,metaboliteDataset)
+
+write.table(mappedMetaboliteData,"day12_metabolites_mzrt_compoundId.txt",quote=FALSE,sep='\t')
 
 ### Averaging values of multiple hits
 
@@ -307,12 +324,70 @@ mappedMetabolites_mean<-mappedMetabolites_mean[,2:ncol(mappedMetabolites_mean)]
 
 d <- dist(mappedMetabolites_mean, method = "euclidean") # distance matrix
 fit <- hclust(d, method="average") 
-png("d12_differentialMetabolites.png")
-plot (fit,main="d12_differentialMetabolites")
+png("d4_totalMetabolites.png")
+plot (fit,main="d4_totalMetabolites_21strains")
 dev.off()
 
 
 ##### Analysis of meta data
+
+## Comparing day 12 and day 4 biochem matrix
+
+# mantel(veg.dist.d12.biochem,veg.dist.d4.biochem,method="spear")
+# 
+# Mantel statistic based on Spearman's rank correlation rho 
+# 
+# Call:
+# mantel(xdis = veg.dist.d12.biochem, ydis = veg.dist.d4.biochem,      method = "spear") 
+# 
+# Mantel statistic r: -0.00405 
+# Significance: 0.482 
+# 
+# Upper quantiles of permutations (null model):
+# 90%   95% 97.5%   99% 
+# 0.114 0.150 0.184 0.220 
+# 
+# Based on 999 permutations
+
+## Comparing day12 and day4 metabolite matrices
+
+# mappedMetabolites_mean_d12<-read.table("metabolitesIdentified_day12.txt",header=TRUE,sep='\t',row.names=1)
+# mappedMetabolites_mean_d4<-read.table("metabolitesIdentified_day4.txt",header=TRUE,sep='\t',row.names=1)
+
+veg.dist.d12 <- vegdist(as.matrix(mappedMetabolites_mean_d12),method="euclidean") 
+veg.dist.d4 <- vegdist(as.matrix(mappedMetabolites_mean_d4),method="euclidean") 
+mantel(veg.dist.d12, veg.dist.d4, method="spear")
+
+## Full dataset metabolites (extracted from the full data batch_corrected_mat)
+
+# Mantel statistic based on Spearman's rank correlation rho 
+# 
+# Call:
+# mantel(xdis = veg.dist.d12, ydis = veg.dist.d4, method = "spear") 
+# 
+# Mantel statistic r: 0.07954 
+#       Significance: 0.297 
+# 
+# Upper quantiles of permutations (null model):
+#   90%   95% 97.5%   99% 
+# 0.187 0.227 0.262 0.319 
+# 
+# Based on 999 permutations
+
+## Differential metabolites (obtained from the above files, metabolitesIdentified_day12.txt)
+# Mantel statistic based on Spearman's rank correlation rho 
+# 
+# Call:
+# mantel(xdis = veg.dist.d12, ydis = veg.dist.d4, method = "spear") 
+# 
+# Mantel statistic r: 0.02115 
+# Significance: 0.43 
+# 
+# Upper quantiles of permutations (null model):
+# 90%   95% 97.5%   99% 
+# 0.166 0.219 0.253 0.289 
+#
+# Based on 999 permutations
 
 ########### DAY 12
 
@@ -466,7 +541,7 @@ mantel(veg.dist.d4, veg.dist.d4.biochem, method="spear")
 # 
 # Based on 999 permutations
 
-veg.dist.d4 <- vegdist(as.matrix(mappedMetabolites_mean_d4_21strains),method="euclidean") #d12_mean1[,2:10688]
+veg.dist.d4 <- vegdist(as.matrix(mappedMetabolites_mean),method="euclidean") #d12_mean1[,2:10688]
 mantel(veg.dist.d4, distanceMatrix_18s, method="spear")
 # Mantel statistic based on Spearman's rank correlation rho 
 # 

@@ -18,6 +18,16 @@
 
 norm.to.total.expression<-function(x){x^2/sum(x^2)}
 
+## Reading in data
+
+#setwd('F:/Vinay's Algae Data/Aug2013/data')
+
+mappedMetabolites_mean_d4<-read.table("metabolitesIdentified_day4.txt")
+mappedMetabolites_mean_d4<-as.matrix(mappedMetabolites_mean_d4)
+mappedMetabolites_mean_d12<-read.table("metabolitesIdentified_day12.txt")
+mappedMetabolites_mean_d12<-as.matrix(mappedMetabolites_mean_d12)
+
+###
 association.values.d4<-apply(mappedMetabolites_mean_d4,2,norm.to.total.expression)
 association.values.d12<-apply(mappedMetabolites_mean_d12,2,norm.to.total.expression)
 
@@ -55,7 +65,34 @@ hist(association.values.d4[i,],main=rownames(association.values.d4)[i])
 dev.off()
 }
 
+#pheatmap
+
+#
+
+#The average value if the metabolite is associated evenly among strains is 1/22=0.0454
+
+#Setting the values which match 0.045 to gray
+
+
+#bk2 = unique(c(seq(0, 0.045),seq(0.046,1, length=10)))
+
+#set different color vectors for each interval
+col1 <- colorRampPalette(c("gray87", 'gray32'))(10) #set the order of greys
+col2 <- rep("white")
+col3 <- colorRampPalette(brewer.pal(10,"Paired"))(100)
+colors2 <- c(col1, col2, col3)
+
+pdf("HayGoodMeasure_d12.pdf",width=8,height=4)
+pheatmap(association.values.d12,scale="none",cluster_rows = TRUE, cluster_cols = TRUE, 
+         clustering_distance_rows = "euclidean", clustering_distance_cols = "euclidean",
+         clustering_method = "average",show_colnames=F,fontsize=12)
+dev.off()
+pdf("HayGoodMeasure_d4.pdf",width=8,height=4)
+pheatmap(association.values.d4,scale="none",show_colnames=F,fontsize=12)
+dev.off()
 ## test statistic
 
 #dataset_fvalue<-mt.teststat(data_matrix,classlabel_factor,test="f",nonpara="n")
+
+
 

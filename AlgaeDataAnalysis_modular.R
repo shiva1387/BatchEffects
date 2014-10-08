@@ -101,7 +101,7 @@ library(Hmisc)
 # Variables #
 #############
 # 
-# directory<- "F:/Vinay's Algae Data/Aug2013/Data"
+# directory<- "F:/Vinay's Algae Data/Aug2013/rawData/MZXML/matrix"
 # #Contains path for .tsv file
 # # The "PATH", Remember to use "/" and not "/" in the path
 # setwd(directory)
@@ -116,12 +116,22 @@ library(Hmisc)
 # 
 # ####### reading in the mass spec data 
 # 
-# mzfilename<-"Algae_22strains_indreps_blanks_matrix.tsv"
-# ms_data_total<-read.table(mzfilename,sep="\t",header=T,check.names=FALSE,row.names=1)
-# str(ms_data_total)
+mzfilename<-"algae_22strains_243sample_021213.tsv"
+#ms_data_total<-read.table(mzfilename,sep="\t",header=T,check.names=FALSE,row.names=1)
+ms_data_total<-read.table(mzfilename,sep="\t",header=T) #For algae_22strains_243sample_021213.tsv sample file, the first colmn is mz so its not unique 
+
+#to avoid memory issues, the file after removing duplicates and outlier replicates is stored as algae_22strains_243sample_021213.tsv
+#this file contains 243 samples ref:AlgaeDataAnalysis_xcmsfile.R
+
+## Execute only for algae_22strains_243sample_021213.tsv file
+ms_data_total<-read.table(mzfilename,sep="\t",header=T)
+row.names(ms_data_total)<-paste0(ms_data_total[,1],'@',ms_data_total[,2])
+ms_data_total<-ms_data_total[,3:245] #first two columns were mz and rt
+str(ms_data_total)
 # 
 # ################Formatting column names
-# 
+# ori_names_ms_data_total<-names(ms_data_total)
+# names(ms_data_total)<-ori_names_ms_data_total
 # names(ms_data_total)<-gsub('\\[', '', names(ms_data_total))
 # names(ms_data_total)<-gsub('\\]', '', names(ms_data_total))
 # a<-names(ms_data_total)
@@ -129,6 +139,16 @@ library(Hmisc)
 # c<-gsub('\\, ','\\-', b)
 # names(ms_data_total)<-c
 # rm(a,b,c)
+# 
+# strains_22<-c("D12_001","D12_006","D12_14","D12_051","D12_84","D12_87","D12_94","D12_104","D12_177","D12_184","D12_187","D12_207","D12_245","D12_252","D12_253","D12_254","D12_255","D12_258","D12_268","D12_283","D12_322","D12_325",
+#               "D4_001","D4_006","D4_14","D4_051","D4_084","D4_087","D4_094","D4_104","D4_177","D4_184","D4_187","D4_207","D4_245","D4_252","D4_253","D4_254","D4_255","D4_258","D4_268","D4_283","D4_322","D4_325")
+# 
+# duplicate_removal<-c("D12_001b1b.r001","D12_001b1b.r002","D12_001b2b.r001","D12_001b2b.r002","D12_001b3b.r001","D12_001b3b.r002",
+#                      "D4_001b1.r001","D4_001b1.r002","D4_001b2.r001","D4_001b2.r002","D4_001b3.r001","D4_001b3.r002")
+# ms_data_22<-ms_data_total[, grepl(paste(strains_22,collapse="|"),names(ms_data_total))]
+# ms_data_22<-ms_data_22[, !names(ms_data_22) %in% duplicate_removal] 
+# ms_data_22<-ms_data_22[,35:dim(ms_data_22)[2]]
+# names(ms_data_22)<-gsub('\\.', '\\_', names(ms_data_22))
 # 
 # #Only for full data -22 strains
 # #ms_data_total_strains<-ms_data_total[, -grep('ACN', names(ms_data_total))] #removing blanks
@@ -166,14 +186,15 @@ dev.off()
 # #data_start_index<-no_of_info_cols+1;
 # #data_end_index<-dim(ms_data_total)[2];
 # 
-# ms_data<-ms_data_total[,1:311]
+# ms_data<-ms_data_total[,1:311]#Check column based on file used
 # names(ms_data)
 # dim(ms_data)
-# SampleGroup<-SampleGroups[1:311]
-# 
+# #SampleGroup<-SampleGroups[1:311]
+# SampleGroup<-SampleGroups
 # 
 # #ms_data<-log(ms_data)
-# 
+# ms_data<-ms_data_total
+
 # #name_list <- strsplit(SampleGroup, "_")
 # #GrowthStage<-sapply(name_list , function (x) if(length(x) == 2) x[1] else as.character(NA))
 # #StrainId<-sapply(name_list , function (x) if(length(x) == 2) x[2] else as.character(NA))
@@ -252,7 +273,8 @@ dev.off()
 # SampleGroup_day4<-SampleGroup[grep('D4', SampleGroup)] 
 # SampleGroup_day12<-SampleGroup[grep('D12',SampleGroup)] 
 # 
-# metadata_rem<-metadata[, !colnames(metadata) %in% outlier_replicates]
+# #metadata_rem<-metadata[, !colnames(metadata) %in% outlier_replicates]
+# metadata_rem<-metadata[, colnames(ms_data)]
 # RunDay<-metadata_rem[3,]
 # GrowthStage<-metadata_rem[1,]
 # #RunDay_rem<-as.vector(RunDay_rem)
@@ -267,11 +289,14 @@ dev.off()
 # GrowthStage_strains<-gsub('D4', 1, GrowthStage_strains)
 # GrowthStage_strains<-gsub('D12', 2, GrowthStage_strains)
 # 
-# RunDay_strains<-as.numeric(RunDay[24:268])
-# names(RunDay_strains)<-colnames(ms_data)[24:268]
+# RunDay_strains<-as.numeric(RunDay)#[24:268])
+# names(RunDay_strains)<-colnames(ms_data)#[24:268]
 # 
 # ms_data_day4<-ms_data[, grep('D4', names(ms_data))] 
 # ms_data_day12<-ms_data[, grep('D12', names(ms_data))] 
+# write.table(ms_data_day4,"ms_data_day4_fulldata_138.txt",sep="\t",quote=FALSE)
+# write.table(ms_data_day12,"ms_data_day12_fulldata_138.txt",sep="\t",quote=FALSE)
+
  ms_data_day12_bc<-ms_data[, grepl(paste(strains_with_biochem,collapse="|"),names(ms_data))] #11 strains with biochemical param
 # 
 # GrowthStage_day4<-GrowthStage[grep('D4', names(GrowthStage),perl=TRUE, value=TRUE)]
@@ -2061,7 +2086,7 @@ write.table(posthoc_test$group,"posthoc_test_day12",quote=F)
 
 #combined
 
-getTICs(files=mzxmlfiles,pdfname=paste("xcms_agilent_TIC_algae_15th.pdf", sep = ""),rt="raw")
+getTICs(files=mzxmlfiles,pdfname=paste("Blanks.pdf", sep = ""),rt="raw")
 
 #ws
 

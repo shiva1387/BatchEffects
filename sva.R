@@ -1,6 +1,4 @@
-
-<!-- saved from url=(0078)http://www.bioconductor.org/packages/release/bioc/vignettes/sva/inst/doc/sva.R -->
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"></head><body><pre style="word-wrap: break-word; white-space: pre-wrap;">### R code from vignette source 'vignettes/sva/inst/doc/sva.Rnw'
+### R code from vignette source 'vignettes/sva/inst/doc/sva.Rnw'
 
 ###################################################
 ### code chunk number 1: sva.Rnw:5-6
@@ -81,7 +79,7 @@ fit = lmFit(edata,modSv)
 ###################################################
 ### code chunk number 12: input
 ###################################################
-contrast.matrix &lt;- cbind("C1"=c(-1,1,0,rep(0,svobj$n.sv)),"C2"=c(0,-1,1,rep(0,svobj$n.sv)),"C3"=c(-1,0,1,rep(0,svobj$n.sv)))
+contrast.matrix <- cbind("C1"=c(-1,1,0,rep(0,svobj$n.sv)),"C2"=c(0,-1,1,rep(0,svobj$n.sv)),"C3"=c(-1,0,1,rep(0,svobj$n.sv)))
 fitContrasts = contrasts.fit(fit,contrast.matrix)
 
 
@@ -170,6 +168,3 @@ fsvaobj = fsva(trainData,trainMod,trainSv,testData)
 mydataSv = list(x=fsvaobj$db,y=trainPheno$cancer)
 mytrainSv = pamr.train(mydataSv)
 table(pamr.predict(mytrainSv,fsvaobj$new,threshold=1),testPheno$cancer)
-
-
-</pre><iframe id="rdbIndicator" width="100%" height="270" border="0" src="./sva_files/indicator.htm" style="display: none; border: 0; position: fixed; left: 0; top: 0; z-index: 2147483647"></iframe></body></html>

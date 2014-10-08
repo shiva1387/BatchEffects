@@ -40,7 +40,7 @@ ggsave("day4_pathway.pdf", p1)
 
 #### Analyzing correlations
 
-mat_cor0<-matcor(as.matrix(mappedMetabolites_mean),as.matrix(biochemData_d12))
+mat_cor0<-matcor(as.matrix(mappedMetabolites_mean_d12),as.matrix(biochemData_d12))
 mat_cor1<-as.matrix(mat_cor0$XYcor)
 mat_cor_pos<-which( mat_cor1 > 0.85,arr.ind=TRUE) #getting the positive indices
 mat_cor_pos_names<-cbind(rownames(mat_cor1)[mat_cor_pos[,1]],colnames(mat_cor1)[mat_cor_pos[,2]]) #getting the names for the indices
@@ -93,7 +93,7 @@ dev.off()
 #pheatmap
 library('pheatmap')
 pdf("totalMetabolites.pdf")
-pheatmap(as.matrix(venn_d),scale="none",col=(c("#E0E0E0","#CC0000")),fontsize_row=1)
+pheatmap(as.matrix(venn_d1),scale="none",col=(c("white","grey")),show_rownames=F,,fontsize_row=1)
 dev.off()
 
 ## Getting strains which show the maximum deviation from exponential to stationary growth phase

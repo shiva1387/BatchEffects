@@ -1,4 +1,3 @@
-###########################################
 # Data Analysis in R-Malaysian algae data #
 ###########################################
 # Author(s): Shiv
@@ -1358,10 +1357,31 @@ d4<-as.data.frame(log(ms_data_day4_nonzero))
 d4.norm<-normalize.quantiles(as.matrix(d4),copy=TRUE)
 d4.scale.min<-scale(d4,center=T,scale=T)
 d4.scale<-d4.scale.min-min(d4.scale.min)
+d4.batch<-batch_corrected_mat_d4
+d4.mz <- strsplit(rownames(d4.batch), "\\@")
+d4.mz<-sapply(d4.mz , function (x) if(length(x) == 2) x[1] else as.character(NA))
+
+d12<-as.data.frame(log(ms_data_day12_nonzero))
+#d<-d[,apply(d, 2, var, na.rm=TRUE) != 0] #removing mz features which have constant variance
+#d<-scale(d,T,F)
+
+d12.norm<-normalize.quantiles(as.matrix(d12),copy=TRUE)
+d12.scale.min<-scale(d12,center=T,scale=T)
+d12.scale<-d12.scale.min-min(d12.scale.min)
+d12.batch<-batch_corrected_mat_d12
+d12.mz <- strsplit(rownames(d12.batch), "\\@")
+d12.mz<-sapply(d12.mz , function (x) if(length(x) == 2) x[1] else as.character(NA))
 
 mean_scaled <- apply(d4.scale,1,mean) 
-sd_scaled <- apply(d4.scale,1,sd) 
+sd_scaled_d4 <- apply(d4.batch,1,sd)
+sd_scaled_d12 <- apply(d12.batch,1,sd)
 
+#
+pdf("mzVariation.pdf",height=8,width=16)
+par(mfrow=c(1,2))
+plot(d4.mz,sd_scaled_d4,main="Day 4",xlim=c(0,1000), col="#00000033",xlab="m/z", ylab="Standard deviation")
+plot(d12.mz,sd_scaled_d12,main="Day 12",xlim=c(0,1000), col="#00000033",xlab="m/z",ylab="")
+dev.off()
 mean_norm <- apply(d4.norm,1,mean) 
 sd_norm <- apply(d4.norm,1,sd) 
 
@@ -1479,19 +1499,19 @@ lm_pca_scores_strain_day4_nonzero_loadings_pval<-sapply(lm_pca_scores_strain_day
 # Comp.2    Comp.5    Comp.6    Comp.4   Comp.15    Comp.9 
 # 0.9633193 0.9629234 0.9545419 0.8828195 0.8620268 0.8172753 
 
-png("pc_plot_d4_x138_nonzero_scale.png",height=800,width=800)
-par(mfrow=c(2,1))
-plot(1:length(lm_pca_scores_runday4_nonzero_loadings_r.sq),lm_pca_scores_runday4_nonzero_loadings_r.sq,col="green",ylab="Multiple R2-Loadings Vs Runday",xlab="PC's",main="Day 4",
+pdf("pc_plot_d4_x138_nonzero_scale_pval_v1.pdf",height=4,width=8)
+#par(mfrow=c(2,1))
+plot(1:length(lm_pca_scores_runday4_nonzero_loadings_r.sq),lm_pca_scores_runday4_nonzero_loadings_r.sq,col="green",pch=16,ylab="Multiple R2-Loadings Vs Runday",xlab="PC's",main="Day 4",
      ylim=c(0,max(c(max(lm_pca_scores_runday4_nonzero_loadings_r.sq),max(lm_pca_scores_strain_day4_nonzero_loadings_r.sq)))))
 points(1:length(lm_pca_scores_strain_day4_nonzero_loadings_r.sq),lm_pca_scores_strain_day4_nonzero_loadings_r.sq,col="red")
 rug(c(1:length(lm_pca_scores_strain_day4_nonzero_loadings_r.sq)), side = 1, col="#00000033")
-legend("topright", inset=.05,c("Strain","RunDay"),fill=c("red","green"),cex=1)
+#legend("topright", inset=.05,c("Strain","RunDay"),fill=c("red","green"),cex=1)
 
-plot(1:length(lm_pca_scores_runday4_nonzero_loadings_pval),lm_pca_scores_runday4_nonzero_loadings_pval,col="green",ylab="pval(r2)-Loadings Vs Runday",xlab="PC's",main="Day 4",
+plot(1:length(lm_pca_scores_runday4_nonzero_loadings_pval),lm_pca_scores_runday4_nonzero_loadings_pval,col="green",pch=16,ylab="pval(r2)-Loadings Vs Runday",xlab="PC's",main="Day 4",
      ylim=c(0,max(c(max(lm_pca_scores_runday4_nonzero_loadings_pval),max(lm_pca_scores_strain_day4_nonzero_loadings_pval)))))
 points(1:length(lm_pca_scores_strain_day4_nonzero_loadings_pval),lm_pca_scores_strain_day4_nonzero_loadings_pval,col="red")
 rug(c(1:length(lm_pca_scores_strain_day4_nonzero_loadings_pval)), side = 1, col="#00000033")
-legend("topright", inset=.05,c("Strain","RunDay"),fill=c("red","green"),cex=1)
+#legend("topright", inset=.05,c("Strain","RunDay"),fill=c("red","green"),cex=1)
 dev.off()
 
 write.table(cbind(lm_pca_scores_runday4_nonzero_loadings_r.sq,lm_pca_scores_runday4_nonzero_loadings_pval),"day4_x138_lm_model_loadings-vs-runday_scale.txt",quote=FALSE,sep="\t")
@@ -1590,7 +1610,7 @@ dev.off()
 #day12 non-zero
 ###############
 
-d12<-as.data.frame(log1p(ms_data_day12_nonzero))
+d12<-as.data.frame(log(ms_data_day12_nonzero))
 #d<-d[,apply(d, 2, var, na.rm=TRUE) != 0] #removing mz features which have constant variance
 #d<-scale(d,T,F)
 
@@ -1697,19 +1717,19 @@ lm_pca_scores_strain_day12_nonzero_loadings_pval<-sapply(lm_pca_scores_strain_da
 # Comp.2    Comp.4   Comp.13    Comp.3   Comp.11    Comp.5 
 # 0.9720811 0.9693793 0.9297342 0.9071018 0.8768161 0.8554697 
 
-png("pc_plot_d12_x138_nonzero_norm.png",height=800,width=800)
+pdf("pc_plot_d12_x138_nonzero_scale_r2_v1.pdf",height=4,width=8)
 par(mfrow=c(2,1))
-plot(1:length(lm_pca_scores_runday12_nonzero_loadings_r.sq),lm_pca_scores_runday12_nonzero_loadings_r.sq,col="green",ylab="Multiple R2-Loadings Vs Runday",xlab="PC's",main="Day 12",
+plot(1:length(lm_pca_scores_runday12_nonzero_loadings_r.sq),lm_pca_scores_runday12_nonzero_loadings_r.sq,col="green",pch=16,ylab="Multiple R2-Loadings Vs Runday",xlab="PC's",main="Day 12",
      ylim=c(0,max(c(max(lm_pca_scores_runday12_nonzero_loadings_r.sq),max(lm_pca_scores_strain_day12_nonzero_loadings_r.sq)))))
 points(1:length(lm_pca_scores_strain_day12_nonzero_loadings_r.sq),lm_pca_scores_strain_day12_nonzero_loadings_r.sq,col="red")
 rug(c(1:length(lm_pca_scores_strain_day12_nonzero_loadings_r.sq)), side = 1, col="#00000033")
-legend("topright", inset=.05,c("Strain","RunDay"),fill=c("red","green"),cex=1)
+#legend("topright", inset=.05,c("Strain","RunDay"),fill=c("red","green"),cex=1)
 
-plot(1:length(lm_pca_scores_runday12_nonzero_loadings_pval),lm_pca_scores_runday12_nonzero_loadings_pval,col="green",ylab="pval(r2)-Loadings Vs Runday",xlab="PC's",main="Day 12",
+plot(1:length(lm_pca_scores_runday12_nonzero_loadings_pval),lm_pca_scores_runday12_nonzero_loadings_pval,col="green",pch=16,ylab="pval(r2)-Loadings Vs Runday",xlab="PC's",main="Day 12",
      ylim=c(0,max(c(max(lm_pca_scores_runday12_nonzero_loadings_pval),max(lm_pca_scores_strain_day12_nonzero_loadings_pval)))))
 points(1:length(lm_pca_scores_strain_day12_nonzero_loadings_pval),lm_pca_scores_strain_day12_nonzero_loadings_pval,col="red")
 rug(c(1:length(lm_pca_scores_strain_day12_nonzero_loadings_pval)), side = 1, col="#00000033")
-legend("topright", inset=.05,c("Strain","RunDay"),fill=c("red","green"),cex=1)
+#legend("topright", inset=.05,c("Strain","RunDay"),fill=c("red","green"),cex=1)
 dev.off()
 
 
