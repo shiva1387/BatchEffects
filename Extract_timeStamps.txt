@@ -1,0 +1,7 @@
+## using proteoqizards msconvert commmand line
+
+>msconvert.exe "J:\F_projects\Vinay's Algae Data\MSMS\2014-Aug-25\RawData\*.d" --filter "index 0" -o "J:\F_projects\Vinay's Algae Data\MSMS\2014-Aug-25\MZML"
+
+###in cygwin
+
+grep startTimeStamp *.mzML > MSMS_timeStamp.txt

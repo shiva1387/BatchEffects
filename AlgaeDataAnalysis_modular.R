@@ -1493,7 +1493,7 @@ compute_pval_list<-function(sigfeat_pval) {
   {
     #index teststat  rawp  adjp
     #listofpval[i]<-sigfeat_pval[[i]][4]#col 4 gives adj.pvalues
-    listofpval[i]<-sigfeat_pval[[i]][3]#col 4 gives raw.pvalues #modified by shiv on June 18 2014
+    listofpval[i]<-sigfeat_pval[[i]][3]#col 3 gives raw.pvalues #modified by shiv on June 18 2014
   }
   sigfeat_pval_pvaldf<-do.call(cbind.data.frame, listofpval)
 }

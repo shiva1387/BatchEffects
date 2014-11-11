@@ -92,7 +92,7 @@ combat_edata1 = ComBat(dat=edata_new, batch=batch_sample_desc_matrix$Batch, mod=
 
 ### For SVA
 # n.sv_new = num.sv(edata_new,mod_new,vfilter=2000,method="leek")
-# svobj1 = sva(edata1,mod_new,mod0_new,vfilter=2000, method="two-step")
+# svobj1 = sva(edata_new,mod_new,mod0_new,vfilter=2000, method="two-step")
 #[1] "No significant surrogate variables"
 pValues=f.pvalue(edata_new,mod_new,mod0_new)
 qValues=p.adjust(pValues,method="BH")

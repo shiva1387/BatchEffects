@@ -91,6 +91,20 @@ hist(lm_runday_d4_pval_corrected,main="After correction Runday",ylim=c(0,14000))
 #plot(lm_strain_d4_nonzero_loadings_pval_corrected,lm_runday_d4_nonzero_loadings_pval_corrected)
 dev.off()
 
+### P adjusted 
+
+lm_strain_d4_pval_raw_adj<-round(p.adjust(lm_strain_d4_pval_raw, "BH"),3)
+lm_runday_d4_pval_raw_adj<-round(p.adjust(lm_runday_d4_pval_raw, "BH"),3)
+lm_strain_d4_pval_corrected_adj<-round(p.adjust(lm_strain_d4_pval_corrected, "BH"),3)
+lm_runday_d4_pval_corrected_adj<-round(p.adjust(lm_runday_d4_pval_corrected, "BH"),3)
+
+pdf("lm_day4_padj.pdf",height=8,width=8)
+par(mfrow=c(2,2))
+hist(lm_strain_d4_pval_raw_adj,main="Raw data Strain",ylim=c(0,14000))
+hist(lm_runday_d4_pval_raw_adj,main="Raw data Runday",ylim=c(0,14000))
+hist(lm_strain_d4_pval_corrected_adj,main="After correction Strain",ylim=c(0,14000))
+hist(lm_runday_d4_pval_corrected_adj,main="After correction Runday",ylim=c(0,14000))
+dev.off()
 
 #day12
 #RawData
