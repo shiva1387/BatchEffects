@@ -1,0 +1,5 @@
+d12_ppmerror10_full<-read.table("d12_ppmerror10_full.txt",header=TRUE,sep="\t")
+plot(as.numeric(d12_ppmerror10_full[,1])~as.numeric(d12_ppmerror10_full[,2]))
+rug(as.numeric(d12_ppmerror10_full[,2]),side=2)
+a<-hist(as.numeric(d12_ppmerror10_full[,2]),prob=TRUE);lines(density(as.numeric(d12_ppmerror10_full[,2])))
+plot(density(as.numeric(d12_ppmerror10_full[,2])))
