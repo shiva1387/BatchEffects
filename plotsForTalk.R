@@ -66,6 +66,15 @@ RunDay_TimeStamp_d12<-as.data.frame(RunDay_TimeStamp_d12)
 rownames(RunDay_TimeStamp_d12)<-RunDay_TimeStamp_d12[,]
 RunDay_TimeStamp_d12<-RunDay_TimeStamp_d12[colnames(ms_data_day12_nonzero),]
 
+###Number of features
+
+d4_PCfiltering_noOfFeature<-read.table("d4_PCfiltering_numberOffeature.txt",header=TRUE,sep="\t")
+d4_PCfiltering_noOfFeature<-melt(d4_PCfiltering_noOfFeature,id="PC")
+
+d12_PCfiltering_noOfFeature<-read.table("d12_PCfiltering_numberOffeature.txt",header=TRUE,sep="\t")
+d12_PCfiltering_noOfFeature<-melt(d12_PCfiltering_noOfFeature,id="PC")
+
+ggplot(d12_PCfiltering_noOfFeature,aes(y=value, x=PC,colour=variable))+ geom_line()
 ##### Linear models
 
 #day4

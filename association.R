@@ -10,9 +10,11 @@
 # http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2902135/?report=printable
 # 
 # Hi Shiv,
-# This is the paper, the method is described in the Sup Mat (attached). Seems simple enough, you just calculate a 2-group test (e.g. t-statistic or whatever) 
+# This is the paper, the method is described in the Sup Mat (attached). 
+# Seems simple enough, you just calculate a 2-group test (e.g. t-statistic or whatever) 
 # between each strain and each of the other strains, for each mass feature. 
-# Strains that have a "specific" mass feature intensity will have high levels of the test statistic for all strain comparisons.
+# Strains that have a "specific" mass feature intensity will have high levels of the 
+# test statistic for all strain comparisons.
 
 ### Strain-specific association values for each metabolite-Algorithm by Rohan(2008)
 

@@ -22,6 +22,8 @@ library(CCA)
 #####
 metabolite_pathways<-read.table("metabolitePathways.txt",header=TRUE,sep="\t")
 
+metabolite_pathways_d12<-metabolite_pathways[,c(1,3,4,5)]
+
 metabolite_pathways_d4<-metabolite_pathways[,c(1,3,6,7)]
 metabolite_pathways_d4$Day4.FullData<-round((metabolite_pathways_d4$Day4.FullData/metabolite_pathways_d4$TotalMetabolites)*100,2)
 metabolite_pathways_d4$Day4.Differential<-round((metabolite_pathways_d4$Day4.Differential/metabolite_pathways_d4$TotalMetabolites)*100,2)
@@ -37,6 +39,75 @@ p1<-ggplot(test1, aes(x=KEGG.ID, y=value, fill=variable)) + geom_bar(stat="ident
                      panel.background = element_blank(),
                      axis.line = element_line(color = 'black'))
 ggsave("day4_pathway.pdf", p1)
+
+############## Analyzing enrichments
+
+#Calculating hypergeometric score for each cazy class
+#ref http://mengnote.blogspot.sg/2012/12/calculate-correct-hypergeometric-p.html
+#ref http://stats.stackexchange.com/questions/72553/which-statistical-test-should-be-used-to-test-for-enrichment-of-gene-lists
+
+## The enrichment analysis is limited to the total number of metabolites that were detected in these pathways
+
+## For day4
+head(metabolite_pathways_d12)
+# KEGG.ID TotalMetabolites Day4.FullData Day4.Differential
+# 1 cvr00906              115            24                13
+# 2 cvr02010              122            15                 7
+# 3 cvr00130               80            14                 5
+# 4 cvr00260               51            13                 5
+# 5 cvr00592               40            11                 6
+# 6 cvr00960               68            12                 5
+
+
+#total_metab<-sum(metabolite_pathways_d12[,2])
+total_detected_metab<-sum(metabolite_pathways_d12[,3])
+total_diff_metab<-sum(metabolite_pathways_d12[,4])
+
+#enrichment_value<-rep(99,times=nrow(metabolite_pathways_d12))
+enrichment_value_fisher<-rep(99,times=nrow(metabolite_pathways_d12))
+
+for(i in 1:nrow(metabolite_pathways_d12))
+{
+  hitinSample<-metabolite_pathways_d12[i,4]
+  hitinPop<-metabolite_pathways_d12[i,3]
+  failinPop<-total_detected_metab-hitinPop
+  sampSize<-total_diff_metab
+  
+  a<-matrix(c(hitinSample,hitinPop-hitinSample,
+              sampSize-hitinSample,failinPop-sampSize+hitinSample),nrow=2,ncol=2)
+  #enrichment_value[i]<-phyper(hitinSample-1,hitinPop,failinPop,sampSize,lower.tail=FALSE)
+  
+  fisher<-fisher.test(a,alternative="greater")
+  enrichment_value_fisher[i]<-fisher$p.value
+  
+}
+
+hitinSample<-metabolite_pathways_d12[1,4]
+hitinPop<-metabolite_pathways_d12[1,3]
+failinPop<-total_detected_metab-hitinPop
+sampSize<-total_diff_metab
+
+a<-matrix(c(hitinSample,hitinPop-hitinSample,
+            sampSize-hitinSample,failinPop-sampSize+hitinSample),nrow=2,ncol=2)
+rownames(a)<-c("sig","nonSig")
+colnames(a)<-c("carotenoid","otherPathways")
+#8,5,105,142
+#13,11,100,136
+#16,3,163,66
+# fisher.test(matrix(c(3,3,176,66),nrow=2,ncol=2),alternative="greater")
+# fisher.test(matrix(c(12,1,167,143),nrow=2,ncol=2),alternative="greater")
+# fisher.test(a,alternative="greater")
+
+enrichment_value_fisher_d12<-enrichment_value_fisher
+enrichment_value_fisher_d4<-enrichment_value_fisher
+
+metabolite_pathways_enrich<-cbind(metabolite_pathways,round(enrichment_value_fisher_d12,2),round(enrichment_value_fisher_d4,2))
+
+#metabolite_pathways_d12_05<-metabolite_pathways_d12_enrich[metabolite_pathways_d12_enrich[,5]<0.05,]
+
+write.table(metabolite_pathways_enrich,"metabolite_pathways_enrichFisher.txt",quote=FALSE,sep='\t',col.names=NA)
+
+
 
 #### Analyzing correlations
 

@@ -25,7 +25,7 @@ library(RColorBrewer)
 ######## reading in MS1 data
 
 
-setwd('../../AlgaeData/results.from.scelse.cluster.211213/')
+setwd("F:/Vinay's Algae Data/Aug2013/AlgaeData/results.from.scelse.cluster.211213")
 
 load("svd_day4_x138_nonzero.rda")
 batch_corrected_mat_d4<-svd_day4_nonzero[[7]]
@@ -68,12 +68,7 @@ names(RunDay_day4)<-as.character(gsub('D4_14','D4_014',names(RunDay_day4)))
 ## The data scaled data is stored here
 #This is done as ta subset of this data is used to compare the relationship between strains before and after batch correction
 ms_data_day12_nonzero_scale<-ScaleData(ms_data_day12_nonzero)
-colnames(ms_data_day12_nonzero_scale)<-colnames(ms_data_day12_nonzero)
-rownames(ms_data_day12_nonzero_scale)<-rownames(ms_data_day12_nonzero)
-
 ms_data_day4_nonzero_scale<-ScaleData(ms_data_day4_nonzero)
-colnames(ms_data_day4_nonzero_scale)<-colnames(ms_data_day4_nonzero)
-rownames(ms_data_day4_nonzero_scale)<-rownames(ms_data_day4_nonzero)
 
 # Adding colnames to names of Sample group
 names(SampleGroup_day12)<-colnames(ms_data_day12_nonzero)
@@ -226,6 +221,7 @@ c<-msms_data_mode3_data;names(c)<-colnames(a);
 d<-msms_data_mode4_data;names(d)<-colnames(a);
 
 msms_data<-rbind(a,b,c,d)#only the first mode column names will be used
+rm(a,b,c,d)
 metainfo_msms_data<-metainfo_mode1_data#as only the first mode's column names are used
 
 ##NOTE: ensure that the order of the columns are the same in each dataset before merging
@@ -275,16 +271,38 @@ pcaPlot<-function(axisA,axisB,Strains,residualVariance,plotTitle) {
   return(plot3)
 }
 
-##Multiple ggplots
+## PCOA ggplot
 
+pcoaPlot<-function(axisA,axisB,Strains,residualVariance,plotTitle) {
+  set.seed(1)
+  forPlot<-data.frame(PCaxisA = axisA,PCaxisB = axisB, Strains=Strains)
+  #Choosing color
+  colourCount = length(unique(forPlot$Strains))
+  getPalette = colorRampPalette(brewer.pal(length(unique(forPlot$Strains)),"Paired"))
+  set.seed(1) #important to set seed so that we obtain the same shapes for strains all the time
+  pch_types<-c(15, 16, 17, 18, 25, 8)
+  pch_values<-sample(pch_types, length(unique(forPlot$Strains)), replace = TRUE)
+  
+  plot1<- ggplot(data=forPlot, aes(x=PCaxisA, y=PCaxisB,colour= factor(Strains), shape = factor(Strains))) + geom_point(size=4) #for samples
+  plot2<- plot1 +  scale_colour_manual('Strains', values=getPalette(colourCount)) + scale_shape_manual('Strains',values=pch_values)
+  plot3<- plot2+ theme_bw() + theme(axis.text.x=element_text(angle = 45, hjust = 1,size=12),axis.text.y=element_text(size=12),
+                                    panel.grid.major.x = element_blank(), # to x remove gridlines
+                                    panel.grid.major.y = element_blank(), # to y remove gridlines
+                                    panel.border = element_blank(),  # remove top and right border
+                                    panel.background = element_blank(),
+                                    axis.line = element_line(color = 'black'))+ 
+    xlab(paste0("PCOA 1","\n","Variation exp= ",round(residualVariance[1]*100,2),"%")) + 
+    ylab(paste0("PCOA 2 ","\n","Variation exp= ",round((residualVariance[2]-residualVariance[1])*100,2),"%")) +
+    ggtitle(plotTitle)
+  return(plot3)
+}
+
+##Multiple ggplots
 multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
   require(grid)
-  
   # Make a list from the ... arguments and plotlist
   plots <- c(list(...), plotlist)
-  
   numPlots = length(plots)
-  
   # If layout is NULL, then use 'cols' to determine layout
   if (is.null(layout)) {
     # Make the panel
@@ -293,20 +311,16 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
     layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
                      ncol = cols, nrow = ceiling(numPlots/cols))
   }
-  
   if (numPlots==1) {
     print(plots[[1]])
-    
   } else {
     # Set up the page
     grid.newpage()
     pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-    
     # Make each plot, in the correct location
     for (i in 1:numPlots) {
       # Get the i,j matrix positions of the regions that contain this subplot
       matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-      
       print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
                                       layout.pos.col = matchidx$col))
     }
@@ -322,6 +336,17 @@ avg.strains<-function(datamatrix0,strains){
   rownames(datamatrix)<-datamatrix[,1]
   datamatrix<-datamatrix[,2:ncol(datamatrix)]
   return(datamatrix)
+}
+
+### pcoa-euclidean
+pcoa_euc<-function(datamatrix)
+{
+  bray_grps <- vegdist(t(datamatrix), "euclidean") #calculating distance matrix using bray curtis
+  bray_grps_pcoa<-cmdscale(bray_grps, eig=TRUE, add=TRUE, x.ret =TRUE) 
+  bray_grps_pcoa_scores<-as.data.frame(bray_grps_pcoa$x)
+  eig<-eigenvals(bray_grps_pcoa)
+  residual_variance<-cumsum(eig/sum(eig))
+  return(list(bray_grps_pcoa_scores,residual_variance))
 }
 
 ####################################### Analysis of distance
@@ -366,8 +391,50 @@ plot(density(batch_corrected_mat_d12_msms_aod), xlim=c(0,5), main="DAY12 correct
 plot(density(msms_data_d12_aod), xlim=c(0,5), main="DAY12 MSMS")
 dev.off()
 
-####################################### PCA
+############# AOD plots using ggplot
 
+ms_data_day4_msms_aod_df<-cbind(as.numeric(ms_data_day4_msms_aod$f.perms),rep("Raw",length(ms_data_day4_msms_aod$f.perms)))
+batch_corrected_mat_d4_msms_aod_df<-cbind(as.numeric(batch_corrected_mat_d4_msms_aod$f.perms),rep("Batch-corrected",length(batch_corrected_mat_d4_msms_aod$f.perms)))
+msms_data_d4_aod_df<-cbind(as.numeric(msms_data_d4_aod$f.perms),rep("MSMS",length(msms_data_d4_aod$f.perms)))
+
+ms_data_day4_msms_aod_plot<-rbind(ms_data_day4_msms_aod_df,batch_corrected_mat_d4_msms_aod_df,msms_data_d4_aod_df)
+ms_data_day4_msms_aod_plot<-as.data.frame(ms_data_day4_msms_aod_plot)
+colnames(ms_data_day4_msms_aod_plot)<-c("fperms","datatype")
+ms_data_day4_msms_aod_plot$fperms<-as.numeric(as.character(ms_data_day4_msms_aod_plot$fperms))
+
+ms_data_day4_msms_aod_plotRes<-ggplot(ms_data_day4_msms_aod_plot, aes(x = fperms, fill = datatype)) + geom_density(alpha = 0.5) +
+  theme_bw() + theme(axis.text.x=element_text(size=12),axis.text.y=element_text(size=12),
+                     strip.text.x = element_text(size=12, face="bold"),
+                     panel.grid.major.x = element_blank(), # to x remove gridlines
+                     panel.grid.major.y = element_blank(), # to y remove gridlines
+                     panel.border = element_blank(),  # remove top and right border
+                     panel.background = element_blank(),
+                     axis.line = element_line(color = 'black')) + xlab("F statistics") + ylab("Density") + ggtitle("Day4")
+
+ms_data_day12_msms_aod_df<-cbind(as.numeric(ms_data_day12_msms_aod$f.perms),rep("Raw",length(ms_data_day12_msms_aod$f.perms)))
+batch_corrected_mat_d12_msms_aod_df<-cbind(as.numeric(batch_corrected_mat_d12_msms_aod$f.perms),rep("Batch-corrected",length(batch_corrected_mat_d12_msms_aod$f.perms)))
+msms_data_d12_aod_df<-cbind(as.numeric(msms_data_d12_aod$f.perms),rep("MSMS",length(msms_data_d12_aod$f.perms)))
+
+ms_data_day12_msms_aod_plot<-rbind(ms_data_day12_msms_aod_df,batch_corrected_mat_d12_msms_aod_df,msms_data_d12_aod_df)
+ms_data_day12_msms_aod_plot<-as.data.frame(ms_data_day12_msms_aod_plot)
+colnames(ms_data_day12_msms_aod_plot)<-c("fperms","datatype")
+ms_data_day12_msms_aod_plot$fperms<-as.numeric(as.character(ms_data_day12_msms_aod_plot$fperms))
+
+ms_data_day12_msms_aod_plotRes<-ggplot(ms_data_day12_msms_aod_plot, aes(x = fperms, fill = datatype)) + geom_density(alpha = 0.5) +
+  theme_bw() + theme(axis.text.x=element_text(size=12),axis.text.y=element_text(size=12),
+                     strip.text.x = element_text(size=12, face="bold"),
+                     panel.grid.major.x = element_blank(), # to x remove gridlines
+                     panel.grid.major.y = element_blank(), # to y remove gridlines
+                     panel.border = element_blank(),  # remove top and right border
+                     panel.background = element_blank(),
+                     axis.line = element_line(color = 'black')) + xlab("F statistics") + ylab("Density") + ggtitle("Day12")
+
+pdf("aod_plots_MSMS_ggplot.pdf",height=8,width=12)
+multiplot(ms_data_day4_msms_aod_plotRes, ms_data_day12_msms_aod_plotRes,cols=2) #)#,   pc1_corrected, pc2_corrected, pc3_corrected cols=2)
+dev.off()
+
+
+######################################
 ##Averaging replicates 
 ms_data_day4_msms_reps<-t(avg.strains(ms_data_day4_msms,SampleGroup_day4_msms))
 ms_data_day12_msms_reps<-t(avg.strains(ms_data_day12_msms,SampleGroup_day12_msms))
@@ -376,6 +443,7 @@ batch_corrected_mat_d12_msms_reps<-t(avg.strains(batch_corrected_mat_d12_msms,Sa
 msms_data_d4_scale_reps<-t(avg.strains(msms_data_d4_scale,metainfo_msms_data_d4$SampleName))
 msms_data_d12_scale_reps<-t(avg.strains(msms_data_d12_scale,metainfo_msms_data_d12$SampleName))
 
+####################################### PCA
 ms_data_day4_msms_pca<-princomp(ms_data_day4_msms_reps,cor=F,scores=T)
 residual_variance<-ms_data_day4_msms_pca$sdev^2/sum(ms_data_day4_msms_pca$sdev^2)
 ms_data_day4_msms_pcaPlot<-pcaPlot(ms_data_day4_msms_pca$loadings[,1],ms_data_day4_msms_pca$loadings[,2],unique(SampleGroup_day4_msms),residual_variance,"Day 4 raw")
@@ -394,13 +462,51 @@ batch_corrected_mat_d12_msms_pcaPlot<-pcaPlot(batch_corrected_mat_d12_msms_pca$l
 
 msms_data_d4_scale_pca<-princomp(msms_data_d4_scale_reps,cor=F,scores=T)
 residual_variance<-msms_data_d4_scale_pca$sdev^2/sum(msms_data_d4_scale_pca$sdev^2)
-msms_data_d4_pcaPlot<-pcaPlot(msms_data_d4_scale_pca$loadings[,1],msms_data_d4_scale_pca$loadings[,2],unique(as.factor(metainfo_msms_data_d4$SampleName)),residual_variance,"Day 4 MSMS")
+msms_data_d4_pcaPlot<-pcaPlot(msms_data_d4_scale_pca$loadings[,1],msms_data_d4_scale_pca$loadings[,2],unique(metainfo_msms_data_d4$SampleName),residual_variance,"Day 4 MSMS")
 
 msms_data_d12_scale_pca<-princomp(msms_data_d12_scale_reps,cor=F,scores=T)
 residual_variance<-msms_data_d12_scale_pca$sdev^2/sum(msms_data_d12_scale_pca$sdev^2)
-msms_data_d12_pcaPlot<-pcaPlot(msms_data_d12_scale_pca$loadings[,1],msms_data_d12_scale_pca$loadings[,2],unique(as.factor(metainfo_msms_data_d12$SampleName)),residual_variance,"Day 12 MSMS")
+msms_data_d12_pcaPlot<-pcaPlot(msms_data_d12_scale_pca$loadings[,1],msms_data_d12_scale_pca$loadings[,2],unique(metainfo_msms_data_d12$SampleName),residual_variance,"Day 12 MSMS")
 
 pdf("PCA_D4-D12_MSMSComparison.pdf",height=12,width=16)
 multiplot(ms_data_day4_msms_pcaPlot, batch_corrected_mat_d4_msms_pcaPlot, ms_data_day12_msms_pcaPlot, 
           batch_corrected_mat_d12_msms_pcaPlot,msms_data_d4_pcaPlot, msms_data_d12_pcaPlot, cols=3)
 dev.off()
+
+######################################## PCOA
+
+ms_data_day4_msms_pcoa<-pcoa_euc(ms_data_day4_msms_reps)
+ms_data_day4_msms_pcoa_scores<-as.data.frame(ms_data_day4_msms_pcoa[[1]])
+residual_variance<-as.numeric(ms_data_day4_msms_pcoa[[2]])
+ms_data_day4_msms_pcoaPlot<-pcoaPlot(ms_data_day4_msms_pcoa_scores[,1],ms_data_day4_msms_pcoa_scores[,2],unique(SampleGroup_day4_msms),residual_variance,"Day 4 raw")
+
+ms_data_day12_msms_pcoa<-pcoa_euc(ms_data_day12_msms_reps)
+ms_data_day12_msms_pcoa_scores<-as.data.frame(ms_data_day12_msms_pcoa[[1]])
+residual_variance<-as.numeric(ms_data_day12_msms_pcoa[[2]])
+ms_data_day12_msms_pcoaPlot<-pcoaPlot(ms_data_day12_msms_pcoa_scores[,1],ms_data_day12_msms_pcoa_scores[,2],unique(SampleGroup_day12_msms),residual_variance,"Day 12 raw")
+
+batch_corrected_mat_d4_msms_pcoa<-pcoa_euc(batch_corrected_mat_d4_msms_reps)
+batch_corrected_mat_d4_msms_pcoa_scores<-as.data.frame(batch_corrected_mat_d4_msms_pcoa[[1]])
+residual_variance<-as.numeric(batch_corrected_mat_d4_msms_pcoa[[2]])
+batch_corrected_mat_d4_msms_pcoaPlot<-pcoaPlot(batch_corrected_mat_d4_msms_pcoa_scores[,1],batch_corrected_mat_d4_msms_pcoa_scores[,2],unique(SampleGroup_day4_msms),residual_variance,"Day 4 corrected")
+
+batch_corrected_mat_d12_msms_pcoa<-pcoa_euc(batch_corrected_mat_d12_msms_reps)
+batch_corrected_mat_d12_msms_pcoa_scores<-as.data.frame(batch_corrected_mat_d12_msms_pcoa[[1]])
+residual_variance<-as.numeric(batch_corrected_mat_d12_msms_pcoa[[2]])
+batch_corrected_mat_d12_msms_pcoaPlot<-pcoaPlot(batch_corrected_mat_d12_msms_pcoa_scores[,1],batch_corrected_mat_d12_msms_pcoa_scores[,2],unique(SampleGroup_day12_msms),residual_variance,"Day 12 corrected")
+
+msms_data_d4_scale_reps_pcoa<-pcoa_euc(msms_data_d4_scale_reps)
+msms_data_d4_scale_reps_pcoa_scores<-as.data.frame(msms_data_d4_scale_reps_pcoa[[1]])
+residual_variance<-as.numeric(msms_data_d4_scale_reps_pcoa[[2]])
+msms_data_d4_pcoaPlot<-pcoaPlot(msms_data_d4_scale_reps_pcoa_scores[,1],msms_data_d4_scale_reps_pcoa_scores[,2],unique(metainfo_msms_data_d4$SampleName),residual_variance,"Day 4 MSMS")
+
+msms_data_d12_scale_reps_pcoa<-pcoa_euc(msms_data_d12_scale_reps)
+msms_data_d12_scale_reps_pcoa_scores<-as.data.frame(msms_data_d12_scale_reps_pcoa[[1]])
+residual_variance<-as.numeric(msms_data_d12_scale_reps_pcoa[[2]])
+msms_data_d12_pcoaPlot<-pcoaPlot(msms_data_d12_scale_reps_pcoa_scores[,1],msms_data_d12_scale_reps_pcoa_scores[,2],unique(metainfo_msms_data_d12$SampleName),residual_variance,"Day 12 MSMS")
+
+pdf("PCOA_D4-D12_MSMSComparison.pdf",height=12,width=16)
+multiplot(ms_data_day4_msms_pcoaPlot, batch_corrected_mat_d4_msms_pcoaPlot, ms_data_day12_msms_pcoaPlot, 
+          batch_corrected_mat_d12_msms_pcoaPlot,msms_data_d4_pcoaPlot, msms_data_d12_pcoaPlot, cols=3)
+dev.off()
+

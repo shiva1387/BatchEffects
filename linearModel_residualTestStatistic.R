@@ -33,8 +33,8 @@ dataset_sig_features_day4<-mt.maxT(data_matrix_d4,classlabel_factor_d4,test="f",
 # 395.242420519267@446.756   6412  97.02215 0.001 0.001
 # 924.566737966965@697.4745 12985  88.85149 0.001 0.001
 # 925.569988480991@697.451  13004  88.58353 0.001 0.001
-metab_sig_day4<-cbind(data_matrix_d4[id.sig_dataset_day4,],round(dataset_sig_features_day4$adjp[dataset_sig_features_day4$index %in% id.sig_dataset_day4],5))
 id.sig_dataset_day4 <- sort(dataset_sig_features_day4[dataset_sig_features_day4$adjp < 0.05,c(1)]) #getting the column which provides index of rows satisying the condition
+metab_sig_day4<-cbind(data_matrix_d4[id.sig_dataset_day4,],round(dataset_sig_features_day4$adjp[dataset_sig_features_day4$index %in% id.sig_dataset_day4],5))
 length(id.sig_dataset_day4)
 
 lm_day12_raw<-compute_linearModel_ext_resid(t(ScaleData(ms_data_day12_nonzero)),SampleGroup_day12,RunDay_day12)
@@ -44,6 +44,14 @@ dataset_sig_features_day12<-mt.maxT(data_matrix_d12,classlabel_factor_d12,test="
 id.sig_dataset_day12 <- sort(dataset_sig_features_day12[dataset_sig_features_day12$adjp < 0.05,c(1)]) #getting the column which provides index of rows satisying the condition
 metab_sig_day12<-cbind(data_matrix_d12[id.sig_dataset_day12,],round(dataset_sig_features_day12$adjp[dataset_sig_features_day12$index %in% id.sig_dataset_day12],5))
 length(id.sig_dataset_day12)
+
+
+pdf("linearModel_permutation.pdf",width=8,height=6)
+par(mfrow=c(1,2))
+hist(dataset_sig_features_day4$adjp,main=paste0("Exponential phase","\n","After correction Strain"),xlab="adjusted p values",ylim=c(0,8000))
+hist(dataset_sig_features_day12$adjp,main=paste0("Stationary phase","\n","After correction Strain"),xlab="adjusted p values",ylim=c(0,8000))
+#plot(lm_strain_d4_nonzero_loadings_pval_corrected,lm_runday_d4_nonzero_loadings_pval_corrected)
+dev.off()
 
 # adjusted p values from matrix
 #for day4 3208
@@ -70,6 +78,8 @@ dataset_r2_d4<-r2.from.Fstat(dataset_fvalue_d4,length(unique(classlabel_factor_d
 
 dataset_fvalue_d12<-mt.teststat(data_matrix_d12,classlabel_factor_d12,test="f",nonpara="n")
 dataset_r2_d12<-r2.from.Fstat(dataset_fvalue_d12,length(unique(classlabel_factor_d12)),ncol(data_matrix_d12))
+
+plot(dataset_fvalue_d12,dataset_r2_d12)
 
 mz_rt_day4 <- strsplit(rownames(ms_data_day4_nonzero), "\\@")
 mz_day4<-sapply(mz_rt_day4 , function (x) if(length(x) == 2) x[1] else as.character(NA))
@@ -128,21 +138,22 @@ df2_d12s$newBin<-as.numeric(sapply(splits , function (x) if(length(x) == 2) x[2]
 
 #plot
 
-pdf("linearModel_testStatistic.pdf",height=12,width=12)
+pdf("linearModel_testStatisticV1.pdf",height=12,width=12)
 
-par(mfrow=c(4,2))
+#par(mfrow=c(4,2))
+par(mfrow=c(2,2))
 
-plot(rt_day4,mz_day4,pch=1,main="day 4 Strain",ylab="m/z",xlab=paste0("rt(s)","\n","no of features=",tot_mz_s_day4),col="#00000033")
-points(sigfeat_day4_bc_rt_s,sigfeat_day4_bc_mz_s,pch=1,col="red")
-
-plot(rt_day12,mz_day12,pch=1,main="day 12 Strain",ylab="m/z",xlab=paste0("rt(s)","\n","no of features=",tot_mz_s_day12),col="#00000033")
-points(sigfeat_day12_bc_rt_s,sigfeat_day12_bc_mz_s,pch=1,col="red")
-
-plot(rt_day4,mz_day4,pch=1,main="day 4 Strain-Test statistic",ylab="m/z",xlab=paste0("rt(s)","\n","no of features=",length(tmp1)),col="#00000033")
-points(sigfeat_day4_bc_rt_s,sigfeat_day4_bc_mz_s,pch=1,col=ifelse(day4_numdenum_s[day4_numdenum_s_ind]<0.1,"red","#00000033"))
-
-plot(rt_day12,mz_day12,pch=1,main="day 12 Strain-Test statistic",ylab="m/z",xlab=paste0("rt(s)","\n","no of features=",length(tmp2)),col="#00000033")
-points(sigfeat_day12_bc_rt_s,sigfeat_day12_bc_mz_s,pch=1,col=ifelse(day12_numdenum_s[day12_numdenum_s_ind]<0.1,"red","#00000033"))
+# plot(rt_day4,mz_day4,pch=1,main="day 4 Strain",ylab="m/z",xlab=paste0("rt(s)","\n","no of features=",tot_mz_s_day4),col="#00000033")
+# points(sigfeat_day4_bc_rt_s,sigfeat_day4_bc_mz_s,pch=1,col="red")
+# 
+# plot(rt_day12,mz_day12,pch=1,main="day 12 Strain",ylab="m/z",xlab=paste0("rt(s)","\n","no of features=",tot_mz_s_day12),col="#00000033")
+# points(sigfeat_day12_bc_rt_s,sigfeat_day12_bc_mz_s,pch=1,col="red")
+# 
+# plot(rt_day4,mz_day4,pch=1,main="day 4 Strain-Test statistic",ylab="m/z",xlab=paste0("rt(s)","\n","no of features=",length(tmp1)),col="#00000033")
+# points(sigfeat_day4_bc_rt_s,sigfeat_day4_bc_mz_s,pch=1,col=ifelse(day4_numdenum_s[day4_numdenum_s_ind]<0.1,"red","#00000033"))
+# 
+# plot(rt_day12,mz_day12,pch=1,main="day 12 Strain-Test statistic",ylab="m/z",xlab=paste0("rt(s)","\n","no of features=",length(tmp2)),col="#00000033")
+# points(sigfeat_day12_bc_rt_s,sigfeat_day12_bc_mz_s,pch=1,col=ifelse(day12_numdenum_s[day12_numdenum_s_ind]<0.1,"red","#00000033"))
 
 plot(dataset_fvalue_d4,dataset_r2_d4,pch=1,main="day 4 Strain-F val VS r2 statistic",ylab="r2",xlab="fvalue",col=ifelse(sigfeat_day4_s=="sig","red","#00000033"))
 legend(x="topright",inset=0, legend=c("sig","non-sig"),col=c("red","black"),pch=1)  

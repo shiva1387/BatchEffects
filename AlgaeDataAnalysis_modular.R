@@ -1517,7 +1517,7 @@ compute_numdenum_ftest<-function(dataset,classlabel) {
     for(i in 1:length(dataset))
     { data_matrix<-as.matrix(dataset[[i]])
       dataset_numdenum<-mt.teststat.num.denum(data_matrix,classlabel_factor,test="f",nonpara="n")
-      numdenum_metab_dataset[[i]]<-dataset_numdenmu
+      numdenum_metab_dataset[[i]]<-dataset_numdenum
     }
   } else { # only a single dataset
     classlabel_factor<-as.numeric(as.factor(classlabel))-1
@@ -1765,8 +1765,9 @@ for(i in 1:15)#ncol(ms_data_day4_nonzero))
 
 
   #plot
-  png(paste('batchAnalysis/day4/',i,'.png',sep=""),height=800,width=800)
-  m<- matrix(c(1,2,3,4,5,6,7,8,9,9),ncol = 2,byrow = TRUE)
+  pdf(paste('batchAnalysis_thesis/day4/',i,'.pdf',sep=""),height=12,width=12)
+  #m<- matrix(c(1,2,3,4,5,6,7,8,9,9),ncol = 2,byrow = TRUE)
+  m<- matrix(c(1,2,3,4,5,6,7,7),ncol = 2,byrow = TRUE)
   layout(mat = m)
   
   plot(rt_day4,mz_day4,pch=1,main="day 4 Runday",ylab="m/z",xlab=paste0("rt(s)","\n","no of features=",tot_mz_r),col="#00000033")
@@ -1775,11 +1776,11 @@ for(i in 1:15)#ncol(ms_data_day4_nonzero))
   plot(rt_day4,mz_day4,pch=1,main="day 4 Strain",ylab="m/z",xlab=paste0("rt(s)","\n","no of features=",tot_mz_s),col="#00000033")
   points(sigfeat_day4_bc_rt_s,sigfeat_day4_bc_mz_s,pch=1,col="red")
   
-  plot(rt_day4,mz_day4,pch=1,main="day 4 Runday-Test statistic",ylab="m/z",xlab=paste0("rt(s)","\n","no of features=",length(tmp1)),col="#00000033")
-  points(sigfeat_day4_bc_rt_r,sigfeat_day4_bc_mz_r,pch=1,col=ifelse(day4_numdenum_r[day4_numdenum_r_ind]<0.1,"green","#00000033"))
-  
-  plot(rt_day4,mz_day4,pch=1,main="day 4 Strain-Test statistic",ylab="m/z",xlab=paste0("rt(s)","\n","no of features=",length(tmp2)),col="#00000033")
-  points(sigfeat_day4_bc_rt_s,sigfeat_day4_bc_mz_s,pch=1,col=ifelse(day4_numdenum_s[day4_numdenum_s_ind]<0.1,"red","#00000033"))
+#   plot(rt_day4,mz_day4,pch=1,main="day 4 Runday-Test statistic",ylab="m/z",xlab=paste0("rt(s)","\n","no of features=",length(tmp1)),col="#00000033")
+#   points(sigfeat_day4_bc_rt_r,sigfeat_day4_bc_mz_r,pch=1,col=ifelse(day4_numdenum_r[day4_numdenum_r_ind]<0.1,"green","#00000033"))
+#   
+#   plot(rt_day4,mz_day4,pch=1,main="day 4 Strain-Test statistic",ylab="m/z",xlab=paste0("rt(s)","\n","no of features=",length(tmp2)),col="#00000033")
+#   points(sigfeat_day4_bc_rt_s,sigfeat_day4_bc_mz_s,pch=1,col=ifelse(day4_numdenum_s[day4_numdenum_s_ind]<0.1,"red","#00000033"))
   
   plot(as.numeric(day4_nonzero_fvalues_r[,i]),as.numeric(day4_nonzero_r2F_r[,i]),pch=1,main="day 4 Runday-F val VS r2 statistic",ylab="r2",xlab="fvalue",col=ifelse(sigfeat_day4_r=="sig","red","#00000033"))
   legend(x="topright",inset=0, legend=c("sig","non-sig"),col=c("red","black"),pch=1)  
@@ -1859,8 +1860,9 @@ for(i in 1:4)#ncol(ms_data_day12_nonzero))
     df2_s$newBin<-as.numeric(sapply(splits , function (x) if(length(x) == 2) x[2] else as.character(NA)))
 
     #plot
-    png(paste('batchAnalysis/day12/',i,'.png',sep=""),height=800,width=800)
-    m<- matrix(c(1,2,3,4,5,6,7,8,9,9),ncol = 2,byrow = TRUE)
+    pdf(paste('batchAnalysis_thesis/day12/',i,'.pdf',sep=""),height=12,width=12)
+    #m<- matrix(c(1,2,3,4,5,6,7,8,9,9),ncol = 2,byrow = TRUE)
+    m<- matrix(c(1,2,3,4,5,6,7,7),ncol = 2,byrow = TRUE)
     layout(mat = m)
     
     plot(rt_day12,mz_day12,pch=1,main="day 12 Runday",ylab="m/z",xlab=paste0("rt(s)","\n","no of features=",tot_mz_r),col="#00000033")
@@ -1869,12 +1871,12 @@ for(i in 1:4)#ncol(ms_data_day12_nonzero))
     plot(rt_day12,mz_day12,pch=1,main="day 12 Strain",ylab="m/z",xlab=paste0("rt(s)","\n","no of features=",tot_mz_s),col="#00000033")
     points(sigfeat_day12_bc_rt_s,sigfeat_day12_bc_mz_s,pch=1,col="red")
     
-    plot(rt_day12,mz_day12,pch=1,main="day 12 Runday-Test statistic",ylab="m/z",xlab=paste0("rt(s)","\n","no of features=",length(tmp1)),col="#00000033")
-    points(sigfeat_day12_bc_rt_r,sigfeat_day12_bc_mz_r,pch=1,col=ifelse(day12_numdenum_r[day12_numdenum_r_ind]<0.1,"green","#00000033"))
-    
-    plot(rt_day12,mz_day12,pch=1,main="day 12 Strain-Test statistic",ylab="m/z",xlab=paste0("rt(s)","\n","no of features=",length(tmp2)),col="#00000033")
-    points(sigfeat_day12_bc_rt_s,sigfeat_day12_bc_mz_s,pch=1,col=ifelse(day12_numdenum_s[day12_numdenum_s_ind]<0.1,"red","#00000033"))
-    
+#     plot(rt_day12,mz_day12,pch=1,main="day 12 Runday-Test statistic",ylab="m/z",xlab=paste0("rt(s)","\n","no of features=",length(tmp1)),col="#00000033")
+#     points(sigfeat_day12_bc_rt_r,sigfeat_day12_bc_mz_r,pch=1,col=ifelse(day12_numdenum_r[day12_numdenum_r_ind]<0.1,"green","#00000033"))
+#     
+#     plot(rt_day12,mz_day12,pch=1,main="day 12 Strain-Test statistic",ylab="m/z",xlab=paste0("rt(s)","\n","no of features=",length(tmp2)),col="#00000033")
+#     points(sigfeat_day12_bc_rt_s,sigfeat_day12_bc_mz_s,pch=1,col=ifelse(day12_numdenum_s[day12_numdenum_s_ind]<0.1,"red","#00000033"))
+#     
     plot(as.numeric(day12_nonzero_fvalues_r[,i]),as.numeric(day12_nonzero_r2F_r[,i]),pch=1,main="day 12 Runday-F val VS r2 statistic",ylab="r2",xlab="fvalue",col=ifelse(sigfeat_day12_r=="sig","red","#00000033"))
     legend(x="topright",inset=0, legend=c("sig","non-sig"),col=c("red","black"),pch=1)  
     
@@ -1906,12 +1908,16 @@ matplot(day4_nonzero_sigfeat_s_pvaldf,type='l',ylab="pval",xlab="day4 Strain")
 matplot(day12_nonzero_sigfeat_s_pvaldf,type='l',ylab="pval",xlab="day12 Strain")
 dev.off()
 
-png("pval_sigfeat.png",height=800,width=800)
-par(mfrow=c(2,2))
-plot(1:124,day4_no_nonzero_sigfeat_r,type='l',col='blue',xlab="day4 Runday")
-plot(1:121,day12_no_nonzero_sigfeat_r,type='l',col='red',xlab="day12 Runday")
-plot(1:124,day4_no_nonzero_sigfeat_s,type='l',col='blue',xlab="day4 Strain")
-plot(1:121,day12_no_nonzero_sigfeat_s,type='l',col='red',xlab="day12 Strain")
+pdf("pval_sigfeat.pdf",height=12,width=8)
+par(mfrow=c(2,1))
+plot(1:125,day4_no_nonzero_sigfeat_r,col='green',ylab="Number of significant features", xlab="PCs",main="Day4",ylim=c(0,12000))
+points(1:125,day4_no_nonzero_sigfeat_s,col='red',ylab="Number of significant features", xlab="PCs",main="Day4",ylim=c(0,12000))
+legend("topright", inset=.05, title="Factor",
+       c("Strain","RunDay"), fill=c("red","green"), horiz=TRUE)
+plot(1:118,day12_no_nonzero_sigfeat_r,col='green',ylab="Number of significant features", xlab="PCs",main="Day12",ylim=c(0,12000))
+points(1:118,day12_no_nonzero_sigfeat_s,col='red',ylab="Number of significant features", xlab="PCs",main="Day12",ylim=c(0,12000))
+legend("topright", inset=.05, title="Factor",
+       c("Strain","RunDay"), fill=c("red","green"), horiz=TRUE)
 dev.off()
 
 png("pval_factor_new.png",height=800,width=800)

@@ -70,7 +70,7 @@ rownames(batch_sample_desc_matrix)<-colnames(ms_data_day12_nonzero)
 
 ## Parameters for SVA and Combat analysis
 
-mod0_new = model.matrix(~1,,data=batch_sample_desc_matrix)
+mod0_new = model.matrix(~1,data=batch_sample_desc_matrix)
 #mod0_new = model.matrix(~as.factor(Batch),,data=batch_sample_desc_matrix)
 mod_new = model.matrix(~as.factor(Strain),data=batch_sample_desc_matrix)
 edata_new = as.matrix(ms_data_day12_nonzero)
@@ -93,6 +93,7 @@ combat_edata1 = ComBat(dat=edata_new, batch=batch_sample_desc_matrix$Batch, mod=
 ### For SVA
 # n.sv_new = num.sv(edata_new,mod_new,vfilter=2000,method="leek")
 # svobj1 = sva(edata_new,mod_new,mod0_new,vfilter=2000, method="two-step")
+svobj1 = sva(edata_new,mod_new,mod0_new, method="leek")
 #[1] "No significant surrogate variables"
 pValues=f.pvalue(edata_new,mod_new,mod0_new)
 qValues=p.adjust(pValues,method="BH")

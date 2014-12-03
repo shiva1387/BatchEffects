@@ -19,6 +19,9 @@ batch_corrected_mat_d4<-svd_day4_nonzero[[7]]
 load("svd_day12_x138_nonzero.rda")
 batch_corrected_mat_d12<-svd_day12_nonzero[[4]]
 
+##Getting the full dataset
+load("../algae-data-objects.RData")
+
 #Ensure all strain ids are in the same format
 colnames(batch_corrected_mat_d12)<-as.character(gsub('D12_14','D12_014',colnames(batch_corrected_mat_d12)))
 colnames(batch_corrected_mat_d12)<-as.character(gsub('D12_84','D12_084',colnames(batch_corrected_mat_d12)))
@@ -49,8 +52,7 @@ names(RunDay_day12)<-as.character(gsub('D12_94','D12_094',names(RunDay_day12)))
 names(RunDay_day4)<-as.character(gsub('D4_14','D4_014',names(RunDay_day4)))
 
 
-##Getting the full dataset
-load("../algae-data-objects.RData")
+
 ## Complete.dataset (without zeroes)
 ms_data_d4_d12<-ms_data
 ms_data_d4_d12[ms_data_d4_d12<1+1e-3]<-NA
@@ -61,12 +63,7 @@ RunDay_d4_d12<-c(RunDay_day12,RunDay_day4)
 ## The data scaled data is stored here
 #This is done as ta subset of this data is used to compare the relationship between strains before and after batch correction
 ms_data_day12_nonzero_scale<-ScaleData(ms_data_day12_nonzero)
-colnames(ms_data_day12_nonzero_scale)<-colnames(ms_data_day12_nonzero)
-rownames(ms_data_day12_nonzero_scale)<-rownames(ms_data_day12_nonzero)
-
 ms_data_day4_nonzero_scale<-ScaleData(ms_data_day4_nonzero)
-colnames(ms_data_day4_nonzero_scale)<-colnames(ms_data_day4_nonzero)
-rownames(ms_data_day4_nonzero_scale)<-rownames(ms_data_day4_nonzero)
 
 # Adding colnames to names of Sample group
 names(SampleGroup_day12)<-colnames(ms_data_day12_nonzero)
@@ -76,9 +73,11 @@ names(SampleGroup_day4)<-colnames(ms_data_day4_nonzero)
 ### Functions
 ScaleData<-function(data_matrix){
   processed_data<-scale(data_matrix,center=T,scale=T)
-  processed_data<-processed_data-min(processed_data)
+  colnames(processed_data)<-colnames(data_matrix)
+  rownames(processed_data)<-rownames(data_matrix)
   return(processed_data)
 }
+
 compute_linearModel_batchEffect<-function(data_matrix,StrainId,RunDayId) { #dependent.factor1 is Strain id(sample groups) and dependent.factor2 is RunDay 
   lm_pca_scores<-apply(data_matrix,2, function(x) {
     lm_val<-lm(x~ as.factor(RunDayId))
@@ -171,13 +170,10 @@ avg.strains<-function(datamatrix0,strains){
 
 multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
   require(grid)
-  
-  # Make a list from the ... arguments and plotlist
+    # Make a list from the ... arguments and plotlist
   plots <- c(list(...), plotlist)
-  
-  numPlots = length(plots)
-  
-  # If layout is NULL, then use 'cols' to determine layout
+    numPlots = length(plots)
+    # If layout is NULL, then use 'cols' to determine layout
   if (is.null(layout)) {
     # Make the panel
     # ncol: Number of columns of plots
@@ -185,32 +181,66 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
     layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
                      ncol = cols, nrow = ceiling(numPlots/cols))
   }
-  
-  if (numPlots==1) {
+   if (numPlots==1) {
     print(plots[[1]])
-    
-  } else {
+    } else {
     # Set up the page
     grid.newpage()
     pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-    
     # Make each plot, in the correct location
     for (i in 1:numPlots) {
       # Get the i,j matrix positions of the regions that contain this subplot
       matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-      
       print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
                                       layout.pos.col = matchidx$col))
     }
   }
 }
 
+##pcoa euclidean
+### pcoa-euclidean
+pcoa_euc<-function(datamatrix)
+{
+  bray_grps <- vegdist(t(datamatrix), "euclidean") #calculating distance matrix using bray curtis
+  bray_grps_pcoa<-cmdscale(bray_grps, eig=TRUE, add=TRUE, x.ret =TRUE) 
+  bray_grps_pcoa_scores<-as.data.frame(bray_grps_pcoa$x)
+  eig<-eigenvals(bray_grps_pcoa)
+  residual_variance<-cumsum(eig/sum(eig))
+  return(list(bray_grps_pcoa_scores,residual_variance))
+}
+
+## PCOA ggplot
+pcoaPlot<-function(axisA,axisB,Strains,residualVariance,plotTitle) {
+  set.seed(1)
+  forPlot<-data.frame(PCaxisA = axisA,PCaxisB = axisB, Strains=Strains)
+  #Choosing color
+  colourCount = length(unique(forPlot$Strains))
+  getPalette = colorRampPalette(brewer.pal(length(unique(forPlot$Strains)),"Paired"))
+  set.seed(1) #important to set seed so that we obtain the same shapes for strains all the time
+  pch_types<-c(15, 16, 17, 18, 25, 8)
+  pch_values<-sample(pch_types, length(unique(forPlot$Strains)), replace = TRUE)
+  
+  plot1<- ggplot(data=forPlot, aes(x=PCaxisA, y=PCaxisB,colour= factor(Strains), shape = factor(Strains))) + geom_point(size=4) #for samples
+  plot2<- plot1 +  scale_colour_manual('Strains', values=getPalette(colourCount)) + scale_shape_manual('Strains',values=pch_values)
+  plot3<- plot2+ theme_bw() + theme(axis.text.x=element_text(angle = 45, hjust = 1,size=12),axis.text.y=element_text(size=12),
+                                    panel.grid.major.x = element_blank(), # to x remove gridlines
+                                    panel.grid.major.y = element_blank(), # to y remove gridlines
+                                    panel.border = element_blank(),  # remove top and right border
+                                    panel.background = element_blank(),
+                                    axis.line = element_line(color = 'black'))+ 
+    xlab(paste0("PCOA 1","\n","Variation exp= ",round(residualVariance[1]*100,2),"%")) + 
+    ylab(paste0("PCOA 2 ","\n","Variation exp= ",round((residualVariance[2]-residualVariance[1])*100,2),"%")) +
+    ggtitle(plotTitle)
+  return(plot3)
+}
 
 ####################################### Linear models
 ## Estimating Nested linear models
 
 #lm_val<-lm(as.numeric(ms_data_day12_nonzero[1,])~ as.factor(RunDay_day12) + as.factor(RunDay_day12)/as.factor(SampleGroup_day12))
-lm_val<-lm(as.numeric(ms_data_day12_nonzero[1,])~ as.factor(SampleGroup_day12) + as.factor(RunDay_day12))
+#lm_val<-lm(as.numeric(ms_data_day12_nonzero[1,])~ as.factor(SampleGroup_day12) + as.factor(RunDay_day12))
+lm_val<-lme(as.numeric(ms_data_day12_nonzero[1,])~ as.factor(SampleGroup_day12), random=~1|as.factor(RunDay_day12)/as.factor(SampleGroup_day12))
+
 p.val_runday_strain<-anova(lm_val)$'Pr(>F)'[1]
 residuals_runday_strain<-sapply(linearmodel_list, function(x){as.numeric(x[1])})
 plot(residuals_runday_strain~fitted(lm_val))
@@ -235,31 +265,44 @@ msum[["Sum Sq"]]/sum(msum[["Sum Sq"]])
 #RawData
 lm_day12_nested_results<-compute_nested_linearModel(t(ScaleData(ms_data_day12_nonzero)),SampleGroup_day12,RunDay_day12)
 #residuals_runday_strain_day12<-as.data.frame(lm_day12_nested_results,"r2"))#extracts the first item in the list
-lm_day12_nested_results_pval<-as.data.frame(lm_day12_nested_results)
-rownames(lm_day12_nested_results_pval)<-c("RunDay","Strain")
+lm_day12_nested_results_pval<-as.data.frame(t(lm_day12_nested_results))
+colnames(lm_day12_nested_results_pval)<-c("RunDay","Strain")
 pdf("lm_day12.pdf",height=8,width=8)
 par(mfrow=c(2,2))
-hist(as.numeric(lm_day12_nested_results_pval[1,]),main="Runday",ylab="No. of features", xlab=paste0("Raw p value","\n","P<0.05= ",sum(as.numeric(lm_day12_nested_results_pval[1,])<0.05)))
-plot(as.numeric(lm_day12_nested_results_pval[2,]),as.numeric(lm_day12_nested_results_pval[1,]),main="Nested linear model",xlab="pvalue Runday/Strain", ylab="p value Runday"); rug(as.numeric(lm_day12_nested_results_pval[2,]))
-hist(as.numeric(lm_day12_nested_results_pval[2,]),main="Runday/Strain",ylab="No. of features", xlab=paste0("Raw p value","\n","P<0.05= ",sum(as.numeric(lm_day12_nested_results_pval[2,])<0.05)))
-plot(log10(as.numeric(lm_day12_nested_results_pval[2,])),log10(as.numeric(lm_day12_nested_results_pval[1,])),main="Nested linear model(log)",xlab="pvalue Runday/Strain", ylab="p value Runday"); rug(as.numeric(lm_day12_nested_results_pval[2,]))
+hist(as.numeric(lm_day12_nested_results_pval$RunDay),main="Runday",ylab="No. of features", xlab=paste0("Raw p value","\n","P<0.05= ",sum(as.numeric(lm_day12_nested_results_pval$RunDay)<0.05)))
+plot(as.numeric(lm_day12_nested_results_pval$Strain),as.numeric(lm_day12_nested_results_pval$RunDay),main="Nested linear model",xlab="pvalue Runday/Strain", ylab="p value Runday"); rug(as.numeric(lm_day12_nested_results_pval$Strain))
+hist(as.numeric(lm_day12_nested_results_pval$Strain),main="Runday/Strain",ylab="No. of features", xlab=paste0("Raw p value","\n","P<0.05= ",sum(as.numeric(lm_day12_nested_results_pval$Strain)<0.05)))
+plot(log10(as.numeric(lm_day12_nested_results_pval$Strain)),log10(as.numeric(lm_day12_nested_results_pval$RunDay)),main="Nested linear model(log)",xlab="pvalue Runday/Strain", ylab="p value Runday"); rug(log10(as.numeric(lm_day12_nested_results_pval$Strain)))
 dev.off()
 
-
-
+## Runday significant features
+sum(as.numeric(lm_day12_nested_results_pval$RunDay)<0.05)
+#9600
+## Runday/Strain significant features
+sum(as.numeric(lm_day12_nested_results_pval$Strain)<0.05)
+#9479  
+  
 #day4
 #RawData
 lm_day4_nested_results<-compute_nested_linearModel(t(ScaleData(ms_data_day4_nonzero)),SampleGroup_day4,RunDay_day4)
 #residuals_runday_strain_day4<-as.data.frame(lm_day4_nested_results,"r2"))#extracts the first item in the list
-lm_day4_nested_results_pval<-as.data.frame(lm_day4_nested_results)
-rownames(lm_day4_nested_results_pval)<-c("RunDay","Strain")
+lm_day4_nested_results_pval<-as.data.frame(t(lm_day4_nested_results))
+colnames(lm_day4_nested_results_pval)<-c("RunDay","Strain")
 pdf("lm_day4.pdf",height=8,width=8)
 par(mfrow=c(2,2))
-hist(as.numeric(lm_day4_nested_results_pval[1,]),main="Runday",ylab="No. of features", xlab=paste0("Raw p value","\n","P<0.05= ",sum(as.numeric(lm_day4_nested_results_pval[1,])<0.05)))
-plot(as.numeric(lm_day4_nested_results_pval[2,]),as.numeric(lm_day4_nested_results_pval[1,]),main="Nested linear model",xlab="pvalue Runday/Strain", ylab="p value Runday"); rug(as.numeric(lm_day4_nested_results_pval[2,]))
-hist(as.numeric(lm_day4_nested_results_pval[2,]),main="Runday/Strain",ylab="No. of features", xlab=paste0("Raw p value","\n","P<0.05= ",sum(as.numeric(lm_day4_nested_results_pval[2,])<0.05)))
-plot(log10(as.numeric(lm_day4_nested_results_pval[2,])),log10(as.numeric(lm_day4_nested_results_pval[1,])),main="Nested linear model(log)",xlab="pvalue Runday/Strain", ylab="p value Runday"); rug(as.numeric(lm_day4_nested_results_pval[2,]))
+hist(as.numeric(lm_day4_nested_results_pval$RunDay),main="Runday",ylab="No. of features", xlab=paste0("Raw p value","\n","P<0.05= ",sum(as.numeric(lm_day4_nested_results_pval$RunDay)<0.05)))
+plot(as.numeric(lm_day4_nested_results_pval$Strain),as.numeric(lm_day4_nested_results_pval$RunDay),main="Nested linear model",xlab="pvalue Runday/Strain", ylab="p value Runday"); rug(as.numeric(lm_day4_nested_results_pval$Strain))
+hist(as.numeric(lm_day4_nested_results_pval$Strain),main="Runday/Strain",ylab="No. of features", xlab=paste0("Raw p value","\n","P<0.05= ",sum(as.numeric(lm_day4_nested_results_pval$Strain)<0.05)))
+plot(log10(as.numeric(lm_day4_nested_results_pval$Strain)),log10(as.numeric(lm_day4_nested_results_pval$RunDay)),main="Nested linear model(log)",xlab="pvalue Runday/Strain", ylab="p value Runday"); rug(log10(as.numeric(lm_day4_nested_results_pval$Strain)))
 dev.off()
+
+## Runday significant features
+sum(as.numeric(lm_day4_nested_results_pval$RunDay)<0.05)
+#11736
+## Runday/Strain significant features
+sum(as.numeric(lm_day4_nested_results_pval$Strain)<0.05)
+#12405  
+
 
 pdf("lm_day4_pval.pdf",height=8,width=8)
 par(mfrow=c(2,1))
@@ -433,7 +476,61 @@ d4_cor_batch23_data_aod<-adonis(t(d4_cor_batch23_data)~ d4_batch23_s, method = "
 # ---
 #   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-pdf("aod_plots.pdf",height=8,width=8)
+aod_density_d4_batch23<-cbind(as.numeric(d4_batch23_data_aod$f.perms),rep("Raw",length(d4_batch23_data_aod$f.perms)))
+aod_density_d4_cor_batch23<-cbind(as.numeric(d4_cor_batch23_data_aod$f.perms),rep("Batch-corrected",length(d4_cor_batch23_data_aod$f.perms)))
+#plot(aod_density_d4_batch23[,1],aod_density_d4_cor_batch23[,1])
+
+aod_density_d4_batch23_plot<-rbind(aod_density_d4_batch23,aod_density_d4_cor_batch23)
+aod_density_d4_batch23_plot<-as.data.frame(aod_density_d4_batch23_plot)
+colnames(aod_density_d4_batch23_plot)<-c("fperms","datatype")
+aod_density_d4_batch23_plot$fperms<-as.numeric(as.character(aod_density_d4_batch23_plot$fperms))
+
+aod_density_d4_batch23_plotRes<-ggplot(aod_density_d4_batch23_plot, aes(x = fperms, fill = datatype)) + geom_density(alpha = 0.5) +
+theme_bw() + theme(axis.text.x=element_text(size=12),axis.text.y=element_text(size=12),
+                   strip.text.x = element_text(size=12, face="bold"),
+                   panel.grid.major.x = element_blank(), # to x remove gridlines
+                   panel.grid.major.y = element_blank(), # to y remove gridlines
+                   panel.border = element_blank(),  # remove top and right border
+                   panel.background = element_blank(),
+                   axis.line = element_line(color = 'black')) + xlab("F statistics") + ylab("Density") + ggtitle("Day4")
+
+aod_density_d12_batch17<-cbind(d12_batch17_data_aod$f.perms,rep("Raw",length(d12_batch17_data_aod$f.perms)))
+aod_density_d12_cor_batch17<-cbind(d12_cor_batch17_data_aod$f.perms,rep("Batch-corrected",length(d12_cor_batch17_data_aod$f.perms)))
+aod_density_d12_batch17_plot<-rbind(aod_density_d12_batch17,aod_density_d12_cor_batch17)
+aod_density_d12_batch17_plot<-as.data.frame(aod_density_d12_batch17_plot)
+colnames(aod_density_d12_batch17_plot)<-c("fperms","datatype")
+aod_density_d12_batch17_plot$fperms<-as.numeric(as.character(aod_density_d12_batch17_plot$fperms))
+
+aod_density_d12_batch17_plotRes<-ggplot(aod_density_d12_batch17_plot, aes(x = fperms, fill = datatype)) + geom_density(alpha = 0.5)  +
+  theme_bw() + theme(axis.text.x=element_text(size=12),axis.text.y=element_text(size=12),
+                     strip.text.x = element_text(size=12, face="bold"),
+                     panel.grid.major.x = element_blank(), # to x remove gridlines
+                     panel.grid.major.y = element_blank(), # to y remove gridlines
+                     panel.border = element_blank(),  # remove top and right border
+                     panel.background = element_blank(),
+                     axis.line = element_line(color = 'black')) + xlab("F statistics") + ylab("Density") + ggtitle("Day12")
+
+pdf("aod_plots_ggplot.pdf",height=8,width=12)
+multiplot(aod_density_d4_batch23_plotRes, aod_density_d12_batch17_plotRes,cols=2) #)#,   pc1_corrected, pc2_corrected, pc3_corrected cols=2)
+dev.off()
+
+#### Histograms
+
+binseq<-seq(0.5,1.8,0.05)
+get.hist.data<-function(x,b){hist(x,b,plot=F)$counts}
+
+########## day4
+aod_density_d4_batch23.hd<-get.hist.data(as.numeric(d4_batch23_data_aod$f.perms),binseq)
+aod_density_d4_cor_batch23.hd<-get.hist.data(as.numeric(d4_cor_batch23_data_aod$f.perms),binseq)
+hd.xaxis<-(seq(0.5,1.8,0.05)+0.025)[-21]
+
+range12<-max(c(aod_density_d4_batch23.hd,aod_density_d4_cor_batch23.hd))
+
+par(mfrow=c(1,2))
+plot(hd.xaxis,aod_density_d4_batch23.hd,type="s",ylim=c(5,range12),log="y",las=1,ylab="Number of mass features",xlab="F-statistics",main="Raw data")
+plot(hd.xaxis,aod_density_d4_cor_batch23.hd,type="s",ylim=c(5,range12),log="y",las=1,ylab="Number of mass features",xlab="F-statistics",main="Batch corrected data")
+
+pdf("aod_plots_test.pdf",height=8,width=8)
 par(mfrow=c(2,2))
 plot(density(d4_batch23_data_aod), xlim=c(0,5), main="DAY4 raw")
 plot(density(d12_batch17_data_aod), xlim=c(0,5), main="DAY12 raw")
@@ -490,47 +587,31 @@ dev.off()
 
 ######################################## PCOA
 
-bray_grps <- vegdist(t(d12_batch17_data_reps), "bray") #calculating distance matrix using bray curtis
-d12_batch17_data_reps_pcoa<-cmdscale(bray_grps, eig=TRUE, add=TRUE, x.ret =TRUE) 
-d12_batch17_data_reps_pcoa_scores<-as.data.frame(d12_batch17_data_reps_pcoa$x)
-eig<-eigenvals(d12_batch17_data_reps_pcoa)
-residual_variance<-cumsum(eig/sum(eig))
+######################################## PCOA
 
-plot(d12_batch17_data_reps_pcoa_scores[,2]~d12_batch17_data_reps_pcoa_scores[,1])
-text(d12_batch17_data_reps_pcoa_scores[,2]~d12_batch17_data_reps_pcoa_scores[,1], labels = colnames(d12_batch17_data_reps), cex=0.6, pos=4)
-# 
+d4_batch23_data_reps_pcoa<-pcoa_euc(d4_batch23_data_reps)
+d4_batch23_data_reps_pcoa_scores<-as.data.frame(d4_batch23_data_reps_pcoa[[1]])
+residual_variance<-as.numeric(d4_batch23_data_reps_pcoa[[2]])
+d4_batch23_data_reps_pcoaPlot<-pcoaPlot(d4_batch23_data_reps_pcoa_scores[,1],d4_batch23_data_reps_pcoa_scores[,2],colnames(d4_batch23_data_reps),residual_variance,"Day 4 raw")
 
-### PCOA ggplot
-set.seed(1)
-# ggplot 
+d4_cor_batch23_data_reps_pcoa<-pcoa_euc(d4_cor_batch23_data_reps)
+d4_cor_batch23_data_reps_pcoa_scores<-as.data.frame(d4_cor_batch23_data_reps_pcoa[[1]])
+residual_variance<-as.numeric(d4_cor_batch23_data_reps_pcoa[[2]])
+d4_cor_batch23_data_reps_pcoaPlot<-pcoaPlot(d4_cor_batch23_data_reps_pcoa_scores[,1],d4_cor_batch23_data_reps_pcoa_scores[,2],colnames(d4_batch23_data_reps),residual_variance,"Day 4 corrected")
 
-forPlot<-data.frame(PCaxisA = d12_batch17_data_reps_pcoa_scores[,1],PCaxisB = d12_batch17_data_reps_pcoa_scores[,2], Strains=colnames(d12_batch17_data_reps))
-#Choosing color
-colourCount = length(unique(forPlot$Strains))
-getPalette = colorRampPalette(brewer.pal(length(unique(forPlot$Strains)),"Paired"))
-set.seed(1) #important to set seed so that we obtain the same shapes for strains all the time
-pch_types<-c(15, 16, 17, 18, 25, 8)
-pch_values<-sample(pch_types, length(unique(forPlot$Strains)), replace = TRUE)
+d12_batch17_data_reps_pcoa<-pcoa_euc(d12_batch17_data_reps)
+d12_batch17_data_reps_pcoa_scores<-as.data.frame(d12_batch17_data_reps_pcoa[[1]])
+residual_variance<-as.numeric(d12_batch17_data_reps_pcoa[[2]])
+d12_batch17_data_reps_pcoaPlot<-pcoaPlot(d12_batch17_data_reps_pcoa_scores[,1],d12_batch17_data_reps_pcoa_scores[,2],colnames(d12_batch17_data_reps),residual_variance,"Day 12 raw")
 
-plot1<- ggplot(data=forPlot, aes(x=PCaxisA, y=PCaxisB,colour= factor(Strains), shape = factor(Strains))) + geom_point(size=4) #for samples
-plot2<- plot1 +  scale_colour_manual('Strains', values=getPalette(colourCount)) + scale_shape_manual('Strains',values=pch_values)
-plot3<- plot2+ theme_bw() + theme(axis.text.x=element_text(angle = 45, hjust = 1,size=4),axis.text.y=element_text(size=4),
-                                  panel.grid.major.x = element_blank(), # to x remove gridlines
-                                  panel.grid.major.y = element_blank(), # to y remove gridlines
-                                  panel.border = element_blank(),  # remove top and right border
-                                  panel.background = element_blank(),
-                                  axis.line = element_line(color = 'black'))+ 
-  xlab(paste0("PCOA 1 scores","\n","Variation exp= ",round(residual_variance[1]*100,2),"%")) + 
-  ylab(paste0("PCOA 2 scores","\n","Variation exp= ",round(residual_variance[2]*100,2),"%")) +
-  ggtitle("Strains-DAY12-raw") #
+d12_cor_batch17_data_reps_pcoa<-pcoa_euc(d12_cor_batch17_data_reps)
+d12_cor_batch17_data_reps_pcoa_scores<-as.data.frame(d12_cor_batch17_data_reps_pcoa[[1]])
+residual_variance<-as.numeric(d12_cor_batch17_data_reps_pcoa[[2]])
+d12_cor_batch17_data_reps_pcoaPlot<-pcoaPlot(d12_cor_batch17_data_reps_pcoa_scores[,1],d12_cor_batch17_data_reps_pcoa_scores[,2],colnames(d12_batch17_data_reps),residual_variance,"Day 12 corrected")
 
-day4_raw<-plot3
-day4_corrected<-plot3  
-day12_raw<-plot3
-day12_corrected<-plot3
-
-pdf("PCA_D4-D12_batchCorrectionEffect.pdf",height=12,width=16)
-multiplot(day4_raw, day4_corrected, day12_raw,day12_corrected,cols=2)
+pdf("PCOA_D4-D12_batchCorrectionEffect.pdf",height=12,width=16)
+multiplot(d4_batch23_data_reps_pcoaPlot, d4_cor_batch23_data_reps_pcoaPlot, 
+          d12_batch17_data_reps_pcoaPlot,d12_cor_batch17_data_reps_pcoaPlot, cols=2)
 dev.off()
 
 #### NN- graphs

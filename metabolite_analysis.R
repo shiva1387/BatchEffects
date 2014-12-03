@@ -26,7 +26,7 @@ library(vegan)
 
 ### Reading Data-svd and differential metabolites
 
-setwd('../../AlgaeData/results.from.scelse.cluster.211213/')
+setwd("F:/Vinay's Algae Data/Aug2013/AlgaeData/results.from.scelse.cluster.211213/")
 
 load("svd_day4_x138_nonzero.rda")
 batch_corrected_mat_d4<-svd_day4_nonzero[[7]]
@@ -211,7 +211,6 @@ formatMetaboliteData<-function(metaboCpdMassmatrix) { # metaboCpdMassmatrix shou
 mappingMetabolites<-function(massSpecDataMatrix,metaboliteData){  #massSpecDataMatrix is the mz data, metaboliteDat contains cpd id and mass
 mappedData<-list()
 sigfeat_bc<-splitMzRt(massSpecDataMatrix) #Change to d4 or d12 according to analysis
-
 for (i in 1:nrow(metaboliteData))
 {
   # STEP1:Obtain values within the range
@@ -219,7 +218,7 @@ for (i in 1:nrow(metaboliteData))
                                  sigfeat_bc$sigfeat_bc_mz_s <= metaboliteData$upperRange[i],]
   #print(paste(i,length(interMappedData)))
   if(!is.na(interMappedData[1,1]))
-  {mappedData[[i]]<-cbind(metaboliteData$actualMass[i],metaboliteData$Compound[i],interMappedData)}
+  {mappedData[[i]]<-cbind(metaboliteData$actualMass[i],metaboliteData$CompoundId[i],interMappedData)}
   # STEP2: For values which do not map within the tolerance limits,
   #        obtain the mz which is closest to the value
   if(is.na(interMappedData[1,1])) {
@@ -227,7 +226,7 @@ for (i in 1:nrow(metaboliteData))
     interMappedData<-sigfeat_bc[match_mz,]
   }
   if(!is.na(interMappedData[1,1]))
-  {mappedData[[i]]<-cbind(metaboliteData$actualMass[i],metaboliteData$Compound[i],interMappedData)}
+  {mappedData[[i]]<-cbind(metaboliteData$actualMass[i],metaboliteData$CompoundId[i],interMappedData)}
   # STEP3: Check if any mz is left out
   if(is.na(interMappedData[1,1]))
   { print(paste(metaboliteData$lowerRange[i],metaboliteData$upperRange[i]))}
@@ -236,6 +235,38 @@ mappedData1<-do.call(rbind,mappedData) #Complete list of mapped metabolites and 
 # Will contain mmultiple hits to each metabolite id
 return (mappedData1)
 }
+
+#################mapping metabolites Modified by shiv to include the actual mass also 14-Nov-2014
+
+mappingMetabolites_mod<-function(massSpecDataMatrix,metaboliteData){  #massSpecDataMatrix is the mz data, metaboliteDat contains cpd id and mass
+  mappedData<-list()
+  sigfeat_bc<-splitMzRt(massSpecDataMatrix) #Change to d4 or d12 according to analysis
+  for (i in 1:nrow(metaboliteData))
+  {
+    # STEP1:Obtain values within the range
+    interMappedData<- sigfeat_bc[sigfeat_bc$sigfeat_bc_mz_s >= metaboliteData$lowerRange[i] & 
+                                   sigfeat_bc$sigfeat_bc_mz_s <= metaboliteData$upperRange[i],]
+    #print(paste(i,length(interMappedData)))
+    if(!is.na(interMappedData[1,1]))
+    {mappedData[[i]]<-cbind(metaboliteData$actualMass[i],metaboliteData$Mass[i],metaboliteData$CompoundId[i],interMappedData)}
+    # STEP2: For values which do not map within the tolerance limits,
+    #        obtain the mz which is closest to the value
+    if(is.na(interMappedData[1,1])) {
+      match_mz<-cmpMZmin(sigfeat_bc$sigfeat_bc_mz_s,metaboliteData$actualMass[i])
+      interMappedData<-sigfeat_bc[match_mz,]
+    }
+    if(!is.na(interMappedData[1,1]))
+    {mappedData[[i]]<-cbind(metaboliteData$actualMass[i],metaboliteData$Mass[i],metaboliteData$CompoundId[i],interMappedData)}
+    # STEP3: Check if any mz is left out
+    if(is.na(interMappedData[1,1]))
+    { print(paste(metaboliteData$lowerRange[i],metaboliteData$upperRange[i]))}
+  }
+  mappedData1<-do.call(rbind,mappedData) #Complete list of mapped metabolites and corresponding features
+  # Will contain mmultiple hits to each metabolite id
+  return (mappedData1)
+}
+
+
 
 ###############################################################
 ############## Extracting non-singletons ######################
@@ -270,13 +301,17 @@ write.table(significant_features_nonSingleton,"day12_differential_bestVsWorst.tx
 # Metabolite pathway analysis  #
 ################################
 
-metaboliteDataset<-read.table("day12_metabolitesId.txt",header=TRUE,sep='\t')
+metaboliteDataset<-read.table("day4_metabolitesId.txt",header=TRUE,sep='\t')
 metaboliteDataset<-as.data.frame(metaboliteDataset)
 metaboliteDataset<-formatMetaboliteData(metaboliteDataset)
 
 mappedMetaboliteData<-mappingMetabolites(batch_corrected_mat_d12,metaboliteDataset)
 
-write.table(mappedMetaboliteData,"day12_metabolites_mzrt_compoundId.txt",quote=FALSE,sep='\t')
+write.table(mappedMetaboliteData,"day12_metabolites_mzrt_compoundId_fullData.txt",quote=FALSE,sep='\t')
+
+## To add table in chapter 4 of thesis wherin i include delta ppm error
+mappedMetaboliteData_mod<-mappingMetabolites_mod(batch_corrected_mat_d4,metaboliteDataset)
+write.table(mappedMetaboliteData_mod,"day4_metabolites_mzrt_compoundId_fullData_thesis.txt",quote=FALSE,sep='\t')
 
 ### Averaging values of multiple hits
 
