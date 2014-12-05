@@ -129,6 +129,17 @@ names(ms_data_22)<-gsub('\\.', '\\_', names(ms_data_22))
 
 #Only for full data -22 strains
 #ms_data_total_strains<-ms_data_total[, -grep('ACN', names(ms_data_total))] #removing blanks
+#ms_data_total_blanks<-ms_data_total[, grep('ACN', names(ms_data_total))] #only blanks
+# ms_data_total_blanks<-round(ms_data_total_blanks,0)
+# ms_data_total_blanks<-cbind(ms_data_total$mz,ms_data_total$rt,ms_data_total_blanks)
+# write.table(ms_data_total_blanks,"algae_blanks_021213.tsv",quote=FALSE,sep="\t",row.name=FALSE)
+
+ms_data_total_matrix<-ms_data_total[, grep('matrix', names(ms_data_total))] #only matrix
+ms_data_total_matrix<-round(ms_data_total_matrix,0)
+ms_data_total_matrix<-cbind(ms_data_total$mz,ms_data_total$rt,ms_data_total_matrix)
+write.table(ms_data_total_matrix,"algae_matrix_021213.tsv",quote=FALSE,sep="\t",row.name=FALSE)
+
+
 #ms_data_total_strains<-ms_data_total_strains[, -grep('matri_', names(ms_data_total_strains))] #removing matrix
 
 metadata<-read.table("Algae_indreps_22strains_blanks_matrix_metadata.txt",header=TRUE,row.name=1,sep="\t")

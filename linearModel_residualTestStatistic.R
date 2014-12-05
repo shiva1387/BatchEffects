@@ -1,6 +1,6 @@
 ## Analyzing linear model--Extracting and generating test statistics on the residuals from a model built on runday
 ## Shiv 10 Nov 2014
-
+## Modified on 04-Dec-2014
 ### Libraries
 
 library(Hmisc)
@@ -10,11 +10,31 @@ library(Hmisc)
 compute_linearModel_ext_resid<-function(data_matrix,StrainId,RunDayId) { #dependent.factor1 is Strain id(sample groups) and dependent.factor2 is RunDay 
   lm_pca_scores<-apply(data_matrix,2, function(x) {
     lm_val<-lm(x~ as.factor(RunDayId))
-    #p.val_runday<-anova(lm_val)$'Pr(>F)'[1]
+    p.val_runday<-anova(lm_val)$'Pr(>F)'[1]
     lm_val_strain<-lm(lm_val$residuals~ as.factor(StrainId))
     #p.val_strain<-anova(lm_val_strain)$'Pr(>F)'[1]
-    return(lm_val$residuals)
+    return(list(pvalue=p.val_runday,resids=lm_val$residuals))
+    #return(list(p.val_runday,lm_val$residuals)) #
   })
+} # Modified to return both p values(run day) and residuals
+
+extract_pval<-function(pval_residuals) {
+  runday_pval<-rep(999,length(pval_residuals))
+  for(i in 1:length(pval_residuals))
+  {
+    runday_pval[i]<-pval_residuals[[i]][1]
+  }
+ return(runday_pval)
+}
+
+extract_residual<-function(pval_residuals) {
+  strain_residual<-vector("list", length(pval_residuals)) #list()
+  for(i in 1:length(pval_residuals))
+  {
+    strain_residual[i]<-pval_residuals[[i]][2]
+  }
+  strain_residual_df<-do.call(rbind.data.frame, strain_residual)
+  return(strain_residual_df)
 }
 
 
@@ -22,7 +42,8 @@ compute_linearModel_ext_resid<-function(data_matrix,StrainId,RunDayId) { #depend
 
 
 lm_day4_raw<-compute_linearModel_ext_resid(t(ScaleData(ms_data_day4_nonzero)),SampleGroup_day4,RunDay_day4)
-data_matrix_d4<-as.matrix(t(lm_day4_raw))
+p.val_runday_d4<-as.numeric(extract_pval(lm_day4_raw))
+data_matrix_d4<-extract_residual(lm_day4_raw)
 classlabel_factor_d4<-as.numeric(as.factor(SampleGroup_day4))-1
 dataset_sig_features_day4<-mt.maxT(data_matrix_d4,classlabel_factor_d4,test="f",side="abs",fixed.seed.sampling="y",B=1000,nonpara="n")
 # head(dataset_sig_features_day4)
@@ -38,13 +59,104 @@ metab_sig_day4<-cbind(data_matrix_d4[id.sig_dataset_day4,],round(dataset_sig_fea
 length(id.sig_dataset_day4)
 
 lm_day12_raw<-compute_linearModel_ext_resid(t(ScaleData(ms_data_day12_nonzero)),SampleGroup_day12,RunDay_day12)
-data_matrix_d12<-as.matrix(t(lm_day12_raw))
+p.val_runday_d12<-as.numeric(extract_pval(lm_day12_raw))
+data_matrix_d12<-extract_residual(lm_day12_raw)
 classlabel_factor_d12<-as.numeric(as.factor(SampleGroup_day12))-1
 dataset_sig_features_day12<-mt.maxT(data_matrix_d12,classlabel_factor_d12,test="f",side="abs",fixed.seed.sampling="y",B=1000,nonpara="n")
 id.sig_dataset_day12 <- sort(dataset_sig_features_day12[dataset_sig_features_day12$adjp < 0.05,c(1)]) #getting the column which provides index of rows satisying the condition
 metab_sig_day12<-cbind(data_matrix_d12[id.sig_dataset_day12,],round(dataset_sig_features_day12$adjp[dataset_sig_features_day12$index %in% id.sig_dataset_day12],5))
 length(id.sig_dataset_day12)
 
+
+#### functions
+calculatePOverlaps<-function(runday,strain,threshold)
+{
+  common_05<-intersect(which(runday<threshold),which(strain<threshold))
+  ronly_05<-setdiff(which(runday<threshold),common_05)
+  sonly_05<-setdiff(which(strain<threshold),common_05)
+  return(cbind(length(common_05),length(ronly_05),length(sonly_05),threshold))
+}
+
+binseq<-seq(0,1,0.05)
+get.hist.data<-function(x,b){hist(x,b,plot=F)$counts}
+
+########## day4
+d4.pval.runday.hd<-get.hist.data(p.val_runday_d4,binseq)
+d4.pval.strain.hd<-get.hist.data(dataset_sig_features_day4$adjp,binseq)
+d12.pval.runday.hd<-get.hist.data(p.val_runday_d12,binseq)
+d12.pval.strain.hd<-get.hist.data(dataset_sig_features_day12$adjp,binseq)
+hd.xaxis<-seq(0,1,0.05)[-21]
+
+range12<-max(c(d4.pval.runday.hd,d4.pval.strain.hd,d12.pval.runday.hd,d12.pval.strain.hd))
+
+pdf("linearModel_permutation_all.pdf",width=8,height=8)
+par(mfrow=c(2,2))
+plot(hd.xaxis,d4.pval.strain.hd,type="s",ylim=c(100,range12),log="y",las=1,ylab="Number of mass features",xlab="P-value",main="Day4 Strain")
+lines(hd.xaxis,rep((0.05*13443),20),lty=2)
+plot(hd.xaxis,d4.pval.runday.hd,type="s",ylim=c(100,range12),log="y",las=1,ylab="Number of mass features",xlab="P-value",main="Day4 Runday")
+lines(hd.xaxis,rep((0.05*13443),20),lty=2)
+plot(hd.xaxis,d12.pval.strain.hd,type="s",ylim=c(100,range12),log="y",las=1,ylab="Number of mass features",xlab="P-value",main="Day12 Strain")
+lines(hd.xaxis,rep((0.05*10687),20),lty=2)
+plot(hd.xaxis,d12.pval.runday.hd,type="s",ylim=c(100,range12),log="y",las=1,ylab="Number of mass features",xlab="P-value",main="Day12 Runday")
+lines(hd.xaxis,rep((0.05*10687),20),lty=2)
+dev.off()
+
+#pval threshold
+#day4
+features_d4_01<-calculatePOverlaps(p.val_runday_d4,dataset_sig_features_day4$adjp,0.01)
+features_d4_05<-calculatePOverlaps(p.val_runday_d4,dataset_sig_features_day4$adjp,0.05)
+features_d4_1<-calculatePOverlaps(p.val_runday_d4,dataset_sig_features_day4$adjp,0.1)
+
+features_d4_pvalThreshold<-rbind(features_d4_01,features_d4_05,features_d4_1)
+colnames(features_d4_pvalThreshold)<-c("Common","Runday only","Strain only","threshold")
+rownames(features_d4_pvalThreshold)<-c("pval< .01","pval< .05","pval< .1")
+
+
+#ronly.mz_rt <- strsplit(rownames(ms_data_total), "\\@")
+# mz<-sapply(mz_rt , function (x) if(length(x) == 2) x[1] else as.character(NA))
+# rt<-sapply(mz_rt , function (x) if(length(x) == 2) x[2] else as.character(NA))
+
+metadata_melt_d4<-melt(features_d4_pvalThreshold,id="threshold")
+metadata_melt_d4<-metadata_melt_d4[metadata_melt_d4[,2]!="threshold",]
+features_d4_pvalThreshold_plot<-ggplot(metadata_melt_d4,aes(x=Var2,value,fill=Var1))+ geom_point (aes(color=Var1,shape = Var2),size=4) + coord_cartesian(ylim = c(0, 10000)) +
+  theme_bw() + theme(axis.text.x=element_text(size=12),axis.text.y=element_text(size=12),
+                     strip.text.x = element_text(size=12, face="bold"),
+                     panel.grid.major.x = element_blank(), # to x remove gridlines
+                     panel.grid.major.y = element_blank(), # to y remove gridlines
+                     panel.border = element_blank(),  # remove top and right border
+                     panel.background = element_blank(),
+                     axis.line = element_line(color = 'black')) + xlab("Factor") + ylab("Number of mass features") + ggtitle("Day4- Linear model")
+
+#day12
+features_d12_01<-calculatePOverlaps(p.val_runday_d12,dataset_sig_features_day12$adjp,0.01)
+features_d12_05<-calculatePOverlaps(p.val_runday_d12,dataset_sig_features_day12$adjp,0.05)
+features_d12_1<-calculatePOverlaps(p.val_runday_d12,dataset_sig_features_day12$adjp,0.1)
+
+features_d12_pvalThreshold<-rbind(features_d12_01,features_d12_05,features_d12_1)
+colnames(features_d12_pvalThreshold)<-c("Common","Runday only","Strain only","threshold")
+rownames(features_d12_pvalThreshold)<-c("pval< .01","pval< .05","pval< .1")
+
+
+#ronly.mz_rt <- strsplit(rownames(ms_data_total), "\\@")
+# mz<-sapply(mz_rt , function (x) if(length(x) == 2) x[1] else as.character(NA))
+# rt<-sapply(mz_rt , function (x) if(length(x) == 2) x[2] else as.character(NA))
+
+metadata_melt_d12<-melt(features_d12_pvalThreshold,id="threshold")
+metadata_melt_d12<-metadata_melt_d12[metadata_melt_d12[,2]!="threshold",]
+features_d12_pvalThreshold_plot<-ggplot(metadata_melt_d12,aes(x=Var2,value,fill=Var1))+ geom_point (aes(color=Var1,shape = Var2),size=4) + coord_cartesian(ylim = c(0, 10000)) +
+  theme_bw() + theme(axis.text.x=element_text(size=12),axis.text.y=element_text(size=12),
+                     strip.text.x = element_text(size=12, face="bold"),
+                     panel.grid.major.x = element_blank(), # to x remove gridlines
+                     panel.grid.major.y = element_blank(), # to y remove gridlines
+                     panel.border = element_blank(),  # remove top and right border
+                     panel.background = element_blank(),
+                     axis.line = element_line(color = 'black')) + xlab("Factor") + ylab("Number of mass features") + ggtitle("Day12- Linear model")
+
+pdf("pvalueDistributionThreshold_linearmodel.pdf",height=8,width=6)
+multiplot(features_d4_pvalThreshold_plot, features_d12_pvalThreshold_plot) #)#,   pc1_corrected, pc2_corrected, pc3_corrected cols=2)
+dev.off()
+
+######## day12
 
 pdf("linearModel_permutation.pdf",width=8,height=6)
 par(mfrow=c(1,2))

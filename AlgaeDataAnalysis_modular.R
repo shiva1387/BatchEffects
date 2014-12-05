@@ -1920,6 +1920,18 @@ legend("topright", inset=.05, title="Factor",
        c("Strain","RunDay"), fill=c("red","green"), horiz=TRUE)
 dev.off()
 
+
+## Modified by shiva for plotting 05-Dec-2014
+
+day4_no_nonzero_sigfeat<-cbind(paste0("PC", 1:length(day4_no_nonzero_sigfeat_r)),day4_no_nonzero_sigfeat_r,day4_no_nonzero_sigfeat_s)
+colnames(day4_no_nonzero_sigfeat)<-c("PC","RunDay","Strain")
+write.table(day4_no_nonzero_sigfeat,"day4_no_nonzero_sigfeat.txt",quote=FALSE,sep="\t",row.names=FALSE)
+
+day12_no_nonzero_sigfeat<-cbind(paste0("PC", 1:length(day12_no_nonzero_sigfeat_r)),day12_no_nonzero_sigfeat_r,day12_no_nonzero_sigfeat_s)
+colnames(day12_no_nonzero_sigfeat)<-c("PC","RunDay","Strain")
+write.table(day12_no_nonzero_sigfeat,"day12_no_nonzero_sigfeat.txt",quote=FALSE,sep="\t",row.names=FALSE)
+
+
 png("pval_factor_new.png",height=800,width=800)
 par(mfrow=c(2,1))
 matplot(day4_x138_nonzero_sigfeat_r_pvaldf,type='l',ylab="pval",xlab="day4 Runday")

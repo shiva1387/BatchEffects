@@ -95,7 +95,7 @@ features_d12_pvalThreshold_plot<-ggplot(metadata_melt_d12,aes(x=Var2,value,fill=
 
 
 #
-pdf("pvalueDistributionThreshold_nestedmodel.pdf",height=8,width=8)
+pdf("pvalueDistributionThreshold_nestedmodel.pdf",height=8,width=6)
 multiplot(features_d4_pvalThreshold_plot, features_d12_pvalThreshold_plot) #)#,   pc1_corrected, pc2_corrected, pc3_corrected cols=2)
 dev.off()
 
