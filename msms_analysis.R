@@ -283,9 +283,9 @@ pcoaPlot<-function(axisA,axisB,Strains,residualVariance,plotTitle) {
   pch_types<-c(15, 16, 17, 18, 25, 8)
   pch_values<-sample(pch_types, length(unique(forPlot$Strains)), replace = TRUE)
   
-  plot1<- ggplot(data=forPlot, aes(x=PCaxisA, y=PCaxisB,colour= factor(Strains), shape = factor(Strains))) + geom_point(size=4) #for samples
+  plot1<- ggplot(data=forPlot, aes(x=PCaxisA, y=PCaxisB,colour= factor(Strains), shape = factor(Strains))) + geom_point(size=2) #for samples
   plot2<- plot1 +  scale_colour_manual('Strains', values=getPalette(colourCount)) + scale_shape_manual('Strains',values=pch_values)
-  plot3<- plot2+ theme_bw() + theme(axis.text.x=element_text(angle = 45, hjust = 1,size=12),axis.text.y=element_text(size=12),
+  plot3<- plot2+ theme_bw() + theme(axis.text.x=element_text(angle = 45, hjust = 1,size=4),axis.text.y=element_text(size=4),
                                     panel.grid.major.x = element_blank(), # to x remove gridlines
                                     panel.grid.major.y = element_blank(), # to y remove gridlines
                                     panel.border = element_blank(),  # remove top and right border
@@ -293,7 +293,7 @@ pcoaPlot<-function(axisA,axisB,Strains,residualVariance,plotTitle) {
                                     axis.line = element_line(color = 'black'))+ 
     xlab(paste0("PCOA 1","\n","Variation exp= ",round(residualVariance[1]*100,2),"%")) + 
     ylab(paste0("PCOA 2 ","\n","Variation exp= ",round((residualVariance[2]-residualVariance[1])*100,2),"%")) +
-    ggtitle(plotTitle)
+    ggtitle(plotTitle) + theme(legend.position = "none")
   return(plot3)
 }
 
@@ -505,8 +505,8 @@ msms_data_d12_scale_reps_pcoa_scores<-as.data.frame(msms_data_d12_scale_reps_pco
 residual_variance<-as.numeric(msms_data_d12_scale_reps_pcoa[[2]])
 msms_data_d12_pcoaPlot<-pcoaPlot(msms_data_d12_scale_reps_pcoa_scores[,1],msms_data_d12_scale_reps_pcoa_scores[,2],unique(metainfo_msms_data_d12$SampleName),residual_variance,"Day 12 MSMS")
 
-pdf("PCOA_D4-D12_MSMSComparison.pdf",height=12,width=16)
-multiplot(ms_data_day4_msms_pcoaPlot, batch_corrected_mat_d4_msms_pcoaPlot, ms_data_day12_msms_pcoaPlot, 
-          batch_corrected_mat_d12_msms_pcoaPlot,msms_data_d4_pcoaPlot, msms_data_d12_pcoaPlot, cols=3)
+pdf("PCOA_D4-D12_MSMSComparison_V1.pdf",height=7,width=7)
+multiplot(ms_data_day4_msms_pcoaPlot, batch_corrected_mat_d4_msms_pcoaPlot, msms_data_d4_pcoaPlot,
+          ms_data_day12_msms_pcoaPlot,batch_corrected_mat_d12_msms_pcoaPlot, msms_data_d12_pcoaPlot, cols=2)
 dev.off()
 

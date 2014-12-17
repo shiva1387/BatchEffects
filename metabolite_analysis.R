@@ -26,7 +26,7 @@ library(vegan)
 
 ### Reading Data-svd and differential metabolites
 
-setwd("F:/Vinay's Algae Data/Aug2013/AlgaeData/results.from.scelse.cluster.211213/")
+setwd("F:/Projects/NUS/Vinay's Algae Data/Aug2013/AlgaeData/results.from.scelse.cluster.211213/")
 
 load("svd_day4_x138_nonzero.rda")
 batch_corrected_mat_d4<-svd_day4_nonzero[[7]]

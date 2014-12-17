@@ -127,6 +127,9 @@ ms_data_22<-ms_data_22[, !names(ms_data_22) %in% duplicate_removal]
 ms_data_22<-ms_data_22[,35:dim(ms_data_22)[2]]
 names(ms_data_22)<-gsub('\\.', '\\_', names(ms_data_22))
 
+# write.table(names(ms_data_22),"colnames_algaedata_with_outliers_22strains.txt",quote=FALSE,sep="\t",row.name=FALSE)
+
+
 #Only for full data -22 strains
 #ms_data_total_strains<-ms_data_total[, -grep('ACN', names(ms_data_total))] #removing blanks
 #ms_data_total_blanks<-ms_data_total[, grep('ACN', names(ms_data_total))] #only blanks
