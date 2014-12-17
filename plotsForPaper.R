@@ -253,5 +253,5 @@ plot1<- ggplot(data=r2.pval.strain_runday_nonzero.melt, aes(x=PrincipalComponent
 plot2<-plot1+ scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
                                   labels = trans_format("log10", math_format(10^.x)))
 
-ggsave("PC_associations_ggplot_nestedmodel_V1.pdf",plot1,height=8,width=10)
+ggsave("PC_associations_ggplot_nestedmodel_V1.pdf",plot2,height=8,width=10)
 
