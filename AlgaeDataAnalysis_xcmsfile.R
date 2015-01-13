@@ -1365,6 +1365,7 @@ lm_pca_scores_runday12_nonzero_bc<-apply(scores_pca_prcomp_day12_nonzero_bc,2, f
 #day4 non-zero
 
 d4<-as.data.frame(log(ms_data_day4_nonzero))
+#d4<-ms_data_day4_nonzero #added on jan 13 2015 for testin
 #d<-d[,apply(d, 2, var, na.rm=TRUE) != 0] #removing mz features which have constant variance
 #d<-scale(d,T,F)
 
@@ -1376,6 +1377,7 @@ d4.mz <- strsplit(rownames(d4.batch), "\\@")
 d4.mz<-sapply(d4.mz , function (x) if(length(x) == 2) x[1] else as.character(NA))
 
 d12<-as.data.frame(log(ms_data_day12_nonzero))
+#d12<-ms_data_day12_nonzero #added for testing
 #d<-d[,apply(d, 2, var, na.rm=TRUE) != 0] #removing mz features which have constant variance
 #d<-scale(d,T,F)
 
@@ -1550,15 +1552,17 @@ colnames(d4_scale_rmbatch)<-names(ms_data_day4_nonzero)
 ###################
 
 classlabel_samplegrp_d4<-as.numeric(as.factor(SampleGroup_day4))-1
-day4_sig_features_nc<-mt.maxT(d4.scale,classlabel_samplegrp_d4,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
+day4_sig_features_nc<-mt.maxT(d4.scale,classlabel_samplegrp_d4,test="f",side="abs",fixed.seed.sampling="y",B=1000,nonpara="n") #using multtest package
 #day4_sig_features_nc<-apply(d4.scale,1,function(x){kruskal(y=x,trt=as.factor(SampleGroup_day4),group=TRUE,p.adj="BH")$statistics$p.chisq})
 #day4_sig_features_nc<-apply(d4.scale,1,function(x){kruskal.test(x ~ as.factor(SampleGroup_day4))$p.value})
 #day4_sig_features_nc_cor<-p.adjust(day4_sig_features_nc,method="BH")
 id.sig_day4_nc <- which(day4_sig_features_nc$adjp < 0.05 );
 metab.sig_day4_nc<-cbind(d4.scale[id.sig_day4_nc,],round(day4_sig_features_nc$adjp[id.sig_day4_nc],5))
 
+a<-day4_sig_features_nc$rawp;b<-a[a<0.05];c<-p.adjust(b,method="BH");d<-c[c<0.05];length(d) #13,019
+
 ##corrected
-day4_sig_features<-mt.maxT(d4_scale_rmbatch,classlabel_samplegrp_d4,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
+day4_sig_features<-mt.maxT(d4_scale_rmbatch,classlabel_samplegrp_d4,test="f",side="abs",fixed.seed.sampling="y",B=1000,nonpara="n") #using multtest package
 id.sig_day4 <- which(day4_sig_features$adjp < 0.05 );
 metab.sig_day4<-cbind(d4.scale[id.sig_day4,],round(day4_sig_features$adjp[id.sig_day4],5))
 
@@ -1567,9 +1571,11 @@ metab.sig_day4<-cbind(d4.scale[id.sig_day4,],round(day4_sig_features$adjp[id.sig
 ###################
 
 classlabel_runday_d4<-as.numeric(as.factor(RunDay_day4))-1
-day4_sig_features_nc_r<-mt.maxT(d4.scale,classlabel_runday_d4,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
+day4_sig_features_nc_r<-mt.maxT(d4.scale,classlabel_runday_d4,test="f",side="abs",fixed.seed.sampling="y",B=1000,nonpara="n") #using multtest package
 id.sig_day4_nc_r <- which(day4_sig_features_nc_r$adjp < 0.05 );
 metab.sig_day4_nc_r<-cbind(d4.scale[id.sig_day4_nc_r,],round(day4_sig_features_nc_r$adjp[id.sig_day4_nc_r],5))
+
+a<-day4_sig_features_nc_r$rawp;b<-a[a<0.05];c<-p.adjust(b,method="BH");d<-c[c<0.05];length(d) #10,825
 
 ##corrected
 day4_sig_features_r<-mt.maxT(d4_scale_rmbatch,classlabel_runday_d4,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
@@ -1769,11 +1775,14 @@ colnames(d12_scale_rmbatch)<-names(ms_data_day12_nonzero)
 #### Against Strain
 ###################
 classlabel_samplegrp_d12<-as.numeric(as.factor(SampleGroup_day12))-1
-day12_sig_features_nc<-mt.maxT(d12.scale,classlabel_samplegrp_d12,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
+day12_sig_features_nc<-mt.maxT(d12.scale,classlabel_samplegrp_d12,test="f",side="abs",fixed.seed.sampling="y",B=1000,nonpara="n") #using multtest package
 #day12_sig_features_nc<-apply(d12.scale,1,function(x){kruskal.test(x ~ as.factor(SampleGroup_day12))$p.value})
 #day12_sig_features_nc_cor<-p.adjust(day12_sig_features_nc,method="BH")
 id.sig_day12_nc <- which(day12_sig_features_nc$adjp < 0.05 );
 metab.sig_day12_nc<-cbind(d12.scale[id.sig_day12_nc,],round(day12_sig_features_nc$adjp[id.sig_day12_nc],5))
+
+a<-day12_sig_features_nc$rawp;b<-a[a<0.05];c<-p.adjust(b,method="BH");d<-c[c<0.05];length(d) #10,825
+
 
 ##corrected
 day12_sig_features<-mt.maxT(d12_scale_rmbatch,classlabel_samplegrp_d12,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
@@ -1784,9 +1793,10 @@ metab.sig_day12<-cbind(d12.scale[id.sig_day12,],round(day12_sig_features$adjp[id
 #### Against runday
 ###################
 classlabel_runday_d12<-as.numeric(as.factor(RunDay_day12))-1
-day12_sig_features_nc_r<-mt.maxT(d12.scale,classlabel_runday_d12,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package
+day12_sig_features_nc_r<-mt.maxT(d12.scale,classlabel_runday_d12,test="f",side="abs",fixed.seed.sampling="y",B=1000,nonpara="n") #using multtest package
 id.sig_day12_nc_r <- which(day12_sig_features_nc_r$adjp < 0.05 );
 metab.sig_day12_nc_r<-cbind(d12.scale[id.sig_day12_nc_r,],round(day12_sig_features_nc_r$adjp[id.sig_day12_nc_r],5))
+a<-day12_sig_features_nc_r$rawp;b<-a[a<0.05];c<-p.adjust(b,method="BH");d<-c[c<0.05];length(d) #8991
 
 ##corrected
 day12_sig_features_r<-mt.maxT(d12_scale_rmbatch,classlabel_runday_d12,test="f",side="abs",fixed.seed.sampling="y",B=100000,nonpara="n") #using multtest package

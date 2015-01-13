@@ -22,6 +22,7 @@ library(pheatmap)
 library(GGally)
 library(grid)
 library(vegan)
+library(scales)
 
 #############
 # User      #
@@ -44,9 +45,9 @@ test<-rbind(day4,day12)
 
 set.seed(1)
 # ggplot 
-plot1<- ggplot(data=blanks, aes(x=blanks$Axis1, y=blanks$Axis2, colour= factor(RunDay), shape = factor(RunDay))) + geom_point(size=1)
+plot1<- ggplot(data=day4, aes(x=day4$Axis1, y=day4$Axis2, colour= factor(RunDay), shape = factor(RunDay))) + geom_point(size=1)
 #plot1<- ggplot(data=forPlot, aes(x=PCaxisA, y=PCaxisB, colour= factor(Strain), shape = factor(Growth))) + geom_point(size=4)
-blanks_plot<- plot1+ theme_bw() + theme(axis.text.x=element_text(hjust = 1,size=8),axis.text.y=element_text(size=8),
+day4_plot<- plot1+ theme_bw() + theme(axis.text.x=element_text(hjust = 1,size=8),axis.text.y=element_text(size=8),
                                   panel.grid.major.x = element_blank(), # to x remove gridlines
                                   panel.grid.major.y = element_blank(), # to y remove gridlines
                                   panel.border = element_blank(),  # remove top and right border
@@ -54,14 +55,40 @@ blanks_plot<- plot1+ theme_bw() + theme(axis.text.x=element_text(hjust = 1,size=
                                   axis.line = element_line(color = 'black'))+ 
 xlab(paste0("PCO 1","\n","44.8% of total variation")) + 
 ylab(paste0("PCO 2","\n","10% of total variation")) + #changed for pcoa plots
-ggtitle("blanks")
+ggtitle("day4")
 
 pdf("PCOA_ggplot.pdf",height=8,width=10)
 multiplot(blanks_plot,day4_plot, matrix_plot, day12_plot,cols=2)
 dev.off()
 
+## Plotting Exponential phase with colors according to Strain for thesis presentation
+
+colourCount = length(unique(day4$Strain))
+getPalette = colorRampPalette(brewer.pal(10,"Paired"))
+set.seed(1) #important to set seed so that we obtain the same shapes for strains all the time
+pch_types<-c(15, 16, 17, 18, 25, 8)
+pch_values<-sample(pch_types, 22, replace = TRUE)
+
+##plotting
+plot1<- ggplot(data=day4, aes(x=day4$Axis1, y=day4$Axis2, colour= factor(Strain), shape = factor(Strain))) + geom_point(size=1)
+plot2 <- plot1 + scale_colour_manual('Strain', values=getPalette(colourCount)) + scale_shape_manual('Strain',values=pch_values)
+day4_plot1<- plot2+ theme_bw() + theme(axis.text.x=element_text(hjust = 1,size=8),axis.text.y=element_text(size=8),
+                                      panel.grid.major.x = element_blank(), # to x remove gridlines
+                                      panel.grid.major.y = element_blank(), # to y remove gridlines
+                                      panel.border = element_blank(),  # remove top and right border
+                                      panel.background = element_blank(),
+                                      axis.line = element_line(color = 'black'))+ 
+  xlab(paste0("PCO 1","\n","19.1% of total variation")) + 
+  ylab(paste0("PCO 2","\n","12.3% of total variation")) + #changed for pcoa plots
+  ggtitle("day4")
+
+pdf("PCOA_ggplot_thesisPresentation.pdf",height=8,width=10)
+multiplot(day4_plot1,day4_plot1, day4_plot1, day4_plot1,cols=2)
+dev.off()
+
 #### Figure 2
 r2.pval<-read.table("F:/Projects/NUS/Vinay's Algae Data/Aug2013/data/x138_lm_model_loadings_scale.txt",sep="\t",header=T,check.names=FALSE,row.names=1)
+r2.pval$PVAL<-p.adjust(as.numeric(r2.pval$PVAL),method="BH") ### Added on 090115 to perform FDR on pvalue associations as nexted model had FDR corrections for pbalues
 r2.pval.melt<-melt(r2.pval,id.vars = c("DataType", "Day", "PrincipalComponents"))
 colnames(r2.pval.melt)[4]<-"param"
 colnames(r2.pval.melt)[5]<-"param.values"
@@ -74,7 +101,7 @@ plot1<- ggplot(data=r2.pval.melt, aes(x=PrincipalComponents, y=param.values, col
                                         #panel.border = element_blank(),  # remove top and right border
                                         panel.background = element_blank(),
                                         axis.line = element_line(color = 'black'))
-ggsave("PC_associations_ggplot.pdf",plot1,height=8,width=10)
+ggsave("PC_associations_ggplot_BHCorrected.pdf",plot1,height=8,width=10)
 
 #### Supplementary Figure
 svd_filters<-read.table("F:/Projects/NUS/Vinay's Algae Data/Aug2013/data/SVDFilters_features.txt",sep="\t",header=T,check.names=FALSE,row.names=1)
@@ -187,63 +214,134 @@ compute_nested_linearModel_associations<-function(results.from.pca,StrainId,RunD
     lm_val<-lm(x~ as.factor(RunDayId) + as.factor(RunDayId)/as.factor(StrainId))
     lm_cor<-summary(lm_val)
     p.val_runday_strain<-anova(lm_val)$'Pr(>F)'[1:2]
-    return(list(lm_cor$r.squared,p.val_runday_strain))
+    fvalue_runday_strain<-anova(lm_val)$'F value'[1:2] # modified by shiv to return r2 for each model term on 09-Jan 2015
+    r2_runday_strain<-anova(lm_val)$'Sum Sq'/sum(anova(lm_val)$'Sum Sq') #includes the r2 term for residuals
+    r2_runday_strain<-r2_runday_strain[1:2] #includes the r2 term only for runday and runday/strain
+    return(list(lm_cor$r.squared,p.val_runday_strain,fvalue_runday_strain,r2_runday_strain))
    })
 }
 
-#function to extract r2 value from list containing r2 and p.val returned from linear model
-compute.r2.pval<-function(linearmodel_list,r2.pval) {
-  if(r2.pval=="r2") { #WARNING:code implictly assumes r2 is in the first column and p.val in the second
+a<-lm(fit_day4_mzbysam_princomp$loadings[,1]~ as.factor(RunDay_day4) + as.factor(RunDay_day4)/as.factor(SampleGroup_day4))
+
+# #function to extract values from a list
+# compute.r2.pval<-function(linearmodel_list,r2.pval) {
+#   if(r2.pval=="r2") { #WARNING:code implictly assumes r2 is in the first column and p.val in the second
+#     return (sapply(linearmodel_list, function(x){as.numeric(x[1])}))
+#   } else{
+#     return (sapply(linearmodel_list, function(x){x[2]}))
+#   }
+# }
+
+extract.variables.pc.associations<-function(linearmodel_list,variable.extract) {
+  if(variable.extract=="r2model") { #WARNING:code implictly assumes r2 is in the first column and p.val in the second
     return (sapply(linearmodel_list, function(x){as.numeric(x[1])}))
-  } else{
+  } else if (variable.extract=="pvalue"){
     return (sapply(linearmodel_list, function(x){x[2]}))
+  } else if (variable.extract=="fvalue"){
+    return (sapply(linearmodel_list, function(x){x[3]}))
+  } else {
+    return (sapply(linearmodel_list, function(x){x[4]}))
   }
 }
+
+
 
 #Day4
 fit_day4_mzbysam_princomp<-compute_pca(ms_data_day4_nonzero,"scale") # From AlgaeDataAnalysis_modular.R
 residual_variance_day4_mzbysam_princomp<-fit_day4_mzbysam_princomp$sdev^2/sum(fit_day4_mzbysam_princomp$sdev^2)
 lm_pca_strain_runday_day4_nonzero_loadings<-compute_nested_linearModel_associations(fit_day4_mzbysam_princomp,SampleGroup_day4,RunDay_day4)
-lm_pca_strain_runday_day4_nonzero_loadings_r.sq<-compute.r2.pval(lm_pca_strain_runday_day4_nonzero_loadings,"r2")
-lm_pca_strain_runday_day4_nonzero_loadings_pval<-compute.r2.pval(lm_pca_strain_runday_day4_nonzero_loadings,"pval")
+lm_pca_strain_runday_day4_nonzero_loadings_r.sq.model<-extract.variables.pc.associations(lm_pca_strain_runday_day4_nonzero_loadings,"r2model")
+lm_pca_strain_runday_day4_nonzero_loadings_pval<-extract.variables.pc.associations(lm_pca_strain_runday_day4_nonzero_loadings,"pvalue")
 lm_pca_strain_runday_day4_nonzero_loadings_pval<-do.call(rbind.data.frame, lm_pca_strain_runday_day4_nonzero_loadings_pval)
-
 lm_pca_strain_runday_day4_nonzero_loadings_pval<-as.data.frame(sapply(lm_pca_strain_runday_day4_nonzero_loadings_pval,
                                                          function(x) p.adjust(as.numeric(x),method="BH"))) # FDR correction
 
-r2.pval.strain_runday_day4_nonzero<-cbind(lm_pca_strain_runday_day4_nonzero_loadings_r.sq,lm_pca_strain_runday_day4_nonzero_loadings_pval,
-                                          as.numeric(paste0(1:length(lm_pca_strain_runday_day4_nonzero_loadings_r.sq))),
-                                          rep("Exponential",length(lm_pca_strain_runday_day4_nonzero_loadings_r.sq)))
-colnames(r2.pval.strain_runday_day4_nonzero)<-c("R2","P-value(RunDay)","P-value(RunDay/Strain)","PrincipalComponents","Day")
+lm_pca_strain_runday_day4_nonzero_loadings_fval<-extract.variables.pc.associations(lm_pca_strain_runday_day4_nonzero_loadings,"fvalue")
+lm_pca_strain_runday_day4_nonzero_loadings_fval<-do.call(rbind.data.frame, lm_pca_strain_runday_day4_nonzero_loadings_fval)
+lm_pca_strain_runday_day4_nonzero_loadings_r2<-extract.variables.pc.associations(lm_pca_strain_runday_day4_nonzero_loadings,"r2")
+lm_pca_strain_runday_day4_nonzero_loadings_r2<-do.call(rbind.data.frame, lm_pca_strain_runday_day4_nonzero_loadings_r2)
 
-r2.pval.strain_runday_day4_nonzero.melt<-melt(r2.pval.strain_runday_day4_nonzero,id.vars = c("R2","Day","PrincipalComponents"))
+r2.pval.strain_runday_day4_nonzero<-cbind(rep("Exponential",length(lm_pca_strain_runday_day4_nonzero_loadings_r.sq.model)),
+                                          as.numeric(paste0(1:length(lm_pca_strain_runday_day4_nonzero_loadings_r.sq.model))),
+                                          lm_pca_strain_runday_day4_nonzero_loadings_r.sq.model,lm_pca_strain_runday_day4_nonzero_loadings_pval,
+                                          lm_pca_strain_runday_day4_nonzero_loadings_fval,lm_pca_strain_runday_day4_nonzero_loadings_r2)
+
+colnames(r2.pval.strain_runday_day4_nonzero)<-c("Day","PrincipalComponents",
+                                                "R2(model)","P-value(RunDay)","P-value(RunDay/Strain)",
+                                                "F-value(RunDay)","F-value(RunDay/Strain)",
+                                                "R2(RunDay)","R2(RunDay/Strain)")
+
+write.table(r2.pval.strain_runday_day4_nonzero,"PC_associations_nested_model_day4.txt",sep="\t",quote=FALSE,row.names=FALSE)
+
+r2.pval.strain_runday_day4_nonzero.melt<-melt(r2.pval.strain_runday_day4_nonzero[,c(1,2,4,5,8,9)],
+                                               id.vars = c("Day","PrincipalComponents"))
+
 
 #Day12
 
 fit_day12_mzbysam_princomp<-compute_pca(ms_data_day12_nonzero,"scale") # From AlgaeDataAnalysis_modular.R
 residual_variance_day12_mzbysam_princomp<-fit_day12_mzbysam_princomp$sdev^2/sum(fit_day12_mzbysam_princomp$sdev^2)
 lm_pca_strain_runday_day12_nonzero_loadings<-compute_nested_linearModel_associations(fit_day12_mzbysam_princomp,SampleGroup_day12,RunDay_day12)
-lm_pca_strain_runday_day12_nonzero_loadings_r.sq<-compute.r2.pval(lm_pca_strain_runday_day12_nonzero_loadings,"r2")
-lm_pca_strain_runday_day12_nonzero_loadings_pval<-compute.r2.pval(lm_pca_strain_runday_day12_nonzero_loadings,"pval")
+lm_pca_strain_runday_day12_nonzero_loadings_r.sq.model<-extract.variables.pc.associations(lm_pca_strain_runday_day12_nonzero_loadings,"r2model")
+lm_pca_strain_runday_day12_nonzero_loadings_pval<-extract.variables.pc.associations(lm_pca_strain_runday_day12_nonzero_loadings,"pvalue")
 lm_pca_strain_runday_day12_nonzero_loadings_pval<-do.call(rbind.data.frame, lm_pca_strain_runday_day12_nonzero_loadings_pval)
-
 lm_pca_strain_runday_day12_nonzero_loadings_pval<-as.data.frame(sapply(lm_pca_strain_runday_day12_nonzero_loadings_pval,
-                                                         function(x) p.adjust(as.numeric(x),method="BH"))) # FDR correction
+                                                                      function(x) p.adjust(as.numeric(x),method="BH"))) # FDR correction
 
-r2.pval.strain_runday_day12_nonzero<-cbind(lm_pca_strain_runday_day12_nonzero_loadings_r.sq,lm_pca_strain_runday_day12_nonzero_loadings_pval,
-                                           as.numeric(paste0(1:length(lm_pca_strain_runday_day12_nonzero_loadings_r.sq))),
-                                          rep("Stationary",length(lm_pca_strain_runday_day12_nonzero_loadings_r.sq)))
-colnames(r2.pval.strain_runday_day12_nonzero)<-c("R2","P-value(RunDay)","P-value(RunDay/Strain)","PrincipalComponents","Day")
+lm_pca_strain_runday_day12_nonzero_loadings_fval<-extract.variables.pc.associations(lm_pca_strain_runday_day12_nonzero_loadings,"fvalue")
+lm_pca_strain_runday_day12_nonzero_loadings_fval<-do.call(rbind.data.frame, lm_pca_strain_runday_day12_nonzero_loadings_fval)
+lm_pca_strain_runday_day12_nonzero_loadings_r2<-extract.variables.pc.associations(lm_pca_strain_runday_day12_nonzero_loadings,"r2")
+lm_pca_strain_runday_day12_nonzero_loadings_r2<-do.call(rbind.data.frame, lm_pca_strain_runday_day12_nonzero_loadings_r2)
 
-r2.pval.strain_runday_day12_nonzero.melt<-melt(r2.pval.strain_runday_day12_nonzero,id.vars = c("R2","Day","PrincipalComponents"))
+r2.pval.strain_runday_day12_nonzero<-cbind(rep("Stationary",length(lm_pca_strain_runday_day12_nonzero_loadings_r.sq.model)),
+                                          as.numeric(paste0(1:length(lm_pca_strain_runday_day12_nonzero_loadings_r.sq.model))),
+                                          lm_pca_strain_runday_day12_nonzero_loadings_r.sq.model,lm_pca_strain_runday_day12_nonzero_loadings_pval,
+                                          lm_pca_strain_runday_day12_nonzero_loadings_fval,lm_pca_strain_runday_day12_nonzero_loadings_r2)
+
+colnames(r2.pval.strain_runday_day12_nonzero)<-c("Day","PrincipalComponents",
+                                                "R2(model)","P-value(RunDay)","P-value(RunDay/Strain)",
+                                                "F-value(RunDay)","F-value(RunDay/Strain)",
+                                                "R2(RunDay)","R2(RunDay/Strain)")
+
+write.table(r2.pval.strain_runday_day12_nonzero,"PC_associations_nested_model_day12.txt",sep="\t",quote=FALSE,row.names=FALSE)
+
+
+r2.pval.strain_runday_day12_nonzero.melt<-melt(r2.pval.strain_runday_day12_nonzero[,c(1,2,4,5,8,9)],
+                                               id.vars = c("Day","PrincipalComponents"))
+
+# r2.pval.strain_runday_nonzero.melt<-rbind(r2.pval.strain_runday_day4_nonzero.melt,r2.pval.strain_runday_day12_nonzero.melt)
+# colnames(r2.pval.strain_runday_nonzero.melt)[4]<-"PvalueType"
+# colnames(r2.pval.strain_runday_nonzero.melt)[5]<-"pvalues"
+# 
+# # ggplot 
+# plot1<- ggplot(data=r2.pval.strain_runday_nonzero.melt, aes(x=PrincipalComponents, y=pvalues, colour= factor(PvalueType), shape = factor(PvalueType))) + geom_point(size=2)  +facet_grid(Day~.) +
+#   geom_line(data=r2.pval.strain_runday_nonzero.melt, aes(x=PrincipalComponents, y=R2),linetype="dotted", colour="black") +
+#   theme_bw() + theme(axis.text.x=element_text(hjust = 1,size=8),axis.text.y=element_text(size=8),
+#                      panel.grid.major.x = element_blank(), # to x remove gridlines
+#                      panel.grid.major.y = element_blank(), # to y remove gridlines
+#                      #panel.border = element_blank(),  # remove top and right border
+#                      panel.background = element_blank(),
+#                      axis.line = element_line(color = 'black'))
+# plot2<-plot1+ scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+#                                   labels = trans_format("log10", math_format(10^.x)))
+# 
+# ggsave("PC_associations_ggplot_nestedmodel_V1.pdf",plot2,height=8,width=10)
+
+### Version used in Jan 2015 with R2 for individual model terms
 
 r2.pval.strain_runday_nonzero.melt<-rbind(r2.pval.strain_runday_day4_nonzero.melt,r2.pval.strain_runday_day12_nonzero.melt)
-colnames(r2.pval.strain_runday_nonzero.melt)[4]<-"PvalueType"
-colnames(r2.pval.strain_runday_nonzero.melt)[5]<-"pvalues"
+colnames(r2.pval.strain_runday_nonzero.melt)[3]<-"VarType"
+colnames(r2.pval.strain_runday_nonzero.melt)[4]<-"VarValues"
 
+
+r2.pval.strain_runday_nonzero.melt$VarType.r2.pval<-sapply(as.character(r2.pval.strain_runday_nonzero.melt$VarType), function(x) strsplit(as.character(x),"\\(")[[1]][1])
+r2.pval.strain_runday_nonzero.melt$VarType.day<-sapply(as.character(r2.pval.strain_runday_nonzero.melt$VarType), function(x) gsub(")","",strsplit(as.character(x),"\\(")[[1]][2]))
+
+r2.pval.strain_runday_nonzero.melt$VarType.r2.pval = factor(r2.pval.strain_runday_nonzero.melt$VarType.r2.pval, levels=c('R2','P-value'))
+
+set.seed(1)
 # ggplot 
-plot1<- ggplot(data=r2.pval.strain_runday_nonzero.melt, aes(x=PrincipalComponents, y=pvalues, colour= factor(PvalueType), shape = factor(PvalueType))) + geom_point(size=2)  +facet_grid(Day~.) +
-  geom_line(data=r2.pval.strain_runday_nonzero.melt, aes(x=PrincipalComponents, y=R2),linetype="dotted", colour="black") +
+plot1<- ggplot(data=r2.pval.strain_runday_nonzero.melt, aes(x=PrincipalComponents, y=VarValues, colour= factor(VarType.day), shape = factor(VarType.day))) + geom_point(size=2) +facet_grid(VarType.r2.pval~Day) +
   theme_bw() + theme(axis.text.x=element_text(hjust = 1,size=8),axis.text.y=element_text(size=8),
                      panel.grid.major.x = element_blank(), # to x remove gridlines
                      panel.grid.major.y = element_blank(), # to y remove gridlines
@@ -251,7 +349,56 @@ plot1<- ggplot(data=r2.pval.strain_runday_nonzero.melt, aes(x=PrincipalComponent
                      panel.background = element_blank(),
                      axis.line = element_line(color = 'black'))
 plot2<-plot1+ scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
-                                  labels = trans_format("log10", math_format(10^.x)))
+                            labels = trans_format("log10", math_format(10^.x)))
 
-ggsave("PC_associations_ggplot_nestedmodel_V1.pdf",plot2,height=8,width=10)
+ggsave("PC_associations_ggplot_nestedmodel_V2(log).pdf",plot2,height=8,width=10)
 
+# 
+# r2.pval<-read.table("F:/Projects/NUS/Vinay's Algae Data/Aug2013/data/x138_lm_model_loadings_scale.txt",sep="\t",header=T,check.names=FALSE,row.names=1)
+# r2.pval.melt<-melt(r2.pval,id.vars = c("DataType", "Day", "PrincipalComponents"))
+# colnames(r2.pval.melt)[4]<-"param"
+# colnames(r2.pval.melt)[5]<-"param.values"
+# set.seed(1)
+# # ggplot 
+# plot1<- ggplot(data=r2.pval.melt, aes(x=PrincipalComponents, y=param.values, colour= factor(DataType), shape = factor(DataType))) + geom_point(size=2) +facet_grid(param ~ Day) +
+#   theme_bw() + theme(axis.text.x=element_text(hjust = 1,size=8),axis.text.y=element_text(size=8),
+#                      panel.grid.major.x = element_blank(), # to x remove gridlines
+#                      panel.grid.major.y = element_blank(), # to y remove gridlines
+#                      #panel.border = element_blank(),  # remove top and right border
+#                      panel.background = element_blank(),
+#                      axis.line = element_line(color = 'black'))
+# ggsave("PC_associations_ggplot.pdf",plot1,height=8,width=10)
+# 
+
+
+
+
+##Multiple ggplots
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  require(grid)
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+  numPlots = length(plots)
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                     ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+  if (numPlots==1) {
+    print(plots[[1]])
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}

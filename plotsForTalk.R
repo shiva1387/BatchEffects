@@ -95,7 +95,7 @@ pdf("lm_day4.pdf",height=8,width=8)
 par(mfrow=c(2,2))
 hist(lm_strain_d4_pval_raw,main="Raw data Strain",ylim=c(0,14000))
 hist(lm_runday_d4_pval_raw,main="Raw data Runday",ylim=c(0,14000))
-hist(lm_strain_d4_pval_corrected,main="After correction Strain",ylim=c(0,14000))
+hist(lm_strain_d4_pval_corrected,main="After correction Strain",ylim=c(0,14000)) ## Comment on 09-0115, after correction refers to after batch effect correction using SVD!
 hist(lm_runday_d4_pval_corrected,main="After correction Runday",ylim=c(0,14000))
 #plot(lm_strain_d4_nonzero_loadings_pval_corrected,lm_runday_d4_nonzero_loadings_pval_corrected)
 dev.off()

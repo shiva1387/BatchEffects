@@ -42,7 +42,10 @@ extract_residual<-function(pval_residuals) {
 
 
 lm_day4_raw<-compute_linearModel_ext_resid(t(ScaleData(ms_data_day4_nonzero)),SampleGroup_day4,RunDay_day4)
-p.val_runday_d4<-as.numeric(extract_pval(lm_day4_raw))
+#p.val_runday_d4<-as.numeric(extract_pval(lm_day4_raw)) #p.adjust(as.numeric(x),method="BH")
+
+## Edited by shiv on 09-Jan-2015 to include correction with BH method for unday too
+p.val_runday_d4<-p.adjust(as.numeric(extract_pval(lm_day4_raw)),method="BH")
 data_matrix_d4<-extract_residual(lm_day4_raw)
 classlabel_factor_d4<-as.numeric(as.factor(SampleGroup_day4))-1
 dataset_sig_features_day4<-mt.maxT(data_matrix_d4,classlabel_factor_d4,test="f",side="abs",fixed.seed.sampling="y",B=1000,nonpara="n")
@@ -59,7 +62,10 @@ metab_sig_day4<-cbind(data_matrix_d4[id.sig_dataset_day4,],round(dataset_sig_fea
 length(id.sig_dataset_day4)
 
 lm_day12_raw<-compute_linearModel_ext_resid(t(ScaleData(ms_data_day12_nonzero)),SampleGroup_day12,RunDay_day12)
-p.val_runday_d12<-as.numeric(extract_pval(lm_day12_raw))
+#p.val_runday_d12<-as.numeric(extract_pval(lm_day12_raw))
+## Edited by shiv on 09-Jan-2015 to include correction with BH method for unday too
+p.val_runday_d12<-p.adjust(as.numeric(extract_pval(lm_day12_raw)),method="BH")
+
 data_matrix_d12<-extract_residual(lm_day12_raw)
 classlabel_factor_d12<-as.numeric(as.factor(SampleGroup_day12))-1
 dataset_sig_features_day12<-mt.maxT(data_matrix_d12,classlabel_factor_d12,test="f",side="abs",fixed.seed.sampling="y",B=1000,nonpara="n")
@@ -89,7 +95,7 @@ hd.xaxis<-seq(0,1,0.05)[-21]
 
 range12<-max(c(d4.pval.runday.hd,d4.pval.strain.hd,d12.pval.runday.hd,d12.pval.strain.hd))
 
-pdf("linearModel_permutation_all.pdf",width=8,height=8)
+pdf("linearModel_permutation_all-BHcorrectionRunday_090115.pdf",width=8,height=8)
 par(mfrow=c(2,2))
 plot(hd.xaxis,d4.pval.strain.hd,type="s",ylim=c(100,range12),log="y",las=1,ylab="Number of mass features",xlab="P-value",main="Day4 Strain")
 lines(hd.xaxis,rep((0.05*13443),20),lty=2)

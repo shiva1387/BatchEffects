@@ -153,7 +153,7 @@ Q <- qgraph(cor(big5), minimum = 0.25, cut = 0.4, vsize = 1.5, groups = big5grou
 title("Big 5 correlations", line = 2.5)
 
 # Venn diagram -Total metabolites
-library(vennDiagram)
+library(VennDiagram)
 venn_d<-read.table("TotalMetabolites.txt",header=TRUE,sep="\t",row.name=1)
 venn_d1<-as.data.frame(venn_d[,c(1,2,5,6)])
 a<-vennCounts(venn_d1, include="both")
@@ -163,9 +163,13 @@ dev.off()
 
 #pheatmap
 library('pheatmap')
-pdf("totalMetabolites.pdf")
-pheatmap(as.matrix(venn_d1),scale="none",col=(c("white","grey")),show_rownames=F,,fontsize_row=1)
+pdf("totalMetabolites1.pdf")
+pheatmap(as.matrix(venn_d1),scale="none",col=(c("white","grey")),cellheight = 0.5,show_rownames=F,border_color="black",fontsize_row=1)
 dev.off()
+
+heatmap.2(as.matrix(venn_d1),scale="none",col=(c("white","grey")),labRow=NA,
+sepwidth=0.2,  # width of the borders
+sepcolor='white',trace="none")
 
 ## Getting strains which show the maximum deviation from exponential to stationary growth phase
 a<-biochemData_d12-biochemData_d4[,1:6] #as biochemData_d4 has an extra column biochemData_d4[,7] for growthRate
