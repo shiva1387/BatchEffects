@@ -1968,6 +1968,15 @@ batch_parameters_day12_plot1<-batch_parameters_day12_plot+ scale_x_log10(breaks 
                                                                        labels = trans_format("log10", math_format(10^.x)))
 
 ggsave("batch_parameters_day12.pdf",batch_parameters_day12_plot,height=8,width=10)
+
+
+#######
+
+gg_color_hue <- function(n) {
+  hues = seq(15, 375, length=n+1)
+  hcl(h=hues, l=65, c=100)[1:n]
+}
+
 ####
 
 png("pval_factor.png",height=800,width=800)
