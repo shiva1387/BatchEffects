@@ -10,9 +10,11 @@ library('RColorBrewer')
 ### Functions
 ScaleData<-function(data_matrix){
   processed_data<-scale(data_matrix,center=T,scale=T)
-  processed_data<-processed_data-min(processed_data)
+  colnames(processed_data)<-colnames(data_matrix)
+  rownames(processed_data)<-rownames(data_matrix)
   return(processed_data)
 }
+
 compute_linearModel_batchEffect<-function(data_matrix,StrainId,RunDayId) { #dependent.factor1 is Strain id(sample groups) and dependent.factor2 is RunDay 
   lm_pca_scores<-apply(data_matrix,2, function(x) {
   lm_val<-lm(x~ as.factor(RunDayId))

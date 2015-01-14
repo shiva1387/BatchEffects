@@ -34,12 +34,13 @@ batch_corrected_mat_d4<-svd_day4_nonzero[[7]]
 load("day4_x138_nonzero_sigfeat_s.rda") #loading strain data
 day4_nonzero_sigfeat_s_matrix<-day4_nonzero_sigfeat_s[[2]]
 batch_corrected_sig_mat_d4<-day4_nonzero_sigfeat_s_matrix[[7]] #as removing after 7 rounds of pc removal, runday effect is removed
+write.table(batch_corrected_sig_mat_d4,"batch_corrected_sig_mat_d4_strain.txt",quote=FALSE,sep='\t')
 
 ## Loading significant features due to RunDay
 # load("day4_x138_nonzero_sigfeat_r.rda") #loading runday data
 # day4_nonzero_sigfeat_r_matrix<-day4_nonzero_sigfeat_r[[2]]
 # batch_corrected_sig_mat_d4_run<-day4_nonzero_sigfeat_r_matrix[[7]] #as removing after 7 rounds of pc removal, runday effect is removed
-
+write.table(batch_corrected_sig_mat_d4_run,"batch_corrected_sig_mat_d4_run.txt",quote=FALSE,sep='\t')
 
 load("svd_day12_x138_nonzero.rda")
 batch_corrected_mat_d12<-svd_day12_nonzero[[4]]
@@ -47,12 +48,13 @@ batch_corrected_mat_d12<-svd_day12_nonzero[[4]]
 load("day12_x138_nonzero_sigfeat_s.rda") #loading strain data
 day12_nonzero_sigfeat_s_matrix<-day12_nonzero_sigfeat_s[[2]]
 batch_corrected_sig_mat_d12<-day12_nonzero_sigfeat_s_matrix[[4]] #as removing after 4 rounds of pc removal, runday effect is removed
+write.table(batch_corrected_sig_mat_d12,"batch_corrected_sig_mat_d12_strain.txt",quote=FALSE,sep='\t')
 
 ## Loading significant features due to RunDay
 # load("day12_x138_nonzero_sigfeat_r.rda") #loading runday data
 # day12_nonzero_sigfeat_r_matrix<-day12_nonzero_sigfeat_r[[2]]
 # batch_corrected_sig_mat_d12_run<-day12_nonzero_sigfeat_r_matrix[[4]] #as removing after 4 rounds of pc removal, runday effect is removed
-
+write.table(batch_corrected_sig_mat_d12_run,"batch_corrected_sig_mat_d12_run.txt",quote=FALSE,sep='\t')
 
 #Ensure all strain ids are in the same format
 colnames(batch_corrected_sig_mat_d12)<-as.character(gsub('D12_14','D12_014',colnames(batch_corrected_sig_mat_d12)))

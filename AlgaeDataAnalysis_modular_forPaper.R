@@ -1687,10 +1687,8 @@ day4_uncorrected_nonzero_fval_r2_r<-compute_r2_from_fvalue_singleDataFrame(Scale
 day4_uncorrected_nonzero_fvalues_r<-day4_uncorrected_nonzero_fval_r2_r[[1]]
 day4_uncorrected_nonzero_r2F_r<-unlist(day4_uncorrected_nonzero_fval_r2_r[[2]])
 day4_uncorrected_nonzero_r2F_r<-round(sum(day4_uncorrected_nonzero_r2F_r[day4_uncorrected_nonzero_sigfeat_r_index])/length(day4_uncorrected_nonzero_r2F_r[day4_uncorrected_nonzero_sigfeat_r_index]),2)
-day4_uncorrected_nonzero_overlap_rs<-round((length(match(day4_uncorrected_nonzero_sigfeat_r_index,day4_uncorrected_nonzero_sigfeat_s_index))/nrow(ms_data_day4_nonzero))*100,2) 
-day4_uncorrected_nonzero_r_row<-c(0,"RunDay", as.numeric(length(day4_uncorrected_nonzero_sigfeat_r_index)), as.numeric(day4_uncorrected_nonzero_r2F_r),
-                                   100,as.numeric(day4_uncorrected_nonzero_overlap_rs))
-
+#day4_uncorrected_nonzero_overlap_rs<-round((length(match(day4_uncorrected_nonzero_sigfeat_r_index,day4_uncorrected_nonzero_sigfeat_s_index))/nrow(ms_data_day4_nonzero))*100,2) 
+day4_uncorrected_nonzero_r_row<-c(0,"RunDay", as.numeric(length(day4_uncorrected_nonzero_sigfeat_r_index)), as.numeric(day4_uncorrected_nonzero_r2F_r))
 
 day4_uncorrected_nonzero_sigfeat_s<-compute_perm_ftest_singleDataFrame(ScaleData(ms_data_day4_nonzero),SampleGroup_day4)
 day4_uncorrected_nonzero_sigfeat_s_pval<-day4_uncorrected_nonzero_sigfeat_s[[1]]
@@ -1703,8 +1701,9 @@ day4_uncorrected_nonzero_fvalues_s<-day4_uncorrected_nonzero_fval_r2_s[[1]]
 day4_uncorrected_nonzero_r2F_s<-unlist(day4_uncorrected_nonzero_fval_r2_s[[2]])
 day4_uncorrected_nonzero_r2F_s<-round(sum(day4_uncorrected_nonzero_r2F_s[day4_uncorrected_nonzero_sigfeat_s_index])/length(day4_uncorrected_nonzero_r2F_s[day4_uncorrected_nonzero_sigfeat_s_index]),2)
 day4_uncorrected_nonzero_overlap_rs<-round((length(match(day4_uncorrected_nonzero_sigfeat_r_index,day4_uncorrected_nonzero_sigfeat_s_index))/nrow(ms_data_day4_nonzero))*100,2) 
-day4_uncorrected_nonzero_s_row<-c(0,"Strain", as.numeric(length(day4_uncorrected_nonzero_sigfeat_s_index)), as.numeric(day4_uncorrected_nonzero_r2F_s),
-                                   100,as.numeric(day4_uncorrected_nonzero_overlap_rs))
+day4_uncorrected_nonzero_s_row<-c(0,"Strain", as.numeric(length(day4_uncorrected_nonzero_sigfeat_s_index)), as.numeric(day4_uncorrected_nonzero_r2F_s))
+
+day4_uncorrected_nonzero_common_row<-c(0,"Common", 100,as.numeric(day4_uncorrected_nonzero_overlap_rs))
 
 ###################
 #### day12
@@ -1779,9 +1778,8 @@ day12_uncorrected_nonzero_fval_r2_r<-compute_r2_from_fvalue_singleDataFrame(Scal
 day12_uncorrected_nonzero_fvalues_r<-day12_uncorrected_nonzero_fval_r2_r[[1]]
 day12_uncorrected_nonzero_r2F_r<-unlist(day12_uncorrected_nonzero_fval_r2_r[[2]])
 day12_uncorrected_nonzero_r2F_r<-round(sum(day12_uncorrected_nonzero_r2F_r[day12_uncorrected_nonzero_sigfeat_r_index])/length(day12_uncorrected_nonzero_r2F_r[day12_uncorrected_nonzero_sigfeat_r_index]),2)
-day12_uncorrected_nonzero_overlap_rs<-round((length(match(day12_uncorrected_nonzero_sigfeat_r_index,day12_uncorrected_nonzero_sigfeat_s_index))/nrow(ms_data_day12_nonzero))*100,2) 
-day12_uncorrected_nonzero_r_row<-c(0,"RunDay", as.numeric(length(day12_uncorrected_nonzero_sigfeat_r_index)), as.numeric(day12_uncorrected_nonzero_r2F_r),
-                                   100,as.numeric(day12_uncorrected_nonzero_overlap_rs))
+#day12_uncorrected_nonzero_overlap_rs<-round((length(match(day12_uncorrected_nonzero_sigfeat_r_index,day12_uncorrected_nonzero_sigfeat_s_index))/nrow(ms_data_day12_nonzero))*100,2) 
+day12_uncorrected_nonzero_r_row<-c(0,"RunDay", as.numeric(length(day12_uncorrected_nonzero_sigfeat_r_index)), as.numeric(day12_uncorrected_nonzero_r2F_r))
 
 
 day12_uncorrected_nonzero_sigfeat_s<-compute_perm_ftest_singleDataFrame(ScaleData(ms_data_day12_nonzero),SampleGroup_day12)
@@ -1796,9 +1794,9 @@ day12_uncorrected_nonzero_fvalues_s<-day12_uncorrected_nonzero_fval_r2_s[[1]]
 day12_uncorrected_nonzero_r2F_s<-unlist(day12_uncorrected_nonzero_fval_r2_s[[2]])
 day12_uncorrected_nonzero_r2F_s<-round(sum(day12_uncorrected_nonzero_r2F_s[day12_uncorrected_nonzero_sigfeat_s_index])/length(day12_uncorrected_nonzero_r2F_s[day12_uncorrected_nonzero_sigfeat_s_index]),2)
 day12_uncorrected_nonzero_overlap_rs<-round((length(match(day12_uncorrected_nonzero_sigfeat_r_index,day12_uncorrected_nonzero_sigfeat_s_index))/nrow(ms_data_day12_nonzero))*100,2) 
-day12_uncorrected_nonzero_s_row<-c(0,"Strain",  as.numeric(length(day12_uncorrected_nonzero_sigfeat_s_index)),  as.numeric(day12_uncorrected_nonzero_r2F_s),
-100, as.numeric(day12_uncorrected_nonzero_overlap_rs))
+day12_uncorrected_nonzero_s_row<-c(0,"Strain",  as.numeric(length(day12_uncorrected_nonzero_sigfeat_s_index)),  as.numeric(day12_uncorrected_nonzero_r2F_s))
 
+day12_uncorrected_nonzero_common_row<-c(0,"Common", 100,as.numeric(day12_uncorrected_nonzero_overlap_rs))
 
 #### Plotting corrected batch effects ## Edited for the paper 13-Jan-2014
 ## Figure 3
@@ -1854,37 +1852,59 @@ no_sigFeat_d4_s[is.na(no_sigFeat_d4_s)]<-0
 r2_d4_s_significant[is.na(r2_d4_s_significant)]<-0
 
 day4_batcheffectParameters_runDay<-data.frame(PrincipalComponents=seq(1:ncol(ms_data_day4_nonzero)),DataType=rep("RunDay",ncol(ms_data_day4_nonzero)),
-                                              SignificantFeatures=no_sigFeat_d4_r, Avg.R2=r2_d4_r_significant,
-                                              ResidualVariance=resid_var_d4,Overlap=sigfeat_overlap_d4)
+                                              SignificantFeatures=no_sigFeat_d4_r, Avg.R2=r2_d4_r_significant)
 day4_batcheffectParameters_runDay<-rbind(day4_uncorrected_nonzero_r_row,day4_batcheffectParameters_runDay)
  
 day4_batcheffectParameters_strain<-data.frame(PrincipalComponents=seq(1:ncol(ms_data_day4_nonzero)),DataType=rep("Strain",ncol(ms_data_day4_nonzero)),
-                                              SignificantFeatures=no_sigFeat_d4_s, Avg.R2=r2_d4_s_significant,
-                                              ResidualVariance=resid_var_d4,Overlap=sigfeat_overlap_d4)
+                                              SignificantFeatures=no_sigFeat_d4_s, Avg.R2=r2_d4_s_significant)
 day4_batcheffectParameters_strain<-rbind(day4_uncorrected_nonzero_s_row,day4_batcheffectParameters_strain)
 
 day4_batcheffectParameters_melt<-melt(rbind(day4_batcheffectParameters_runDay,day4_batcheffectParameters_strain),id.vars=c("PrincipalComponents","DataType"))
 colnames(day4_batcheffectParameters_melt)[3:4]<-c("VarType","VarValues")
 
-# day4_batcheffectParameters_overall<-data.frame(PrincipalComponents=seq(1:ncol(ms_data_day4_nonzero)),
-#                                                ResidualVariance=resid_var_d4,Overlap=sigfeat_overlap_d4)
-# day4_batcheffectParameters_overall_melt<-melt(day4_batcheffectParameters_overall,id.vars=c("PrincipalComponents"))
-# colnames(day4_batcheffectParameters_overall_melt)[2:3]<-c("VarType","VarValues")
 
-set.seed(1)
+day4_batcheffectParameters_common<-data.frame(PrincipalComponents=seq(1:ncol(ms_data_day4_nonzero)),DataType=rep("Common",ncol(ms_data_day4_nonzero)),
+                                               ResidualVariance=resid_var_d4,Overlap=sigfeat_overlap_d4) # a seaparte data frame for plotting in diff colors and shapes
+day4_batcheffectParameters_common_melt<-melt(rbind(day4_batcheffectParameters_common,day4_uncorrected_nonzero_common_row),
+                                              id.vars=c("PrincipalComponents","DataType"))
+colnames(day4_batcheffectParameters_common_melt)[3:4]<-c("VarType","VarValues")
+
+day4_batcheffectParametersset.seed(1)
 # ggplot 
-batch_parameters_day4_plot<- ggplot(data=day4_batcheffectParameters_melt, aes(x=as.numeric(PrincipalComponents), y=as.numeric(VarValues), colour= factor(DataType), shape = factor(DataType))) + geom_point(size=2) +facet_grid(VarType~.,scales="free_y") +
+batch_parameters_day4_plot<- ggplot(data=day4_batcheffectParameters_total_subset, aes(x=PrincipalComponents, #remove as.numeric for subset
+                             y=as.numeric(VarValues), colour= factor(DataType), shape = factor(DataType))) + 
+  geom_point(size=2) +facet_grid(VarType~.,scales="free_y") +
+  scale_colour_manual(values=c("#F8766D", "#7CAE00","grey")) +
+  #scale_x_discrete(breaks=c(seq(0,8,by=2),seq(15,40,by=5),seq(60,130,20))) + #do not use for subset
   theme_bw() + theme(axis.text.x=element_text(hjust = 1,size=8),axis.text.y=element_text(size=8),
                      panel.grid.major.x = element_blank(), # to x remove gridlines
                      panel.grid.major.y = element_blank(), # to y remove gridlines
                      #panel.border = element_blank(),  # remove top and right border
                      panel.background = element_blank(),
                      axis.line = element_line(color = 'black'))
-batch_parameters_day4_plot<-batch_parameters_day4_plot + geom_vline(xintercept = 7,linetype = "dotted") #indicate PC filter used
-batch_parameters_day4_plot1<-batch_parameters_day4_plot+ scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x),
-                            labels = trans_format("log10", math_format(10^.x)))
+#batch_parameters_day4_plot<-batch_parameters_day4_plot + geom_vline(xintercept = 7,linetype = "dotted") #for full data indicate PC filter used
+# For subset data xinterceot is the point (factor) rather than number..therefore its the abs position of the intercept
+# this ends up being position 8 after including '0'
+batch_parameters_day4_plot<-batch_parameters_day4_plot + geom_vline(xintercept = 8,linetype = "dotted") #For intercept indicate PC filter used
+# batch_parameters_day4_plot1<-batch_parameters_day4_plot+ scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x),
+#                             labels = trans_format("log10", math_format(10^.x)))
 
-ggsave("batch_parameters_day4(xlog).pdf",batch_parameters_day4_plot1,height=8,width=10)
+ggsave("batch_parameters_day4SubSet.pdf",batch_parameters_day4_plot,height=8,width=10)_total<-rbind(day4_batcheffectParameters_melt,day4_batcheffectParameters_common_melt)
+
+#PCs to exclude 
+exclude <- c(41:59, 61:79, 81:99, 101:124)
+
+day4_batcheffectParameters_total_subset<-day4_batcheffectParameters_total %>% filter(!(PrincipalComponents %in% exclude))
+day4_batcheffectParameters_total_subset[,1] <- factor(day4_batcheffectParameters_total_subset[,1], 
+                                                      levels = day4_batcheffectParameters_total_subset[,1], ordered = TRUE)
+
+
+# day4_batcheffectParameters_overall<-data.frame(PrincipalComponents=seq(1:ncol(ms_data_day4_nonzero)),
+#                                                ResidualVariance=resid_var_d4,Overlap=sigfeat_overlap_d4)
+# day4_batcheffectParameters_overall_melt<-melt(day4_batcheffectParameters_overall,id.vars=c("PrincipalComponents"))
+# colnames(day4_batcheffectParameters_overall_melt)[2:3]<-c("VarType","VarValues")
+
+
 
 ### Day 12
 no_sigFeat_d12_r<-rep(0,ncol(ms_data_day12_nonzero))
@@ -1937,37 +1957,68 @@ no_sigFeat_d12_s[is.na(no_sigFeat_d12_s)]<-0
 r2_d12_s_significant[is.na(r2_d12_s_significant)]<-0
 
 day12_batcheffectParameters_runDay<-data.frame(PrincipalComponents=seq(1:ncol(ms_data_day12_nonzero)),DataType=rep("RunDay",ncol(ms_data_day12_nonzero)),
-                                              SignificantFeatures=no_sigFeat_d12_r, Avg.R2=r2_d12_r_significant,
-                                              ResidualVariance=resid_var_d12,Overlap=sigfeat_overlap_d12)
+                                              SignificantFeatures=no_sigFeat_d12_r, Avg.R2=r2_d12_r_significant)
 day12_batcheffectParameters_runDay<-rbind(day12_uncorrected_nonzero_r_row,day12_batcheffectParameters_runDay)
 
 day12_batcheffectParameters_strain<-data.frame(PrincipalComponents=seq(1:ncol(ms_data_day12_nonzero)),DataType=rep("Strain",ncol(ms_data_day12_nonzero)),
-                                              SignificantFeatures=no_sigFeat_d12_s, Avg.R2=r2_d12_s_significant,
-                                              ResidualVariance=resid_var_d12,Overlap=sigfeat_overlap_d12)
+                                              SignificantFeatures=no_sigFeat_d12_s, Avg.R2=r2_d12_s_significant)
 day12_batcheffectParameters_strain<-rbind(day12_uncorrected_nonzero_s_row,day12_batcheffectParameters_strain)
 
 day12_batcheffectParameters_melt<-melt(rbind(day12_batcheffectParameters_runDay,day12_batcheffectParameters_strain),id.vars=c("PrincipalComponents","DataType"))
 colnames(day12_batcheffectParameters_melt)[3:4]<-c("VarType","VarValues")
 
-# day12_batcheffectParameters_overall<-data.frame(PrincipalComponents=seq(1:ncol(ms_data_day12_nonzero)),
-#                                                ResidualVariance=resid_var_d12,Overlap=sigfeat_overlap_d12)
-# day12_batcheffectParameters_overall_melt<-melt(day12_batcheffectParameters_overall,id.vars=c("PrincipalComponents"))
-# colnames(day12_batcheffectParameters_overall_melt)[2:3]<-c("VarType","VarValues")
+day12_batcheffectParameters_common<-data.frame(PrincipalComponents=seq(1:ncol(ms_data_day12_nonzero)),DataType=rep("Common",ncol(ms_data_day12_nonzero)),
+                                               ResidualVariance=resid_var_d12,Overlap=sigfeat_overlap_d12) # a seaparte data frame for plotting in diff colors and shapes
+day12_batcheffectParameters_common_melt<-melt(rbind(day12_batcheffectParameters_common,day12_uncorrected_nonzero_common_row),
+                                              id.vars=c("PrincipalComponents","DataType"))
+colnames(day12_batcheffectParameters_common_melt)[3:4]<-c("VarType","VarValues")
+
+day12_batcheffectParameters_total<-rbind(day12_batcheffectParameters_melt,day12_batcheffectParameters_common_melt)
+
+#PCs to exclude 
+exclude <- c(41:59, 61:79, 81:99, 101:117)
+
+day12_batcheffectParameters_total_subset<-day12_batcheffectParameters_total %>% filter(!(PrincipalComponents %in% exclude))
+day12_batcheffectParameters_total_subset[,1] <- factor(day12_batcheffectParameters_total_subset[,1], 
+                                                      levels = day12_batcheffectParameters_total_subset[,1], ordered = TRUE)
+
 
 set.seed(1)
 # ggplot 
-batch_parameters_day12_plot<- ggplot(data=day12_batcheffectParameters_melt, aes(x=as.numeric(PrincipalComponents), y=as.numeric(VarValues), colour= factor(DataType), shape = factor(DataType))) + geom_point(size=2) +facet_grid(VarType~.,scales="free_y") +
+batch_parameters_day12_plot<- ggplot(data=day12_batcheffectParameters_total_subset, aes(x=PrincipalComponents, #remove as.numeric for subset
+                                as.numeric(VarValues), colour= factor(DataType), shape = factor(DataType))) + geom_point(size=2) +facet_grid(VarType~.,scales="free_y") +
+  scale_colour_manual(values=c("#F8766D", "#7CAE00","grey")) + 
+  #scale_x_discrete(breaks=c(seq(0,8,by=2),seq(15,40,by=5),seq(50,118,20))) + #do not use for subset
   theme_bw() + theme(axis.text.x=element_text(hjust = 1,size=8),axis.text.y=element_text(size=8),
                      panel.grid.major.x = element_blank(), # to x remove gridlines
                      panel.grid.major.y = element_blank(), # to y remove gridlines
                      #panel.border = element_blank(),  # remove top and right border
                      panel.background = element_blank(),
                      axis.line = element_line(color = 'black'))
-batch_parameters_day12_plot<-batch_parameters_day12_plot + geom_vline(xintercept = 4,linetype = "dotted") #indicate PC filter used
-batch_parameters_day12_plot1<-batch_parameters_day12_plot+ scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x),
-                                                                       labels = trans_format("log10", math_format(10^.x)))
+#batch_parameters_day12_plot<-batch_parameters_day12_plot + geom_vline(xintercept = 4,linetype = "dotted") #for full data indicate PC filter used
+# For subset data xinterceot is the point (factor) rather than number..therefore its the abs position of the intercept
+# this ends up being position 5 after including '0'
+batch_parameters_day12_plot<-batch_parameters_day12_plot + geom_vline(xintercept = 5,linetype = "dotted") 
 
-ggsave("batch_parameters_day12.pdf",batch_parameters_day12_plot,height=8,width=10)
+# batch_parameters_day12_plot1<-batch_parameters_day12_plot+ scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x),
+#                                                                        labels = trans_format("log10", math_format(10^.x)))
+
+ggsave("batch_parameters_day12SubSet.pdf",batch_parameters_day12_plot,height=8,width=10)
+
+
+#######
+
+gg_color_hue <- function(n) {
+  hues = seq(15, 375, length=n+1)
+  hcl(h=hues, l=65, c=100)[1:n]
+}
+
+n = 4
+cols = gg_color_hue(4)
+# [1] orang "#F8766D" green "#7CAE00" blue "#00BFC4" violet "#C77CFF"
+dev.new(width=4, height=4)
+plot(1:n, pch=16, cex=2, col=cols)
+
 ####
 
 png("pval_factor.png",height=800,width=800)
