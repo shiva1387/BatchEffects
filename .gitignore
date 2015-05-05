@@ -8,3 +8,7 @@ sync.ffs_db
 AlgaeDataAnalysis_server.R
 .RDataTmp
 mzratio.txt.bak
+ColorfulBird.jpg
+.gitattributes
+AlgaeDataAnalysis_modular.R.bak
+AlgaeDataAnalysis_xcmsfile.R.bak
