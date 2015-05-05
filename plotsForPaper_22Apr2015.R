@@ -1,4 +1,4 @@
-##Plots for Shiv thesis
+##Plots for Shiv paper
 ##Author: Shiv
 ##Version :22-04-15
 #############
