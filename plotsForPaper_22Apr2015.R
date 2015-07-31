@@ -1,6 +1,12 @@
+<<<<<<< HEAD
 ##Plots for Shiv thesis
 ##Author: Shiv
 ##Version :05-12-14
+=======
+##Plots for Shiv paper
+##Author: Shiv
+##Version :22-04-15
+>>>>>>> 4d03db8c80ba11dc5899790beca5183556148c5e
 #############
 # Clear all #
 #############
